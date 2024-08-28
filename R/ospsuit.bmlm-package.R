@@ -1,6 +1,9 @@
 #' @keywords internal
 "_PACKAGE"
 
+# try to avoid warning in R cmd check Notes
+`.` <- list
+
 ## usethis namespace: start
 #' @import ospsuite.utils
 #' @import ospsuite.plots

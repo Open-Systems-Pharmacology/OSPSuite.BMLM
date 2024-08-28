@@ -4,7 +4,7 @@
 \alias{buildGroupPopulation}
 \title{Title}
 \usage{
-buildGroupPopulation(projectConfig, dtScenarioG, dataG)
+buildGroupPopulation(projectConfig, params, dtScenarioG)
 }
 \arguments{
 \item{dataG}{}

@@ -1,3 +1,12 @@
+#' Title
+#'
+#' @param snaphsotFile
+#' @param PIName
+#'
+#' @return
+#' @export
+#'
+#' @examples
 readIdentificationParameterFromSnapshot <- function(snaphsotFile, PIName) {
   snp <- jsonlite::fromJSON(snaphsotFile)
   checkmate::assertChoice(PIName, snp$ParameterIdentifications$Name)
@@ -41,3 +50,7 @@ readIdentificationParameterFromSnapshot <- function(snaphsotFile, PIName) {
     "Mapping_template"
   ))
 }
+
+
+
+

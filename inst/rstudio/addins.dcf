@@ -1,0 +1,5 @@
+Name: Open Template Workflow
+Description: Open a template script for the default workflow
+Binding: openBMLMWorkflowTemplate
+Interactive: false
+

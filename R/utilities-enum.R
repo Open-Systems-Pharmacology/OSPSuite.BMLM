@@ -36,11 +36,3 @@ ERRORMODEL <- ospsuite.utils::enum(c(
 ))
 
 
-#' @title Error Model
-#' @export
-#' @family enum helpers
-ERRORMODEL <- ospsuite.utils::enum(c(
-  "relative",
-  "absolute",
-  "log_absolute"
-))

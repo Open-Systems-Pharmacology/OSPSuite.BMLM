@@ -5,11 +5,8 @@
 \title{Title}
 \usage{
 createBMLMProjectConfiguration(
-  projectPath = ".",
-  snaphsotFile = NULL,
-  PIName = NULL,
-  modelFolder = NULL,
-  overwrite = FALSE
+  projectConfigurationFilePath,
+  bMLMConfigurationFile
 )
 }
 \arguments{

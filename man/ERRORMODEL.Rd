@@ -15,8 +15,8 @@ Error Model
 }
 \seealso{
 Other enum helpers: 
-\code{\link{PARAMETERTYPE}},
-\code{\link{WEIGHTINGMODUS}}
+\code{\link{BMLMSHEET}},
+\code{\link{PARAMETERTYPE}}
 }
 \concept{enum helpers}
 \keyword{datasets}

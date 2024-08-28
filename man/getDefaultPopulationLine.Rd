@@ -4,10 +4,10 @@
 \alias{getDefaultPopulationLine}
 \title{Title}
 \usage{
-getDefaultPopulationLine(projectConfig, params, modelFile)
+getDefaultPopulationLine(projectConfig, dtScenarioG, params)
 }
 \arguments{
-\item{modelFile}{}
+\item{params}{}
 }
 \description{
 Title

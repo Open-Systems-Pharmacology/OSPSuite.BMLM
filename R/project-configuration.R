@@ -29,6 +29,13 @@ ProjectConfigurationBMLM <- R6::R6Class(   # nolint object_name_linter
       super$initialize(
         projectConfigurationFilePath = projectConfigurationFilePath
       )
+    },
+    #' Print
+    #' @description print prints a summary of the Project Configuration.
+    print = function() {
+      super$print()
+      private$printLine("BMLM Configuration File", fs::path_rel(as.character(self$BMLMConfigurationFile)))
+      invisible(self)
     }
   )
 )

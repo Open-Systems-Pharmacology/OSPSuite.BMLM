@@ -16,10 +16,10 @@ Language: en-US
 Imports: 
     ospsuite.utils (>= 1.4.0),
     ospsuite.plots,
+    ospsuite.reportingframework,
     data.table,
     checkmate,
     DiagrammeR,
-    shiny,
     fs,
     bslib,
     dplyr,
