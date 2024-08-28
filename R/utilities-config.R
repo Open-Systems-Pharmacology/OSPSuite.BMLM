@@ -13,14 +13,15 @@
 #'
 #' @examples
 createBMLMProjectConfiguration <- function(projectConfigurationFilePath,
-                                                  bMLMConfigurationFile = 'BMLMConfiguration.xlsx') {
-
+                                           bMLMConfigurationFile = "BMLMConfiguration.xlsx") {
   projectConfiguration <-
     ProjectConfigurationBMLM$new(projectConfigurationFilePath = projectConfigurationFilePath)
 
-  if (!file.exists(file.path(projectConfiguration$paramsFolder,bMLMConfigurationFile))){
-    invisible(file.copy(from = system.file("templates", "BMLMConfiguration.xlsx",package = "ospsuite.bmlm"),
-                        to = file.path(projectConfiguration$paramsFolder,bMLMConfigurationFile)))
+  if (!file.exists(file.path(projectConfiguration$paramsFolder, bMLMConfigurationFile))) {
+    invisible(file.copy(
+      from = system.file("templates", "BMLMConfiguration.xlsx", package = "ospsuite.bmlm"),
+      to = file.path(projectConfiguration$paramsFolder, bMLMConfigurationFile)
+    ))
   }
 
   projectConfiguration$BMLMConfigurationFile <- bMLMConfigurationFile
@@ -60,7 +61,7 @@ readIdentificationParameterFromSnapshot <- function(snaphsotFile,
 
 
   # get Headers
-  definitionDTHeader <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$ParameterDefinition)
+  definitionDTHeader <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$ParameterDefinition)
 
   # check if table already has entries
   if (nrow(definitionDTHeader) == 1 | overwrite) {
@@ -72,34 +73,36 @@ readIdentificationParameterFromSnapshot <- function(snaphsotFile,
       linkedParameter = linkedParameter
     )
 
-    if ('isFixed' %in% names(linkedParameterDT)){
-      definitionDT <- linkedParameterDT[is.na(IsFixed) | IsFixed == FALSE ]
+    if ("isFixed" %in% names(linkedParameterDT)) {
+      definitionDT <- linkedParameterDT[is.na(IsFixed) | IsFixed == FALSE]
       definitionDT[, IsFixed := NULL]
-    } else{
+    } else {
       definitionDT <- linkedParameterDT
     }
 
-    if ('UseAsFactor' %in% names(definitionDT)){
+    if ("UseAsFactor" %in% names(definitionDT)) {
       set(definitionDT, which(is.na(definitionDT$UseAsFactor)), "UseAsFactor", FALSE)
     } else {
-      definitionDT[, UseAsFactor :=  FALSE]
+      definitionDT[, UseAsFactor := FALSE]
     }
 
     definitionDT <- rbind(definitionDTHeader,
-                                definitionDT,
-                                fill = TRUE)
+      definitionDT,
+      fill = TRUE
+    )
 
     xlsxWriteData(wb = wb, sheetName = BMLMSHEET$ParameterDefinition, dt = definitionDT)
 
     # add linked parameter
     dtMappedPaths <- rbind(xlsxReadData(wb = wb, sheetName = BMLMSHEET$ParameterMappedPaths),
-                           extractMappedParameterPaths(linkedParameter),
-                           fill = TRUE)
+      extractMappedParameterPaths(linkedParameter),
+      fill = TRUE
+    )
 
     xlsxWriteData(wb = wb, sheetName = BMLMSHEET$ParameterMappedPaths, dt = dtMappedPaths)
 
     # add outputMapping
-    dtOutputMappings <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$OutputDefinitions)
+    dtOutputMappings <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$OutputDefinitions)
 
     dtOutputMappings <- extractOutputMappings(
       projectConfiguration = projectConfiguration,
@@ -125,7 +128,7 @@ readIdentificationParameterFromSnapshot <- function(snaphsotFile,
       if (!(PIName %in% openxlsx::getSheetNames(projectConfiguration$paramsFile))) {
         wbP <- openxlsx::loadWorkbook(projectConfiguration$paramsFile)
 
-        wbP <- xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = PIName,dt = modelParameters)
+        wbP <- xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = PIName, dt = modelParameters)
 
         openxlsx::saveWorkbook(wb = wb_P, projectConfiguration$paramsFile, overwrite = TRUE)
       } else {
@@ -181,17 +184,15 @@ extractIdentificationParameter <- function(linkedParameter) {
 #' @param headers
 #'
 #' @return
-extractOutputMappings <- function(projectConfiguration,snp, selectedPI, dtOutputMappingsHeader) {
-
-
-  dtOutputPathIds = getOutputPathIds(projectConfiguration)
+extractOutputMappings <- function(projectConfiguration, snp, selectedPI, dtOutputMappingsHeader) {
+  dtOutputPathIds <- getOutputPathIds(projectConfiguration)
 
   dtOutputMappings <- snp$ParameterIdentifications$OutputMappings[[selectedPI]]
 
-  if (is.null(dtOutputMappings)){
+  if (is.null(dtOutputMappings)) {
     dtOutputMappings <- data.table(OutputPathId = dtOutputPathIds$outputPathId)
   } else {
-    stop('compare to Plots.xslx')
+    stop("compare to Plots.xslx")
     dtOutputMappings <- dtOutputMappings %>%
       setDT() %>%
       dplyr::select(c("Path", "Scaling")) %>%
@@ -212,14 +213,13 @@ extractOutputMappings <- function(projectConfiguration,snp, selectedPI, dtOutput
     dtOutputMappings[, OutputPathId := paste("O", as.numeric(OutputPath), sep = "_"), by = "OutputPath"]
 
     dtOutputMappings[, ErrorModel := ifelse(Scaling == "Log", "relative", "absolute"),
-                     by = "OutputPath"
+      by = "OutputPath"
     ]
     dtOutputMappings[, Scaling := NULL]
 
     dtOutputMappings[, ModelErrorId := paste0("sigma_", OutputPathId),
-                     by = "OutputPath"
+      by = "OutputPath"
     ]
-
   }
 
   dtOutputMappings <-
@@ -244,10 +244,10 @@ extractFixedParameters <- function(linkedParameterDT, dtMappedPaths) {
     return(paste(x[seq(2, length(x) - 1)], collapse = "|"))
   }
   dtMappedPaths[, ("Container Path") := getContainerPath(pathName = LinkedParameters),
-                by = "LinkedParameters"
+    by = "LinkedParameters"
   ]
   dtMappedPaths[, ("Parameter Name") := tail(strsplit(x = LinkedParameters, split = "\\|")[[1]], 1),
-                by = "LinkedParameters"
+    by = "LinkedParameters"
   ]
 
   dtMappedPaths <- dtMappedPaths %>%
@@ -280,7 +280,7 @@ extractFixedParameters <- function(linkedParameterDT, dtMappedPaths) {
 #' @examples
 extractMappedParameterPaths <- function(linkedParameter) {
   dtMappedPaths <- tidyr::unnest(linkedParameter %>%
-                                   dplyr::select(c("Name", "LinkedParameters")), "LinkedParameters") %>%
+    dplyr::select(c("Name", "LinkedParameters")), "LinkedParameters") %>%
     setDT()
 
 
@@ -306,14 +306,14 @@ extractMappedParameterPaths <- function(linkedParameter) {
 configuratePriors <- function(projectConfiguration, dataObserved, overwrite = FALSE) {
   wb <- openxlsx::loadWorkbook(projectConfiguration$BMLMConfigurationFile)
 
-  dtPrior <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$Prior)
+  dtPrior <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$Prior)
   if (overwrite & nrow(dtPrior) > 1) {
     dtPrior <- dtPrior[1]
   }
 
 
   dtDefinition <-
-    xlsxReadData(wb = wb,sheetName = BMLMSHEET$ParameterDefinition,skipDescriptionRow = TRUE)
+    xlsxReadData(wb = wb, sheetName = BMLMSHEET$ParameterDefinition, skipDescriptionRow = TRUE)
 
   checkmate::assertDataTable(
     x = dtDefinition,
@@ -343,7 +343,7 @@ configuratePriors <- function(projectConfiguration, dataObserved, overwrite = FA
     dtPrior <- addHyperPriorParameter(dtPrior, dtDefinition)
 
     dtOutputMappings <-
-      xlsxReadData(wb = wb,sheetName = BMLMSHEET$OutputDefinitions,skipDescriptionRow = TRUE)
+      xlsxReadData(wb = wb, sheetName = BMLMSHEET$OutputDefinitions, skipDescriptionRow = TRUE)
     dtPrior <- addModelErrorParameter(dtPrior, dtOutputMappings)
 
     dtPrior[, Distribution := reTranslateDistribution(Distribution), by = 1:nrow(dtPrior)]
@@ -354,7 +354,7 @@ configuratePriors <- function(projectConfiguration, dataObserved, overwrite = FA
     warning(paste(BMLMSHEET$Prior, "is already edited"))
   }
 
-  dtStartValuesHeaders <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$IndividualStartValues)
+  dtStartValuesHeaders <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$IndividualStartValues)
   if (overwrite & nrow(dtStartValuesHeaders) > 1) {
     dtStartValuesHeaders <- dtStartValuesHeaders[1]
   }
@@ -373,7 +373,7 @@ configuratePriors <- function(projectConfiguration, dataObserved, overwrite = FA
       addMissingColumns(names(dtStartValuesHeaders)) %>%
       dplyr::select(all_of(names(dtStartValuesHeaders)))
 
-    dtStartValues <- rbind(dtStartValuesHeaders,dtStartValues,fill = TRUE)
+    dtStartValues <- rbind(dtStartValuesHeaders, dtStartValues, fill = TRUE)
 
     xlsxWriteData(wb = wb, sheetName = BMLMSHEET$IndividualStartValues, dt = dtStartValues)
 
@@ -507,10 +507,6 @@ addModelErrorParameter <- function(dtPrior, dtOutputMappings) {
   dtPrior <- rbind(dtPrior, tmp)
 }
 
-
-
-
-
 ## configData ----------------
 
 #' Title
@@ -524,7 +520,6 @@ addModelErrorParameter <- function(dtPrior, dtOutputMappings) {
 #'
 #' @examples
 addDataIdsToDictionary <- function(projectConfiguration, observedData, overwrite = FALSE) {
-
   # load xls as workbook to conserve formating an data validation
   bMLMConfigurationFile <- file.path(projectConfiguration$BMLMConfigurationFile)
   checkmate::assertFileExists(fs::path_abs(bMLMConfigurationFile))
@@ -533,7 +528,7 @@ addDataIdsToDictionary <- function(projectConfiguration, observedData, overwrite
   checkmate::assertDataFrame(data, null.ok = FALSE)
 
   # dictionary
-  dtDictionaryHeader <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$Dictionary)
+  dtDictionaryHeader <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$Dictionary)
 
   dataIdCols <- c(
     # "OutputPathId",
@@ -553,7 +548,7 @@ addDataIdsToDictionary <- function(projectConfiguration, observedData, overwrite
   if (any(!is.na(dtDictionaryHeader %>% dplyr::select(all_of(dataIdCols)))) & !overwrite) {
     warning("Dictionary is already edited")
   } else {
-    dtOutputMappings <- xlsxReadData(wb = wb,sheetName = BMLMSHEET$OutputDefinitions)
+    dtOutputMappings <- xlsxReadData(wb = wb, sheetName = BMLMSHEET$OutputDefinitions)
 
     dict <- list(
       OutputPathId = unique(data$outputPathId),
@@ -634,5 +629,3 @@ replaceModelPath <- function(pathName) {
   x <- strsplit(x = pathName, split = "\\|")[[1]]
   return(paste(c("*", x[seq(2, length(x))]), collapse = "|"))
 }
-
-
