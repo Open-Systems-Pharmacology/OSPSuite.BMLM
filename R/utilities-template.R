@@ -5,16 +5,17 @@
 #' set the path to the template via option `options(OSPSuite.RF.PathForWorkflowTemplate = 'myTemplateDirectory'`)
 #'
 #' @export
-openBMLMWorkflowTemplate <- function() {
-  rstudioapi::callFun("sendToConsole", "createBMLMWorkflowTemplate()")
+addBMLMWorkflowTemplate <- function() {
+  rstudioapi::callFun("sendToConsole", "insertTemplateText()")
 }
 
-#' Opens the workflow template as new document
-#'
-#' @export
-createBMLMWorkflowTemplate <- function() {
-  ospsuite.reportingframework::createDocumentFromTemplate(
-    template = "template_workflow",
-    templatePath = system.file("templates", package = "ospsuite.bmlm")
-  )
+
+# addin.R
+insertTemplateText <- function() {
+  # Specify the text you want to insert
+  templatePath <- system.file("templates/codeTemplate.R", package = "ospsuite.bmlm")
+  textToInsert <- readLines(templatePath)
+
+  # Get the current document's context
+  rstudioapi::insertText(text = textToInsert)
 }

@@ -2,13 +2,17 @@
 % Please edit documentation in R/utilities-config.R
 \name{extractIdentificationParameter}
 \alias{extractIdentificationParameter}
-\title{Title}
+\title{Extract Identification Parameter}
 \usage{
-extractIdentificationParameter(linkedParameter, headers)
+extractIdentificationParameter(linkedParameter)
 }
 \arguments{
-\item{headers}{}
+\item{linkedParameter}{A list of linked parameters.}
+}
+\value{
+A data.table containing the extracted parameters, including columns for parameter names, values, and their configurations.
 }
 \description{
-Title
+This function extracts identification parameters from linked parameters.
 }
+\keyword{internal}

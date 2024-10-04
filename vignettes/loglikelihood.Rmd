@@ -107,8 +107,8 @@ $$ log(\mathcal{L}_h(\theta))  = \sum_k log(\mathcal{L}_{h,k}(\theta)) = \sum_{k
 
 available distributions:
 
-- normal
-- lognormal
+- norm
+- lnorm
 
 easily extendable to all distributions available in package stats: (https://rdrr.io/r/stats/Distributions.html)
 
@@ -132,8 +132,8 @@ $$ log(\mathcal{L}_p(\theta,\mathbf{p}))  = \sum_{k \in K_p} log(\mathcal{L}_{p,
 
 available distributions:
 
-- flat:  $log(\mathcal{L}_{p,k})$ = 0  
-- normal
-- lognormal
+- unif (flat):  $log(\mathcal{L}_{p,k})$ = 0  
+- norm (normal)
+- lnorm (lognormal)
 
 

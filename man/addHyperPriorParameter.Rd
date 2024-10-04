@@ -2,13 +2,21 @@
 % Please edit documentation in R/utilities-config.R
 \name{addHyperPriorParameter}
 \alias{addHyperPriorParameter}
-\title{Title}
+\title{Add Hyper Prior Parameter}
 \usage{
-addHyperPriorParameter(dtPrior, dtDefinition)
+addHyperPriorParameter(dtPrior, dtDefinition, dataObserved)
 }
 \arguments{
-\item{dtDefinition}{}
+\item{dtPrior}{A data.table containing prior parameters.}
+
+\item{dtDefinition}{A data.table containing parameter definitions.}
+
+\item{dataObserved}{A data.frame of observed data.}
+}
+\value{
+A data.table containing updated prior parameters.
 }
 \description{
-Title
+This function adds hyper prior parameters based on the parameter definition and observed data.
 }
+\keyword{internal}

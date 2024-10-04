@@ -22,13 +22,13 @@ Initialize}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-ProjectConfiguration-new}{\code{ProjectConfigurationBMLM$new()}}
+\item \href{#method-ProjectConfiguration-print}{\code{ProjectConfigurationBMLM$print()}}
 \item \href{#method-ProjectConfiguration-clone}{\code{ProjectConfigurationBMLM$clone()}}
 }
 }
 \if{html}{\out{
 <details open><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="esqlabsR" data-topic="ProjectConfiguration" data-id="print"><a href='../../esqlabsR/html/ProjectConfiguration.html#method-ProjectConfiguration-print'><code>esqlabsR::ProjectConfiguration$print()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="esqlabsR" data-topic="ProjectConfiguration" data-id="save"><a href='../../esqlabsR/html/ProjectConfiguration.html#method-ProjectConfiguration-save'><code>esqlabsR::ProjectConfiguration$save()</code></a></span></li>
 </ul>
 </details>
@@ -45,10 +45,21 @@ Initialize}
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{projectConfigurationFilePath}}{A string representing the path to the
-project configuration file.}
+project configuration file.
+Print}
 }
 \if{html}{\out{</div>}}
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ProjectConfiguration-print"></a>}}
+\if{latex}{\out{\hypertarget{method-ProjectConfiguration-print}{}}}
+\subsection{Method \code{print()}}{
+print prints a summary of the Project Configuration.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ProjectConfigurationBMLM$print()}\if{html}{\out{</div>}}
+}
+
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ProjectConfiguration-clone"></a>}}

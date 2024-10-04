@@ -2,13 +2,19 @@
 % Please edit documentation in R/utilities-config.R
 \name{addGlobalPriorParameter}
 \alias{addGlobalPriorParameter}
-\title{Title}
+\title{Add Global Prior Parameter}
 \usage{
 addGlobalPriorParameter(dtPrior, dtDefinition)
 }
 \arguments{
-\item{dtDefinition}{}
+\item{dtPrior}{A data.table containing prior parameters.}
+
+\item{dtDefinition}{A data.table containing parameter definitions.}
+}
+\value{
+A data.table containing updated prior parameters.
 }
 \description{
-Title
+This function adds global prior parameters based on the parameter definition.
 }
+\keyword{internal}

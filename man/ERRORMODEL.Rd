@@ -15,7 +15,6 @@ Error Model
 }
 \seealso{
 Other enum helpers: 
-\code{\link{BMLMSHEET}},
 \code{\link{PARAMETERTYPE}}
 }
 \concept{enum helpers}

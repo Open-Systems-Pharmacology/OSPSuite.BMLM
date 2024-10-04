@@ -1,19 +1,3 @@
-#' @title Sheet names of BMLM COnfiguration xlsx
-#' @export
-#' @family enum helpers
-BMLMSHEET <-
-  ospsuite::enum(
-    c(
-      "ParameterDefinition",
-      "ParameterMappedPaths",
-      "OutputDefinitions",
-      "DataGroupToModelFile",
-      "Prior",
-      "IndividualStartValues",
-      "Dictionary"
-    )
-  )
-
 
 #' @title Parameter types
 #' @export

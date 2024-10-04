@@ -14,22 +14,20 @@ Description: This library provides a toolbox to identify parameters in multi lev
 License: GPL-2 | file LICENSE
 Language: en-US
 Imports: 
-    ospsuite.utils (>= 1.4.0),
     ospsuite.plots,
-    ospsuite.reportingframework,
     data.table,
     checkmate,
-    DiagrammeR,
     fs,
-    bslib,
     dplyr,
     tidyr
 Depends: 
+    ospsuite.reportingframework,
     R (>= 3.6),
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Suggests:
     spelling,
+    DiagrammeR,
     knitr,
     rmarkdown,
     ggsci,
@@ -37,4 +35,4 @@ Suggests:
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2

@@ -2,13 +2,19 @@
 % Please edit documentation in R/utilities-config.R
 \name{addModelErrorParameter}
 \alias{addModelErrorParameter}
-\title{Title}
+\title{Add Model Error Parameter}
 \usage{
-addModelErrorParameter(dtPrior, dtOutputMappings)
+addModelErrorParameter(dtPrior, wb)
 }
 \arguments{
-\item{dtOutputMappings}{}
+\item{dtPrior}{A data.table containing prior parameters.}
+
+\item{wb}{the open workkbook with the BMLM configurations}
+}
+\value{
+A data.table containing updated prior parameters.
 }
 \description{
-Title
+This function adds model error parameters based on output mappings.
 }
+\keyword{internal}
