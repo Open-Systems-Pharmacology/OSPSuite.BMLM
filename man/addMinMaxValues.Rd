@@ -7,13 +7,14 @@
 addMinMaxValues(dt, dtDefinition)
 }
 \arguments{
-\item{dt}{A data.table to which MinValue and MaxValue will be added.}
+\item{dt}{A data.table to which minValue and maxValue will be added.}
 
 \item{dtDefinition}{A data.table containing parameter definitions.}
 }
 \value{
-A data.table with MinValue and MaxValue added.
+A data.table with minValue and maxValue added.
 }
 \description{
 This function merges a data.table with min and max values from a definition data.table.
 }
+\keyword{internal}

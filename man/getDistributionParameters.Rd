@@ -2,13 +2,16 @@
 % Please edit documentation in R/utilities-BMLMParameter.R
 \name{getDistributionParameters}
 \alias{getDistributionParameters}
-\title{Title}
+\title{Get Distribution Parameters}
 \usage{
 getDistributionParameters(distributionName)
 }
 \arguments{
-\item{distributionName}{}
+\item{distributionName}{A string representing the name of the distribution.}
+}
+\value{
+A vector of parameters for the specified distribution.
 }
 \description{
-Title
+This function retrieves the parameters for a specified distribution.
 }

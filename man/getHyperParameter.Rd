@@ -4,12 +4,10 @@
 \alias{getHyperParameter}
 \title{Get Hyper Parameters}
 \usage{
-getHyperParameter(dtPrior, dtDefinition)
+getHyperParameter(dtPrior)
 }
 \arguments{
 \item{dtPrior}{A data.table containing prior definitions.}
-
-\item{dtDefinition}{A data.table containing parameter definitions.}
 }
 \value{
 A data.table containing hyperparameters and their distributions.
@@ -17,3 +15,4 @@ A data.table containing hyperparameters and their distributions.
 \description{
 This function retrieves hyperparameters from the prior definition.
 }
+\keyword{internal}

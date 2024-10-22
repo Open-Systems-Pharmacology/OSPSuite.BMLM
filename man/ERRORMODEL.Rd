@@ -15,7 +15,8 @@ Error Model
 }
 \seealso{
 Other enum helpers: 
-\code{\link{PARAMETERTYPE}}
+\code{\link{PARAMETERTYPE}},
+\code{\link{SCALING}}
 }
 \concept{enum helpers}
 \keyword{datasets}

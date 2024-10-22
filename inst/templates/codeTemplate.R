@@ -6,7 +6,7 @@
 projectConfiguration <-
   addBMLMPConfiguration(projectConfiguration,
                         bMLMConfigurationFile = "BMLMConfiguration.xlsx",
-                        snapshotFile = file.path(projectConfiguration$modelFolder,'mySnaphot.json'),
+                        snapshotFile = file.path(projectConfiguration$modelFolder, 'mySnaphot.json'),
                         nameOfParameterIdentfication = 'myParameterIdentification',
                         overwrite = FALSE)
 

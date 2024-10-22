@@ -25,8 +25,7 @@ hyperParameters <-
         names(formals(eval(parse(text = paste0("stats::d", distributionName))))),
         c("x", "log")
       ))
-    }
-    ),
+    }),
     unlist(availableDistributions)
   )
 
@@ -46,9 +45,10 @@ for (distribution in names(hyperParameters)) {
     # Get the default value if it exists
     defaultValue <- NA
     if (parameter %in% names(args) &&
-        !is.symbol(args[[parameter]]) &&
-        !is.language(args[[parameter]]))
+      !is.symbol(args[[parameter]]) && # nolint identation
+      !is.language(args[[parameter]])) {
       defaultValue <- args[[parameter]]
+    }
 
 
 
@@ -56,51 +56,54 @@ for (distribution in names(hyperParameters)) {
     minValue <- NA
     maxValue <- NA
     defaultValue <- NA
-    scaling <- 'Linear'
+    scaling <- SCALING$linear
 
-    switch(paste(distribution, parameter, sep = '_'),
-           norm_mean = {
-             minValue <- 'minValue'
-             maxValue <- 'maxValue'
-             defaultValue <- 'startValue'
-           },
-           norm_sd = {
-             minValue <- 0
-             maxValue <- Inf
-           },
-           lnorm_meanlog = {
-             minValue <- 'minValue'
-             maxValue <- 'maxValue'
-             defaultValue <- 'startValue'
-             scaling <- 'Log'
-           },
-           lnorm_sdlog = {
-             minValue <- 1
-             maxValue <- Inf
-           },
-           unif_min = {
-             minValue <- 'minValue'
-             maxValue <- 'maxValue'
-             defaultValue <- 'minValue'
-             scaling <- 'scaling'
-           },
-           unif_max = {
-             minValue <- 'minValue'
-             maxValue <- 'maxValue'
-             defaultValue <- 'maxValue'
-             scaling <- 'scaling'
-           }
-
+    switch(paste(distribution, parameter, sep = "_"),
+      norm_mean = {
+        minValue <- "minValue"
+        maxValue <- "maxValue"
+        defaultValue <- "startValue"
+      },
+      norm_sd = {
+        minValue <- 0
+        maxValue <- Inf
+      },
+      lnorm_meanlog = {
+        minValue <- "minValue"
+        maxValue <- "maxValue"
+        defaultValue <- "startValue"
+        scaling <- SCALING$log
+      },
+      lnorm_sdlog = {
+        minValue <- 1
+        maxValue <- Inf
+      },
+      unif_min = {
+        minValue <- "minValue"
+        maxValue <- "maxValue"
+        defaultValue <- "minValue"
+        scaling <- "scaling"
+      },
+      unif_max = {
+        minValue <- "minValue"
+        maxValue <- "maxValue"
+        defaultValue <- "maxValue"
+        scaling <- "scaling"
+      }
     )
 
     # Create a new row for the data.table
-    distributionList <- rbind(distributionList,
-                              data.table(distribution = distribution,
-                                         parameter = parameter,
-                                         minValue = minValue,
-                                         maxValue = maxValue,
-                                         defaultValue = defaultValue,
-                                         scaling = scaling))
+    distributionList <- rbind(
+      distributionList,
+      data.table(
+        distribution = distribution,
+        parameter = parameter,
+        minValue = minValue,
+        maxValue = maxValue,
+        defaultValue = defaultValue,
+        scaling = scaling
+      )
+    )
   }
 }
 

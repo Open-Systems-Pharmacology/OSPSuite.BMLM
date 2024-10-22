@@ -6,9 +6,8 @@
 \usage{
 addBMLMPConfiguration(
   projectConfiguration,
-  bMLMConfigurationFile = "BMLMConfiguration.xlsx",
-  snapshotFile = NULL,
   nameOfParameterIdentfication = NULL,
+  snapshotFile = NULL,
   overwrite = FALSE
 )
 }
@@ -16,20 +15,17 @@ addBMLMPConfiguration(
 \item{projectConfiguration}{An object of class \code{ProjectConfiguration}, which contains configuration details for the project.
 This object should include paths to necessary folders and files for the BMLM project.}
 
-\item{bMLMConfigurationFile}{A string representing the name of the BMLM configuration file.
-Default is "BMLMConfiguration.xlsx". This file contains various settings and parameters for the BMLM model.}
+\item{nameOfParameterIdentfication}{A string representing the name of the parameter identification to be read from the snapshot.
+This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.}
 
 \item{snapshotFile}{A string representing the path to the snapshot file. This file contains parameter identifications
 that will be read and potentially used to update the project configuration. If NULL, no updates from a snapshot will occur.}
-
-\item{nameOfParameterIdentfication}{A string representing the name of the parameter identification to be read from the snapshot.
-This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.}
 
 \item{overwrite}{A logical indicating whether to overwrite existing data in the configuration file if it already exists.
 Default is FALSE, meaning existing data will not be overwritten unless specified.}
 }
 \value{
-An object of class \code{ProjectConfigurationBMLM}, which includes the updated configuration details after processing.
+An object of class \code{ProjectConfiguration}, which includes the updated configuration details after processing.
 }
 \description{
 This function creates and initializes a project configuration for BMLM (Biologically-Based Modeling and Learning Model).

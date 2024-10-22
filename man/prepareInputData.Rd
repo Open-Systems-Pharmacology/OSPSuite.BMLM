@@ -12,8 +12,6 @@ prepareInputData(dtPrior, dtStartValues, dtDefinition)
 \item{dtStartValues}{A data.table containing start values with at least a 'Name' column.}
 
 \item{dtDefinition}{A data.table containing definitions with columns: 'Name', 'Scaling'.}
-
-\item{PARAMETERTYPE}{A list or environment containing parameter types, including 'global'.}
 }
 \value{
 A data.table with combined and transformed input data for the L-BFGS-B algorithm.

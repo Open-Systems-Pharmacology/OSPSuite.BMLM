@@ -2,10 +2,13 @@
 % Please edit documentation in R/utilities-BMLMParameter.R
 \name{getAllDistributions}
 \alias{getAllDistributions}
-\title{Title}
+\title{Get All Distributions}
 \usage{
 getAllDistributions()
 }
+\value{
+A vector of unique distribution names.
+}
 \description{
-Title
+This function retrieves all distributions available for prior definitions and hyperprameter.
 }

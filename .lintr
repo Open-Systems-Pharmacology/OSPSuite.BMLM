@@ -11,5 +11,7 @@ linters: linters = linters_with_defaults(
     vector_logic_linter = NULL,
     object_name_linter(styles = c("camelCase", "symbols")))
 exclusions: list(
+  "inst/templates"
   )
+encoding: "UTF-8"
 

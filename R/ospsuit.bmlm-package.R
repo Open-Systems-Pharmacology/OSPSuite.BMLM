@@ -6,7 +6,7 @@
 
 ## usethis namespace: start
 #' @import ospsuite.utils
-#' @import ospsuite.plots
+#' @import ospsuite.reportingframwork
 #' @import data.table
 #' @importFrom data.table .BY
 #' @importFrom data.table .EACHI
@@ -16,5 +16,6 @@
 #' @importFrom data.table .NGRP
 #' @importFrom data.table .SD
 #' @importFrom data.table :=
+#' @importFrom tidyr  %>%
 ## usethis namespace: end
 NULL

@@ -10,7 +10,8 @@ startBMLMOptimization(
   dataObserved,
   seed = 1234,
   method = "L-BFGS-B",
-  control = list()
+  control = list(),
+  simulationRunOptions = NULL
 )
 }
 \arguments{
@@ -23,9 +24,13 @@ startBMLMOptimization(
 \item{seed}{A numeric seed for random number generation (default is 1234).}
 
 \item{method}{The optimization method to be used (default is "L-BFGS-B").}
+
+\item{control}{A list of control parameters for the optimization.}
+
+\item{simulationRunOptions}{an object of class ospsuite::SimulationRunOptions. Optional parameters for running simulations.}
 }
 \value{
-A list of results from the optimization process.
+An invisible NULL. The results of the optimization process are saved in files.
 }
 \description{
 This function initiates the BMLM optimization process based on project configuration and observed data.

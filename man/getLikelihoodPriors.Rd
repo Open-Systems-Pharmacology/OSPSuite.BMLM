@@ -15,3 +15,4 @@ The updated data.table with calculated probabilities.
 \description{
 This function calculates the likelihood priors for the given data.table.
 }
+\keyword{internal}

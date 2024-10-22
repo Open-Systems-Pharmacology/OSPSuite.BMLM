@@ -10,11 +10,12 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  rmarkdown.html_vignette.check_title = FALSE
 )
 ```
 
-```{r setup, echo=FALSE}
+```{r setup, echo=FALSE,warning=FALSE,message=FALSE}
 library(ospsuite.bmlm)
 ```
 
@@ -41,9 +42,6 @@ To use this as objective function in an optimization algorithm it is converted :
 $$ \hat {\theta } = \underset {\theta \in \Theta }{\operatorname {arg\;min}\mathcal {log(L(\theta,\mathbf {y},\mathbf{p}))} }$$
 
 
-## Weighting of Data
-
-For each data point a weighting is defined: $w_{i,j}(t)$ i individual, j observer, t time.
 
 ## construction of loglikelihood
 
@@ -68,32 +66,49 @@ $$ log(\mathcal{L}_t(\theta,\mathbf {y})) =  \sum_{i,j}(log(\mathcal{L}u_{i,j}(\
 
 
 
-
-### Definitions per error model
-
-description  | | additive | multiplicative | logarithmic
------------ | -------- | -------- | -------------- | -----------
-residuals |  $\mathbf{r}_{i,j}(t)$ | $(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))$ | $(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))$ | $(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))$
-residuals censored | $\mathbf{r}_{LLOQ,i,j}(t)$ | $(lloq_{j}(t) - f_{i,j}(\theta,t))$ | $(lloq_{j}(t) - f_{i,j}(\theta,t_u))$ | $(log(lloq_{j}(t)) - log(f_{i,j}(\theta,t)))$
-residuals to physiological possible lower bound LB (typical = 0)| $\mathbf{r}_{LB,i,j}(t)$ | $(LB - f_{i,j}(\theta,t))$ | $(LB - f_{i,j}(\theta,t_u))$ | $(log(LB) - log(f_{i,j}(\theta,t)))$
-model error vector|  $\epsilon_{i,j}(t)$ | $\epsilon_j$ | $\epsilon_j*f_{i,j}(\theta,t)$ | $\epsilon_j$
-normalization vector|  $\epsilon N_{i,j}(t)$ | $\epsilon_j$ | $\epsilon_j$ | $\epsilon_j*d_{i,j}(t)$
-
-- $\mathbf{y}_{i,j}(t)$ observed data point for individual i and output j
-- $f_{i,j}(\theta,t)$ simulated data point for individual i and output j
-- $lloq_{j}(t)$ lower limits of quantification
-- $\epsilon_j$ model error by observer
+### additive 
 
 <u>uncensored data points</u>
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}w_{i,j}(t_u)\left( \frac{-(\mathbf{r}_{i,j}(t_u))^2.}{\epsilon_{i,j}(t_u)^2} - log(2\pi * \epsilon N_{i,j}(t_u)^2)\right)$$
-
-
-<u>censored data points</u>
-
-$$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}w_{i,j}(t_u)\left(log\left(\Phi\left(\frac{\mathbf{r}_{LLOQ,i,j}(t_c)}{\epsilon_{i,j}(t_c)}\right) - \Phi  \left(\frac{\mathbf{r}_{LB,i,j}(t_c)}{\epsilon_{i,j}(t_c)}\right)\right) -log\left(1-\Phi  \left(\frac{\mathbf{r}_{LB,i,j}(t_c)}{\epsilon_{i,j}(t_c)}\right)\right)\right)$$    
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2.}{\epsilon_j^2} - log(2\pi * \epsilon_j^2)\right)$$
+   <u>censored data points</u>
+   
+   
+   $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{(lloq_{j}(t) - f_{i,j}(\theta,t))}{\epsilon_j}\right) - \Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j}\right)\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)\right)$$    
   
+- $\mathbf{y}_{i,j}(t)$ observed data point for individual i and output j
+- $f_{i,j}(\theta,t)$ simulated data point for individual i and output j
+- $lloq_{j}(t)$ lower limits of quantification
+- $LB$ physiological possible lower bound 
+- $\epsilon_j$ model error by observer
+
 $$ \Phi(x) = \frac{1}{\sqrt{2*\pi}}\int_{-\inf}^xe^{-\frac{x^2}{2}} $$
+
+
+
+#### multiplicative 
+
+<u>uncensored data points</u>
+
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))^2.}{\epsilon_j*f_{i,j}(\theta,t)^2} - log(2\pi * \epsilon_j^2)\right)$$
+
+   <u>censored data points</u>
+   
+   
+   $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{lloq_{j}(t) - f_{i,j}(\theta,t)}{\epsilon_j*f_{i,j}(\theta,t)}\right) - \Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right)\right)$$    
+
+#### logarithmic
+
+   <u>uncensored data points</u>
+
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))^2.}{\epsilon_j^2} - log(2\pi*\epsilon_j*d_{i,j}(t)(t_u)^2)\right)$$
+
+
+   <u>censored data points</u>
+   
+   
+   $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{(log(lloq_{j}(t)) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right) - \Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right) -log\left(1-\Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right)\right)$$    
+
 
   
 

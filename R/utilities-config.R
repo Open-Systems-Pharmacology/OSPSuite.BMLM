@@ -8,45 +8,41 @@
 #' @param projectConfiguration An object of class `ProjectConfiguration`, which contains configuration details for the project.
 #' This object should include paths to necessary folders and files for the BMLM project.
 #'
-#' @param bMLMConfigurationFile A string representing the name of the BMLM configuration file.
-#' Default is "BMLMConfiguration.xlsx". This file contains various settings and parameters for the BMLM model.
+#' @param nameOfParameterIdentfication A string representing the name of the parameter identification to be read from the snapshot.
+#' This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.
 #'
 #' @param snapshotFile A string representing the path to the snapshot file. This file contains parameter identifications
 #' that will be read and potentially used to update the project configuration. If NULL, no updates from a snapshot will occur.
 #'
-#' @param nameOfParameterIdentfication A string representing the name of the parameter identification to be read from the snapshot.
-#' This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.
-#'
 #' @param overwrite A logical indicating whether to overwrite existing data in the configuration file if it already exists.
 #' Default is FALSE, meaning existing data will not be overwritten unless specified.
 #'
-#' @return An object of class `ProjectConfigurationBMLM`, which includes the updated configuration details after processing.
+#' @return An object of class `ProjectConfiguration`, which includes the updated configuration details after processing.
 #'
 #' @export
 #'
 addBMLMPConfiguration <- function(projectConfiguration,
-                                  bMLMConfigurationFile = "BMLMConfiguration.xlsx",
-                                  snapshotFile = NULL,
                                   nameOfParameterIdentfication = NULL,
+                                  snapshotFile = NULL,
                                   overwrite = FALSE) {
-  projectConfiguration <-
-    ProjectConfigurationBMLM$new(
-      projectConfigurationFilePath = projectConfiguration$projectConfigurationFilePath) # nolint identation
+  checkmate::assertClass(projectConfiguration, classes = "ProjectConfiguration")
+  checkmate::assertString(nameOfParameterIdentfication)
+  checkmate::assertString(snapshotFile, null.ok = TRUE)
+  checkmate::assertFlag(overwrite)
 
-  if (!file.exists(file.path(projectConfiguration$configurationsFolder, bMLMConfigurationFile))) {
-    invisible(file.copy(
-      from = system.file("templates", "BMLMConfiguration.xlsx", package = "ospsuite.bmlm"),
-      to = file.path(projectConfiguration$configurationsFolder, bMLMConfigurationFile)
-    ))
-  }
+  bMLMConfigurationFile <- paste0("BMLMConfiguration_", nameOfParameterIdentfication, ".xlsx")
 
-  projectConfiguration$BMLMConfigurationFile <- bMLMConfigurationFile
-
+  projectConfiguration$addAddOnfileToConfiguration(
+    property = "bMLMConfigurationFile",
+    value = bMLMConfigurationFile,
+    description = "Configuration file for Baysian Multi Level Parameteridentification",
+    templatePath = system.file("templates", "BMLMConfiguration.xlsx", package = "ospsuite.bmlm")
+  )
 
   # Update DataGroups and Outputs in Plot configuration sheet
   if (!is.null(snapshotFile) && !is.null(nameOfParameterIdentfication)) {
     readIdentificationParameterFromSnapshot(
-      snapshotFile = file.path(projectConfiguration$modelFolder, "DrugX.json"),
+      snapshotFile = snapshotFile,
       nameOfParameterIdentfication = nameOfParameterIdentfication,
       projectConfiguration = projectConfiguration,
       overwrite = overwrite
@@ -83,7 +79,7 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
                                                     nameOfParameterIdentfication,
                                                     projectConfiguration,
                                                     overwrite = FALSE) {
-  bMLMConfigurationFile <- file.path(projectConfiguration$BMLMConfigurationFile)
+  bMLMConfigurationFile <- file.path(projectConfiguration$addOns$bMLMConfigurationFile)
   checkmate::assertFileExists(fs::path_abs(bMLMConfigurationFile))
   wb <- openxlsx::loadWorkbook(bMLMConfigurationFile)
 
@@ -116,7 +112,7 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
       wb = wb
     )
 
-    openxlsx::saveWorkbook(wb, projectConfiguration$BMLMConfigurationFile, overwrite = TRUE)
+    openxlsx::saveWorkbook(wb, projectConfiguration$addOns$bMLMConfigurationFile, overwrite = TRUE)
 
     if (any(linkedParameterDT$isFixed)) {
       updateFixedParameters(
@@ -126,7 +122,7 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
       )
     }
 
-    message("Add snapshot to Configurationfile")
+    message(paste0("Add '", nameOfParameterIdentfication, " from snapshot to Configurationfile"))
   }
 
   return(invisible())
@@ -185,21 +181,17 @@ updateMappedPaths <- function(wb, linkedParameter, projectConfiguration) {
   LinkedParameters <- NULL # nolint object_name
 
   dtMappedPaths <- tidyr::unnest(linkedParameter %>%
-    dplyr::select(c("Name", "LinkedParameters")), "LinkedParameters") %>%  # nolint identation
+    dplyr::select(c("Name", "LinkedParameters")), "LinkedParameters") %>% # nolint identation
     data.table::setDT()
 
-  replaceModelPath <- function(pathName) {
-    x <- strsplit(x = pathName, split = "\\|")[[1]]
-    return(paste(x[seq(2, length(x))], collapse = "|"))
-  }
-
-  dtMappedPaths[, LinkedParameters := replaceModelPath(LinkedParameters), by = LinkedParameters]
+  dtMappedPaths[, LinkedParameters := .replaceModelPath(LinkedParameters), by = LinkedParameters]
   dtMappedPaths <- unique(dtMappedPaths)
 
   dtMappedPaths <-
     rbind(xlsxReadData(wb = wb, sheetName = "ParameterMappedPaths", convertHeaders = FALSE), # nolint identation
       dtMappedPaths, # nolint identation
-      fill = TRUE)
+      fill = TRUE
+    )
 
   xlsxWriteData(wb = wb, sheetName = "ParameterMappedPaths", dt = dtMappedPaths) # nolint
 
@@ -218,36 +210,55 @@ updateMappedPaths <- function(wb, linkedParameter, projectConfiguration) {
 #' @keywords internal
 updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
   # Initialize variables to NULL to avoid linter messages
-  outputPath <- errorModel <- scaling <- modelErrorId <- outputPathId <- NULL
+  path <- errorModel <- scaling <- modelErrorId <- outputPathId <- NULL
 
   dtOutputPathIds <- getOutputPathIds(projectConfiguration)
 
-  dtOutputMappings <- snp$ParameterIdentifications$OutputMappings[[selectedPI]]
+  dtOutputMappings <- data.table::copy(snp$ParameterIdentifications$OutputMappings[[selectedPI]]) %>%
+    data.table::setDT() %>%
+    setHeadersToLowerCase()
 
   if (is.null(dtOutputMappings)) {
     dtOutputMappings <- data.table(
       outputPathId = dtOutputPathIds$outputPathId,
-      scaling = "Log"
+      scaling = SCALING$log
     )
   } else {
-    stop("link per path to outputPathId")
-
+    dtOutputMappings[, path := .replaceModelPath(path), by = "path"]
     dtOutputMappings <- dtOutputMappings %>%
       setDT() %>%
       dplyr::select(c("path", "scaling")) %>%
-      unique() %>%
-      setnames(old = "path", new = "outputPath")
+      unique()
 
-    dtOutputMappings[, outputPath := replaceModelPath(outputPath), by = "outputPath"]
+    dtOutputMappings <- dtOutputMappings %>%
+      merge(
+        dtOutputPathIds %>%
+          dplyr::select(c("outputPathId", "outputPath")),
+        by.x = "path",
+        by.y = "outputPath",
+        all.x = TRUE
+      )
+
+    if (any(is.na(dtOutputMappings$outputPathId))) {
+      stop(paste0(
+        "Missing identifier for path(s): ",
+        paste(dtOutputMappings[is.na(outputPathId)]$path, collapse = ","),
+        ". Please update Plotconfiguration 'Outputs'"
+      ))
+    }
+
+    dtOutputMappings[, path := NULL]
   }
 
-  dtOutputMappings[, errorModel := ifelse(scaling == "Log", "relative", "absolute"),
-                   by = "outputPathId"] # nolint identation
+  dtOutputMappings[, errorModel := ifelse(scaling == SCALING$log, "relative", "absolute"),
+    by = "outputPathId"
+  ] # nolint identation
 
   dtOutputMappings[, scaling := NULL]
 
   dtOutputMappings[, modelErrorId := paste0("sigma_", outputPathId),
-                   by = "outputPathId"] # nolint identation
+    by = "outputPathId"
+  ] # nolint identation
 
   dtOutputMappingsHeader <- xlsxReadData(wb = wb, sheetName = "ModelError")
   dtOutputMappings <-
@@ -269,7 +280,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
   # Initialize variables to NULL to avoid linter messages
   linkedParameters <- isFixed <- NULL
 
-  dtMappedPaths <- xlsxReadData(wb = projectConfiguration$BMLMConfigurationFile, sheetName = "ParameterMappedPaths")
+  dtMappedPaths <- xlsxReadData(wb = projectConfiguration$addOns$bMLMConfigurationFile, sheetName = "ParameterMappedPaths")
 
   getContainerPath <- function(pathName) {
     x <- strsplit(x = pathName, split = "\\|")[[1]]
@@ -277,7 +288,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
   }
 
   dtMappedPaths[, ("container Path") := getContainerPath(pathName = linkedParameters), by = "linkedParameters"]
-  dtMappedPaths[, ("parameter Name") := tail(strsplit(x = linkedParameters, split = "\\|")[[1]], 1), by = "linkedParameters"]
+  dtMappedPaths[, ("parameter Name") := utils::tail(strsplit(x = linkedParameters, split = "\\|")[[1]], 1), by = "linkedParameters"]
 
   dtMappedPaths <- dtMappedPaths %>%
     dplyr::select(c("name", "container Path", "parameter Name")) %>%
@@ -287,7 +298,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
     merge(
       linkedParameterDT[isFixed == TRUE] %>%
         dplyr::select(c("name", "startValue", "unit")) %>%
-        setnames(
+        data.table::setnames(
           old = c("startValue", "unit"),
           new = c("value", "units")
         ),
@@ -316,7 +327,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
 #' @keywords internal
 extractIdentificationParameter <- function(linkedParameter) {
   # Initialize variables to NULL to avoid linter messages
-  Name <- Value <- NULL #nolint object_name
+  Name <- Value <- NULL # nolint object_name
   linkedParameterDT <-
     cbind(
       linkedParameter %>%
@@ -328,8 +339,8 @@ extractIdentificationParameter <- function(linkedParameter) {
           function(iRow) {
             linkedParameter$Parameters[[iRow]] %>%
               tidyr::pivot_wider(names_from = Name, values_from = Value) %>%
-              setDT() %>%
-              setnames(
+              data.table::setDT() %>%
+              data.table::setnames(
                 old = c("Start value", "Start.value"),
                 new = c("startValue", "startValue"),
                 skip_absent = TRUE
@@ -346,12 +357,15 @@ extractIdentificationParameter <- function(linkedParameter) {
   data.table::setDT(linkedParameterDT)
 
   # nolint start
-  data.table::setnames(linkedParameterDT,
-                       sapply(names(linkedParameterDT),
-                              function(x)
-                                paste0(tolower(substring(x, 1, 1)), substring(x, 2))
-                              )
-                       )
+  data.table::setnames(
+    linkedParameterDT,
+    sapply(
+      names(linkedParameterDT),
+      function(x) {
+        paste0(tolower(substring(x, 1, 1)), substring(x, 2))
+      }
+    )
+  )
   # nolint end
 
   return(linkedParameterDT)
@@ -372,7 +386,7 @@ extractIdentificationParameter <- function(linkedParameter) {
 #' @return NULL (invisible).
 #' @export
 configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALSE) {
-  wb <- openxlsx::loadWorkbook(projectConfiguration$BMLMConfigurationFile)
+  wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dtPrior <- loadPriorData(wb, overwrite)
   dtDefinition <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition", skipDescriptionRow = TRUE) # nolint
 
@@ -400,7 +414,7 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
   }
 
   if (isEdited) {
-    openxlsx::saveWorkbook(wb = wb, projectConfiguration$BMLMConfigurationFile, overwrite = TRUE)
+    openxlsx::saveWorkbook(wb = wb, projectConfiguration$addOns$bMLMConfigurationFile, overwrite = TRUE)
   }
 
   return(invisible())
@@ -436,7 +450,6 @@ loadPriorData <- function(wb, overwrite) {
 #' @return invisible(NULL). This function is called for its side effects (validation).
 #' @keywords internal
 validateParameterDefinition <- function(dtDefinition) {
-
   checkmate::assertCharacter(
     dtDefinition$name,
     unique = TRUE,
@@ -466,10 +479,18 @@ validateParameterDefinition <- function(dtDefinition) {
 #' @return A data.table containing the updated prior parameters.
 #' @keywords internal
 updatePriorParameters <- function(dtPrior, dtDefinition, wb) {
+  # Initialize variables to NULL to avoid linter messages
+  valueMode <- startValue <- hyperParameter <- NULL
+
   dtPrior <- addGlobalPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition)
   dtPrior <- addHyperPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition)
 
   dtPrior <- addModelErrorParameter(dtPrior, wb)
+
+  # setDefault startValues
+  dtPrior[hyperParameter == "sdlog", startValue := 1.4]
+  dtPrior[valueMode == "outputError", startValue := 1]
+
 
   xlsxWriteData(wb = wb, sheetName = "Prior", dt = dtPrior)
 
@@ -539,10 +560,10 @@ createStartValues <- function(dtDefinition, dataObserved) {
 #' @keywords internal
 addGlobalPriorParameter <- function(dtPrior, dtDefinition) {
   # Initialize variables to NULL to avoid linter messages
-  valueMode <- scaling <- p1_type <- p2_type <- startValue <- p1_value <- p2_value <- NULL
+  valueMode <- startValue <- NULL # nolint camelCase
 
   globalParams <- dtDefinition[valueMode == PARAMETERTYPE$global] %>% # nolint identation
-    setnames(
+    data.table::setnames(
       old = c("minValue", "maxValue", "unit"),
       new = c("p1_value", "p2_value", "unit_of_distributed_Parameter")
     ) %>%
@@ -652,7 +673,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
 #' @keywords internal
 addModelErrorParameter <- function(dtPrior, wb) {
   # Initialize variables to NULL to avoid linter messages
-  errorModel <-  NULL
+  errorModel <- NULL
 
   dtOutputMappings <- xlsxReadData(wb = wb, sheetName = "ModelError", skipDescriptionRow = TRUE)
 
@@ -660,7 +681,7 @@ addModelErrorParameter <- function(dtPrior, wb) {
     dtOutputMappings[, .(
       valueMode = PARAMETERTYPE$outputError,
       distribution = "unif",
-      scaling = ifelse(errorModel == ERRORMODEL$log_absolute, "Log", "Linear"),
+      scaling = ifelse(errorModel == ERRORMODEL$log_absolute, SCALING$log, SCALING$linear),
       p1_type = "min",
       p1_value = 0,
       p2_type = "max",
@@ -675,3 +696,8 @@ addModelErrorParameter <- function(dtPrior, wb) {
   return(dtPrior)
 }
 
+# auxiliaries -------
+.replaceModelPath <- function(pathName) {
+  x <- strsplit(x = pathName, split = "\\|")[[1]]
+  return(paste(x[seq(2, length(x))], collapse = "|"))
+}
