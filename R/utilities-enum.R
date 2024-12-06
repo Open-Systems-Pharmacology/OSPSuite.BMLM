@@ -13,7 +13,7 @@ PARAMETERTYPE <- ospsuite.utils::enum(c(  #nolint camelCase
 #' @export
 #' @family enum helpers
 ERRORMODEL <- ospsuite.utils::enum(c( #nolint camelCase
-  "relative",
+  "proportional",
   "absolute",
   "log_absolute"
 ))

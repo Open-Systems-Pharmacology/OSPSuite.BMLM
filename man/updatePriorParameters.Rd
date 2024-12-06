@@ -4,12 +4,14 @@
 \alias{updatePriorParameters}
 \title{Update Prior Parameters}
 \usage{
-updatePriorParameters(dtPrior, dtDefinition, wb)
+updatePriorParameters(dtPrior, dtDefinition, dataObserved, wb)
 }
 \arguments{
 \item{dtPrior}{A data.table containing the existing prior parameters.}
 
 \item{dtDefinition}{A data.table containing parameter definitions.}
+
+\item{dataObserved}{A data.table of observed data.}
 
 \item{wb}{An open workbook object where the updated prior parameters will be written.}
 }

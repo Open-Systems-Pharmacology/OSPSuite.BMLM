@@ -1,29 +1,272 @@
 #' Start BMLM Optimization
 #'
-#' This function initiates the BMLM optimization process based on project configuration and observed data.
+#' This function initiates the BMLM optimization process based on the provided configuration and parameters.
 #'
-#' @param projectConfiguration An object of class ProjectConfiguration containing project configuration details, including the path to the BMLM configuration file.
-#' @param scenarioList A list of scenarios to be used in the optimization.
-#' @param dataObserved A data.table containing observed data.
-#' @param seed A numeric seed for random number generation (default is 1234).
-#' @param method The optimization method to be used (default is "L-BFGS-B").
-#' @param control A list of control parameters for the optimization.
-#' @param simulationRunOptions an object of class ospsuite::SimulationRunOptions. Optional parameters for running simulations.
+#' @param projectConfiguration A list containing project configuration details.
+#' @param runName A character string representing the name of the current run.
+#' @param scenarioList A list of scenarios to be optimized.
+#' @param dataObserved A data.table containing the observed data to be fitted
+#' @param seed An integer for random number generation (default is 1234).
+#' @param method A character string specifying the optimization method (default is "L-BFGS-B").
+#' @param control A list of control parameters for the optimization function.
+#' @param hessian A logical indicating whether to compute the Hessian matrix (default is FALSE).
+#' @param simulationRunOptions A list of options for simulation runs.
+#' @param restartAtBestValues A logical indicating whether to restart from the best values found (default is FALSE).
+#' @param failValue value to set if evaluation of objective function fails.
+#' @param ... Additional arguments passed to the optimization function.
 #'
-#' @return An invisible NULL. The results of the optimization process are saved in files.
+#' @return Returns NULL invisibly.
 #' @export
 startBMLMOptimization <- function(projectConfiguration,
+                                  runName,
                                   scenarioList,
                                   dataObserved,
                                   seed = 1234,
                                   method = "L-BFGS-B",
                                   control = list(),
-                                  simulationRunOptions = NULL) {
+                                  hessian = FALSE,
+                                  simulationRunOptions = NULL,
+                                  restartAtBestValues = FALSE,
+                                  failValue = -1e+10,
+                                  ...) {
+
+  # Check BMLM Configuration
+  checkBMLMConfiguration(projectConfiguration)
+
+  # Create output directory and handle user confirmation
+  outputDir <- manageOutputDirectory(projectConfiguration$outputFolder, runName)
+
+  # Create log file
+  logFile <- file.path(outputDir, "optimization_log.txt")
+
+  # Log start time
+  startTime <- Sys.time()
+  logMessage(logFile, "Optimization started.")
+
+  # Save function call details
+
+  browser()
+  logFunctionCall(
+    logFile = logFile,
+    projectConfiguration = projectConfiguration,
+    scenarioList = scenarioList,
+    seed = seed,
+    dataObservedExpr = deparse(substitute(dataObserved)),
+    method = method,
+    controlExpr = deparse(substitute(control)),
+    hessian = hessian,
+    restartAtBestValues = restartAtBestValues,
+    failValue = failValue,
+    ...
+  )
+
+
+  # Initialize data list
+  dtList <- createDtList(projectConfiguration, scenarioList, dataObserved, seed)
+
+  # # Save counts per identifier
+  # saveRDS(object = dtList$data[,.N,by = c('scenario','outputPathId','individualId','group')],
+  #         file =
+
+  # Initialize optimization variables
+  bestValue <- initializeOptimization(restartAtBestValues, outputDir, dtList,failValue)
+
+  # Perform optimization
+  result <- optimizeParameters(dtList, scenarioList, simulationRunOptions, method, control, hessian, outputDir)
+
+  # Save data tables as CSV
+  saveDataTablesAsCSV(dtList = dtList, outputDir = outputDir)
+
+  # Log end time
+  logMessage(logFile, "Optimization finalized")
+  logMessage(logFile, paste("Total duration:", Sys.time() - startTime))
+
+  return(invisible())
+}
+
+#' Check BMLM Configuration
+#'
+#' Validates the presence of the BMLM configuration file in the project configuration.
+#'
+#' @param projectConfiguration A list containing project configuration details.
+#'
+#' @return NULL if the configuration is valid; stops execution if invalid.
+#' @keywords internal
+checkBMLMConfiguration <- function(projectConfiguration) {
   if (is.null(projectConfiguration$addOns$bMLMConfigurationFile)) {
     stop("Project configuration has no BMLM Configuration attached!")
   }
   checkmate::assertFileExists(projectConfiguration$addOns$bMLMConfigurationFile)
+}
 
+#' Manage Output Directory
+#'
+#' Creates the output directory for the optimization run and prompts the user for confirmation if it already exists.
+#'
+#' @param baseDir A character string representing the base directory for output.
+#' @param runName A character string representing the name of the current run.
+#'
+#' @return A character string representing the path to the output directory.
+#' @keywords internal
+manageOutputDirectory <- function(baseDir, runName) {
+  outputDir <- file.path(baseDir, "BMLM", runName)
+
+  if (dir.exists(outputDir) & interactive()) {
+    message("The output folder for ", runName, " already exists!")
+    userInput <- readline(prompt = paste("Do you want to continue? (yes/no): "))
+    if (tolower(userInput) != "yes") {
+      cat("Operation cancelled by user.\n")
+      return(NULL)  # Exit the function if the user does not confirm
+    }
+  } else {
+    dir.create(outputDir, recursive = TRUE)
+  }
+
+  return(outputDir)
+}
+
+#' Log Message
+#'
+#' Logs a message to the specified log file with a timestamp.
+#'
+#' @param logFile A character string representing the path to the log file.
+#' @param message A character string containing the message to log.
+#'
+#' @return NULL
+#' @keywords internal
+logMessage <- function(logFile, message) {
+  cat(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), message, "\n", file = logFile, append = TRUE)
+}
+
+#' Log Function Call
+#'
+#' Logs the details of the function call to the specified log file.
+#'
+#' @param logFile A character string representing the path to the log file.
+#' @param projectConfiguration A list containing project configuration details.
+#' @param scenarioList A list of scenarios to be optimized.
+#' @param dataObservedExpr dataObserved
+#' @param seed An integer for random number generation.
+#' @param method A character string specifying the optimization method.
+#' @param controlExpr A list of control parameters for the optimization function.
+#' @param hessian A logical indicating whether to compute the Hessian matrix.
+#' @param restartAtBestValues A logical indicating whether to restart from the best values found.
+#' @param failValue value to set if evaluation of objective function fails
+#' @param ... Additional arguments passed to the optimization function.
+#'
+#' @return NULL
+#' @keywords internal
+logFunctionCall <- function(logFile, projectConfiguration, scenarioList, dataObservedExpr,seed, method, controlExpr, hessian, restartAtBestValues,failValue, ...) {
+
+
+  # Capture additional arguments
+  additionalArgs <- list(...)
+  additionalArgsExpr <- sapply(names(additionalArgs), function(arg) {
+    if (is.null(arg)) {
+      return(deparse(additionalArgs[[arg]]))
+    } else {
+      return(paste(arg, "=", deparse(additionalArgs[[arg]]), sep = ""))
+    }
+  })
+
+  callDetails <- paste("Function call:\n",
+                       "      BMLM Configuration file: ", basename(projectConfiguration$addOns$bMLMConfigurationFile), "\n",
+                       "      scenarios: ", paste(names(scenarioList), collapse = ', '), "\n",
+                       "      dataObserved: ",dataObservedExpr,"\n",
+                       "      seed: ", seed, "\n",
+                       "      method: ", method, "\n",
+                       "      control: ", controlExpr, "\n",
+                       "      hessian: ", hessian, "\n",
+                       "      restartAtBestValues: ", restartAtBestValues, "\n",
+                       "      failValue: ", getOption("OSPSuite.BMLM.failValue"), "\n",
+                       "      Additional arguments: ", paste(additionalArgsExpr, collapse = ", "), "\n",
+                       sep = "")
+
+  logMessage(logFile, callDetails)
+}
+
+#' Initialize Optimization
+#'
+#' Initializes optimization variables and loads previous results if restarting from the best values.
+#'
+#' @param restartAtBestValues A logical indicating whether to restart from the best values found.
+#' @param outputDir A character string representing the path to the output directory.
+#' @param dtList A list containing data tables for optimization.
+#'
+#' @return A numeric value representing the initialized best value.
+#' @keywords internal
+initializeOptimization <- function(restartAtBestValues, outputDir, dtList,failValue) {
+  options(OSPSuite.BMLM.failValue = failValue)
+  if (restartAtBestValues) {
+    load(file = file.path(outputDir, "tmpbestResult.Rdata"))
+    dtList$input$param <- params
+    return(-1 * sum(loglikelihoods))
+  } else {
+    return(Inf)  # Initialize bestValue to Inf
+  }
+}
+
+#' Optimize Parameters
+#'
+#' Performs the optimization of parameters using the specified method and control settings.
+#'
+#' @param dtList A list containing data tables for optimization.
+#' @param scenarioList A list of scenarios to be optimized.
+#' @param simulationRunOptions A list of options for simulation runs.
+#' @param method A character string specifying the optimization method.
+#' @param control A list of control parameters for the optimization function.
+#' @param hessian A logical indicating whether to compute the Hessian matrix.
+#' @param outputDir A character string representing the path to the output directory.
+#'
+#' @return The result of the optimization process.
+#' @keywords internal
+optimizeParameters <- function(dtList, scenarioList, simulationRunOptions, method, control, hessian, outputDir) {
+  iteration <- 0
+  bestValue <- Inf
+
+  result <- optim(
+    par = dtList$input$param,
+    fn = function(params) {
+      iteration <<- iteration + 1
+      loglikelihoods <- getLogLikelihood(params, scenarioList, dtList, simulationRunOptions)
+      currentValue <- -1 * sum(loglikelihoods)
+
+      if (!is.numeric(currentValue)) {
+        message(paste(loglikelihoods[1], loglikelihoods[2], loglikelihoods[3], iteration, sep = ", "))
+        save(params, iteration, loglikelihoods, file = file.path(outputDir, "tmpStrangeResult.Rdata"))  # Save the current parameters
+        currentValue <- getOption("OSPSuite.BMLM.failValue")
+      }
+
+      if (currentValue < bestValue) {
+        bestValue <<- currentValue
+        message(paste(loglikelihoods[1], loglikelihoods[2], loglikelihoods[3], iteration, sep = ", "))
+        save(params, iteration, loglikelihoods, file = file.path(outputDir, "tmpbestResult.Rdata"))  # Save the current parameters
+      }
+
+      return(currentValue)
+    },
+    method = method,
+    control = control,
+    hessian = hessian
+  )
+
+  return(result)
+}
+# initialization functions ------------------
+
+
+#' Create Data List for BMLM Optimization
+#'
+#' This helper function creates a list of data.tables (`dtList`) required for the BMLM optimization process.
+#'
+#' @param projectConfiguration An object of class ProjectConfiguration containing project configuration details.
+#' @param scenarioList A list of scenarios to be used in the optimization.
+#' @param dataObserved A data.table containing observed data.
+#' @param seed A numeric seed for random number generation.
+#'
+#' @return A list of data.tables required for the BMLM optimization process.
+#' @keywords internal
+createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed) {
   dtList <- list()
 
   dtList$definition <- validateAndLoadDefinition(projectConfiguration)
@@ -34,22 +277,19 @@ startBMLMOptimization <- function(projectConfiguration,
     scenarioList = scenarioList
   )
 
-  dtList$mappedPaths <-
-    validateAndLoadMappedPaths(projectConfiguration, dtList$definition, scenarioList)
+  dtList$mappedPaths <- validateAndLoadMappedPaths(projectConfiguration, dtList$definition, scenarioList)
 
-  dtList$prior <-
-    validateAndLoadPriorDefinition(
-      projectConfiguration = projectConfiguration,
-      dtDefinition = dtList$definition
-    )
+  dtList$prior <- validateAndLoadPriorDefinition(
+    projectConfiguration = projectConfiguration,
+    dtDefinition = dtList$definition
+  )
 
-  dtList$startValues <-
-    validateAndLoadIndividualStartValues(
-      projectConfiguration = projectConfiguration,
-      dtHyperParameter = getHyperParameter(dtPrior = dtList$prior),
-      dtDefinition = dtList$definition,
-      seed = seed
-    )
+  dtList$startValues <- validateAndLoadIndividualStartValues(
+    projectConfiguration = projectConfiguration,
+    dtHyperParameter = getHyperParameter(dtPrior = dtList$prior),
+    dtDefinition = dtList$definition,
+    seed = seed
+  )
 
   dtList$data <- addAndValidateErrorModel(
     projectConfiguration = projectConfiguration,
@@ -57,47 +297,14 @@ startBMLMOptimization <- function(projectConfiguration,
     dataObservedForMatch = dtList$data
   )
 
-  dtInput <-
+  dtList$input <-
     prepareInputData(
       dtPrior = dtList$prior,
-      dtStartValues = dtList$startValues,
-      dtDefinition = dtList$definition
+      dtStartValues = dtList$startValues
     )
 
-  # Optimization
-  result <- optim(
-    par = dtInput$value,
-    fn = getLogLikelihood,
-    method = method,
-    lower = dtInput$minValue,
-    upper = dtInput$maxValue,
-    control = control,
-    logScaleIndex = dtInput$logConversion,
-    scenarioList = scenarioList,
-    dtList = dtList,
-    simulationRunOptions = simulationRunOptions
-  )
-
-  dtList <- setParameterToTables(
-    dtList = dtList,
-    params = result$par,
-    logScaleIndex = dtInput$logConversion
-  )
-
-  saveFinalValuesToTables(projectConfiguration = projectConfiguration, dtList = dtList)
-  exportOptimizedPopulation(projectConfiguration = projectConfiguration, dtList = dtList)
-
-  save(result, file = "tmpResult.Rdata")
-  load(file = "tmpResult.Rdata")
-
-
-
-
-  return(invisible())
+  return(dtList)
 }
-
-# initialization functions ------------------
-
 
 #' Validate and Load Definition
 #'
@@ -118,7 +325,8 @@ validateAndLoadDefinition <- function(projectConfiguration) {
   checkmate::assertNames(dtDefinition$distribution, subset.of = getAllDistributions())
   checkmate::assertLogical(as.logical(dtDefinition$useAsFactor), any.missing = FALSE)
   checkmate::assertLogical(as.logical(dtDefinition$hasHyperparameter), any.missing = FALSE)
-  checkmate::assertNames(dtDefinition$scaling, subset.of = unlist(SCALING))
+
+  dtDefinition$scaling <- NULL
 
   return(dtDefinition)
 }
@@ -133,7 +341,7 @@ validateAndLoadDefinition <- function(projectConfiguration) {
 #'
 #' @return A data.table containing mapped paths for parameters.
 #' @keywords internal
-validateAndLoadMappedPaths <-  # nolint cyclocomp
+validateAndLoadMappedPaths <- # nolint cyclocomp
   function(projectConfiguration,
            dtDefinition,
            scenarioList) {
@@ -145,7 +353,11 @@ validateAndLoadMappedPaths <-  # nolint cyclocomp
         projectConfiguration$addOns$bMLMConfigurationFile,
         sheetName = "ParameterMappedPaths",
         skipDescriptionRow = TRUE
-      ) %>%
+      )
+
+    checkmate::assertNames(unique(dtMappedPaths$name), must.include = unique(dtDefinition$name))
+
+    dtMappedPaths <- dtMappedPaths %>%
       merge(dtDefinition[, c("name", "unit", "useAsFactor")], by = "name", sort = FALSE)
     dtMappedPaths[is.na(unit), unit := ""]
 
@@ -158,11 +370,12 @@ validateAndLoadMappedPaths <-  # nolint cyclocomp
 
       for (dp in split(dtMappedPaths, by = "linkedParameters")) {
         if (is.na(dp$scenarios) ||
-          grepl(scenarioName, splitInputs(dp$scenarios))) { #nolint identation
+          grepl(scenarioName, splitInputs(dp$scenarios))) { # nolint identation
           par <-
             ospsuite::getParameter(
               path = dp$linkedParameters,
-              container = sim
+              container = sim,
+              stopIfNotFound = FALSE
             )
           if (is.null(par)) {
             factor <- NA
@@ -179,7 +392,7 @@ validateAndLoadMappedPaths <-  # nolint cyclocomp
           dtMappedPaths[linkedParameters == dp$linkedParameters, (scenarioName) := as.numeric(factor)]
 
           # set all parameters as population parameters
-          if (!(dp$linkedParameters %in% scenario$population$allParameterPaths)) {
+          if (!(dp$linkedParameters %in% scenario$population$allParameterPaths) & !is.na(factor)) {
             scenario$population$setParameterValues(
               parameterOrPath = dp$linkedParameters,
               values = rep(par$value, scenario$population$count)
@@ -230,9 +443,8 @@ getHyperParameter <- function(dtPrior) {
 #' @keywords internal
 randomizeIndividualStartValues <-
   function(indGroup, dtHyperParameter) {
-    #initialize variable to avoid linter message
+    # initialize variable to avoid linter message
     name <- categoricCovariate <- scaling <- value <- minValue <- maxValue <- NULL
-
     setDT(indGroup)
     nNew <- sum(is.na(indGroup$value))
 
@@ -250,13 +462,23 @@ randomizeIndividualStartValues <-
     paramList <- stats::setNames(tmp$value, tmp$hyperParameter)
 
     # Generate new values based on the distribution
-    values <-
-      do.call(paste0("r", tmp$hyperDistribution[1]), c(list(n = nNew), paramList))
-    indGroup[is.na(indGroup$value), value := values]
+    trials <- 0
+    while (nNew > 0 & trials < 10) {
+      values <-
+        do.call(paste0("r", tmp$hyperDistribution[1]), c(list(n = nNew), paramList))
+      indGroup[is.na(indGroup$value), value := values]
 
-    # set Values outside limits to limits
-    indGroup[value <= minValue, value := minValue]
-    indGroup[value >= maxValue, value := maxValue]
+      # set Values outside limits to limits
+      indGroup[value <= minValue, value := NA]
+      indGroup[value >= maxValue, value := NA]
+
+      nNew <- sum(is.na(indGroup$value))
+      trials <- trials + 1
+    }
+    if (nNew > 0) {
+      stop("Not possible to generate random startValues in boundarys")
+    }
+
 
     # Check if all values are within the distribution range
     probs <-
@@ -295,12 +517,17 @@ validateAndLoadIndividualStartValues <-
       projectConfiguration$addOns$bMLMConfigurationFile,
       sheetName = "IndividualStartValues",
       skipDescriptionRow = TRUE
-    )
+    ) %>%
+      merge(dtDefinition[,c('name','minValue','maxValue')],
+            by = "name",
+            sort = FALSE,
+            all.x = TRUE
+      )
 
-    dtStartValues <- addMinMaxValues(dtStartValues, dtDefinition[, c("name", "minValue", "maxValue", "scaling")])
+    dtStartValues <- checkMinMaxValues(dtStartValues)
 
     # Randomize startValues
-    dtStartValuesNew <- rbindlist(
+    dtStartValuesNew <- data.table::rbindlist(
       lapply(
         split(dtStartValues, by = c("name", "categoricCovariate")),
         randomizeIndividualStartValues,
@@ -330,13 +557,30 @@ validateAndLoadPriorDefinition <- function(projectConfiguration, dtDefinition) {
     projectConfiguration$addOns$bMLMConfigurationFile,
     sheetName = "Prior",
     skipDescriptionRow = TRUE
-  )
+  ) %>%
+    merge(dtDefinition[, c("name",  "distribution")] %>%
+            data.table::setnames("distribution", "hyperDistribution"),
+          by = 'name',
+          all.x = TRUE
+    )
 
-  dtPrior <- addMinMaxValues(
-    dtPrior,
-    dtDefinition[, c("name", "minValue", "maxValue", "distribution")] %>%
-      data.table::setnames("distribution", "hyperDistribution")
-  )
+  getPriorDistributionLimit <- function(distribution,p1_type, p1_value, p2_type, p2_value, p3_type, p3_value,limitName){
+    params <- stats::setNames(list(p1_value,p2_value,p3_value),c(p1_type,p2_type,p3_type))
+    params <- params[!is.na(params)]
+    if (distribution == 'unif'){
+      return(params[[limitName]])
+    } else{
+      p <- switch(limitName,
+                  min = 0,
+                  max = 1)
+      do.call(paste0('q',distribution),args = c(list(p = p),params))
+    }
+  }
+
+  dtPrior[,minValue := getPriorDistributionLimit(distribution,p1_type, p1_value, p2_type, p2_value, p3_type, p3_value,'min'),by = .I]
+  dtPrior[,maxValue := getPriorDistributionLimit(distribution,p1_type, p1_value, p2_type, p2_value, p3_type, p3_value,'max'),by = .I]
+
+  dtPrior <- checkMinMaxValues(dtPrior)
 
   if (any(is.na(dtPrior$startValue))) {
     stop(paste(
@@ -348,7 +592,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration, dtDefinition) {
   checkmate::assertNames(dtPrior$distribution, subset.of = getAllDistributions())
 
 
-  dtPrior[, probability := apply(.SD, 1, calculateProbability), by = "id"]
+  dtPrior[, probability := apply(.SD, 1, calculateProbability)]
 
 
   if (any(is.na(dtPrior$probability))) {
@@ -400,6 +644,21 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
       by = "outputPathId"
     )
 
+  if (nrow(dataObservedForMatch[yValues < lloq / 2]) > 0) {
+    warning("Set Data Values below lloq to lloq/2")
+    writeTableToLog(dt = dataObservedForMatch[yValues < lloq, c("outputPathId", "group", "individualId", "xValues", "yValues", "lloq")])
+    dataObservedForMatch[yValues < lloq, yValues := lloq / 2]
+  }
+
+  tmp <- dataObservedForMatch[errorModel %in% c(ERRORMODEL$proportional, ERRORMODEL$log_absolute) & yValues <= 0, ]
+
+  if (nrow(tmp) > 0) {
+    writeTableToLog(dt = tmp[, c("outputPathId", "group", "individualId", "xValues", "yValues", "lloq", "errorModel")])
+    stop("values <= 0 not allowed for this error model")
+  }
+
+
+
   return(dataObservedForMatch)
 }
 
@@ -414,42 +673,30 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
 #'
 #' @return A data.table with minValue and maxValue added.
 #' @keywords internal
-addMinMaxValues <- function(dt, dtDefinition) {
+checkMinMaxValues <- function(dt) {
   # initialize variables to avoid linter messages
   minValue <- value <- maxValue <- valueMode <- scaling <- startValue <- NULL
-
-  dt <-
-    merge(dt,
-      dtDefinition,
-      by = "name",
-      sort = FALSE,
-      all.x = TRUE
-    )
 
   dt[is.na(minValue), minValue := -Inf]
   dt[is.na(maxValue), maxValue := Inf]
 
   dt[, value := startValue]
 
-  if ("valueMode" %in% names(dt)) {
-    dt[valueMode == PARAMETERTYPE$outputError, minValue := 0]
-    dt[valueMode == PARAMETERTYPE$hyperParameter, minValue := -Inf]
-    dt[valueMode == PARAMETERTYPE$hyperParameter, maxValue := Inf]
-  }
-
-  tmpFailing <- dt[scaling == SCALING$log &
-                     (value <= 0 | minValue <= 0 | maxValue <= 0)]
-  if ("valueMode" %in% names(dt)) tmpFailing <- tmpFailing[valueMode != PARAMETERTYPE$hyperParameter]
-
-  if (nrow(tmpFailing) > 0) {
-    writeTableToLog(tmpFailing)
-    stop("Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling Log")
-  }
-
   tmpFailing <- dt[value > maxValue | value < minValue]
   if (nrow(tmpFailing) > 0) {
     writeTableToLog(tmpFailing)
     stop("Some values do not satisfy the condition minValue <= value <= maxValue")
+  }
+
+  if ("scaling" %in% names(dt)) {
+    tmpFailing <- dt[scaling == SCALING$log &
+                       (value <= 0 | minValue < 0 | maxValue < 0)]
+    if ("valueMode" %in% names(dt)) tmpFailing <- tmpFailing[valueMode != PARAMETERTYPE$hyperParameter]
+
+    if (nrow(tmpFailing) > 0) {
+      writeTableToLog(tmpFailing)
+      stop("Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling Log")
+    }
   }
 
 
@@ -461,36 +708,71 @@ addMinMaxValues <- function(dt, dtDefinition) {
 #' This function prepares the input data for the L-BFGS-B algorithm by merging and transforming
 #' the provided data tables. It handles log transformations based on specified conditions.
 #'
-#' @param dtPrior A data.table containing prior values with columns: 'value', 'MinValue', 'MaxValue', 'Scaling', 'valueMode'.
+#' @param dtPrior A data.table containing prior values with columns: 'value', 'MinValue', 'MaxValue',
 #' @param dtStartValues A data.table containing start values with at least a 'Name' column.
 #' @param dtDefinition A data.table containing definitions with columns: 'Name', 'Scaling'.
 #'
 #' @return A data.table with combined and transformed input data for the L-BFGS-B algorithm.
 #' @keywords internal
-prepareInputData <- function(dtPrior, dtStartValues, dtDefinition) {
+prepareInputData <- function(dtPrior, dtStartValues) {
   # initialize variables to avoid linter messages
   logConversion <- value <- minValue <- maxValue <- scaling <- valueMode <- NULL
 
   # Select relevant columns from dtPrior and dtStartValues and create logConversion column
   dtInput <- rbind(
-    dtPrior %>%
-      dplyr::select(value, minValue, maxValue, scaling, valueMode) %>%
-      dplyr::mutate(
-        logConversion = (scaling == SCALING$log)
-      ) %>%
-      dplyr::select(-scaling, -valueMode),
-    dtStartValues %>%
-      dplyr::mutate(logConversion = (scaling == SCALING$log)) %>%
-      dplyr::select(value, minValue, maxValue, logConversion)
+    dtPrior[,c('value', 'minValue', 'maxValue')],
+    dtStartValues[,c('value', 'minValue', 'maxValue')]
   )
 
-  # Apply log transformation where logConversion is TRUE
-  dtInput[logConversion == TRUE, value := log(value)]
-  dtInput[logConversion == TRUE & is.finite(minValue), minValue := log(minValue)]
-  dtInput[logConversion == TRUE & is.finite(maxValue), maxValue := log(maxValue)]
-
+  # Trasnsform params to unbounded values
+  dtInput[, param := fifelse(
+    !is.finite(minValue) & !is.finite(maxValue), value,
+    fifelse(
+      is.infinite(minValue) & is.finite(maxValue), log(maxValue - value),
+      fifelse(
+        is.finite(minValue) & is.infinite(maxValue), log(value - minValue),
+        qlogis((value - minValue) / (maxValue - minValue))
+      )
+    )
+  )]
   return(dtInput)
 }
+
+
+#' Set Parameter to Tables
+#'
+#' This function updates the parameter values in the provided data.tables based on the optimization results.
+#'
+#' @param dtList A list containing various data.tables used in the optimization process.
+#' @param params A numeric vector of parameters for the likelihood calculation.
+#'
+#' @return A list containing the updated data.tables.
+#' @keywords internal
+setParameterToTables <- function(dtList, params) {
+  dtList$input$param <- params
+
+  # Transform params to unbounded values
+  dtList$input[, value := fifelse(
+    !is.finite(minValue) & !is.finite(maxValue), param,
+    fifelse(
+      is.infinite(minValue) & is.finite(maxValue), exp(param) - maxValue,
+      fifelse(
+        is.finite(minValue) & is.infinite(maxValue), exp(param) + minValue,
+        plogis(param) * (maxValue - minValue) + minValue
+      )
+    )
+  )]
+
+  dtList$prior$value <- dtList$input$value[seq_len(nrow(dtList$prior))]
+  dtList$startValues$value <-
+    dtList$input$value[nrow(dtList$prior) + seq_len(nrow(dtList$startValues))]
+
+
+  return(dtList)
+}
+
+
+
 
 # likelihood ---------------
 
@@ -499,7 +781,6 @@ prepareInputData <- function(dtPrior, dtStartValues, dtDefinition) {
 #' This function calculates the log likelihood based on the provided parameters and observed data.
 #'
 #' @param params A numeric vector of parameters for the likelihood calculation.
-#' @param logScaleIndex A logical vector indicating which parameters are on a log scale.
 #' @param scenarioList A list of scenarios for the optimization.
 #' @param dtList A list containing various data.tables used in the optimization process.
 #' @param simulationRunOptions Optional parameters for running simulations.
@@ -508,16 +789,14 @@ prepareInputData <- function(dtPrior, dtStartValues, dtDefinition) {
 #' @keywords internal
 getLogLikelihood <-
   function(params,
-           logScaleIndex,
            scenarioList,
            dtList,
            simulationRunOptions) {
+
     dtList <- setParameterToTables(
       dtList = dtList,
-      params = params,
-      logScaleIndex = logScaleIndex
+      params = params
     )
-
     # Likelihood observed data given simulated time profiles
     logTimeProfile <- getLikelihoodTimeProfiles(
       scenarioList = scenarioList,
@@ -537,9 +816,7 @@ getLogLikelihood <-
     # Likelihood of parameter estimates given prior distribution
     logPrior <- getLikelihoodPriors(dtList$prior)
 
-    message(paste(logTimeProfile, logHyperParameter, logPrior))
-
-    return(-(logTimeProfile + logHyperParameter + logPrior))
+    return(c(logTimeProfile, logHyperParameter, logPrior))
   }
 
 " Get Likelihood Time Profiles
@@ -562,7 +839,7 @@ getLikelihoodTimeProfiles <- function(scenarioList,
                                       dtMappedPaths,
                                       simulationRunOptions) {
   # initialize variables to avoid linter messages
-  yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <-lowerBound <- logLikelihood <- valueMode <- NULL
+  yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
 
   # update parameter values and run result
   invisible(lapply(names(scenarioList), function(scenarioName) {
@@ -590,13 +867,28 @@ getLikelihoodTimeProfiles <- function(scenarioList,
 
   dtRes[, isCensored := !is.na(lloq) & lloq > yValues]
 
-  # Apply the function to calculate likelihood
-  dtRes[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
+  tryCatch(
+    {
+      # Apply the function to calculate likelihood
+      dtRes[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
 
-  # Calculate total log-likelihood
-  if (any(is.na(dtRes$logLikelihood))) {
-    return(-1e10)
-  }
+      # Calculate total log-likelihood
+      if (any(!is.finite(dtRes$logLikelihood))) {
+        return(getOption("OSPSuite.BMLM.failValue"))
+      }
+    },
+    error = function(err) {
+      save(dtPrior,
+           dtStartValues,
+           dtRes,
+           file = file.path(
+             getOption('OSPSuite.RF.logFileFolder'),
+             paste0('error_', format(Sys.time(), "%Y-%m-%d_%H-%M-%S"), '.log')
+           )
+      )
+      return(getOption("OSPSuite.BMLM.failValue"))
+    }
+  )
 
   return(sum(dtRes$logLikelihood))
 }
@@ -615,11 +907,10 @@ getLikelihoodTimeProfiles <- function(scenarioList,
 #' @keywords internal
 updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues, dtMappedPaths) {
   # initialize variables to avoid linter messages
-  currentValue <- value <- newValue <-  individualId <- valueMode<- NULL
+  currentValue <- value <- newValue <- individualId <- valueMode <- NULL
 
   scenarioName <- names(scenarioList)[1]
   scenario <- scenarioList[[scenarioName]]
-
 
   dtMappedPathsForScenarios <-
     dtMappedPaths[!is.na(get(scenarioName))] %>%
@@ -637,8 +928,10 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
     for (dp in split(dtCustomParams, by = "linkedParameters")) {
       scenario$population$setParameterValues(
         parameterOrPath = dp$linkedParameters,
-        values = rep(dp$value * dp$factor),
-        scenario$population$count
+        values = rep(
+          dp$value * dp$factor,
+          scenario$population$count
+        )
       )
     }
   }
@@ -677,52 +970,7 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
   return(invisible())
 }
 
-#' Calculate Log Likelihood
-#'
-#' This function calculates the log likelihood based on observed and predicted values.
-#'
-#' @param y A numeric vector of observed values.
-#' @param pred A numeric vector of predicted values.
-#' @param model A string indicating the error model type.
-#' @param sigma A numeric value representing the standard deviation.
-#' @param isCensored A logical indicating if the data is censored.
-#' @param lloq A numeric value representing the lower limit of quantification.
-#' @param lowerBound A numeric value representing the lower bound.
-#'
-#' @return A numeric value representing the log likelihood.
-#' @keywords internal
-calculateLogLikelihood <- function(y, pred, model, sigma, isCensored, lloq, lowerBound) {
-  if (isCensored) {
-    if (model == "absolute") {
-      p1 <- stats::pnorm(q = lloq, mean = pred, sd = sigma)
-      p2 <- stats::pnorm(q = lowerBound, mean = pred, sd = sigma)
-      if (p1 <= p2) stop("Invalid probabilities for absolute model.")
-      return(log(p1 - p2) - log(1 - p2))
-    } else if (model == "relative") {
-      p1 <- stats::pnorm(q = lloq / pred, mean = 1, sd = sigma)
-      p2 <- stats::pnorm(q = lowerBound / pred, mean = 1, sd = sigma)
-      if (p1 <= p2) stop("Invalid probabilities for relative model.")
-      return(log(p1 - p2) - log(1 - p2))
-    } else if (model == "log_absolute") {
-      p1 <- stats::plnorm(q = lloq, meanlog = pred, sdlog = sigma)
-      p2 <- stats::plnorm(q = lowerBound, meanlog = pred, sdlog = sigma)
-      if (p1 <= p2) stop("Invalid probabilities for log_absolute model.")
-      return(log(p1 - p2) - log(1 - p2))
-    } else {
-      stop("Unexpected error model: ", model)
-    }
-  } else {
-    if (model == "absolute") {
-      return(dnorm(x = y, mean = pred, sd = sigma, log = TRUE))
-    } else if (model == "relative") {
-      return(dnorm(x = y / pred, mean = 1, sd = sigma, log = TRUE))
-    } else if (model == "log_absolute") {
-      return(dlnorm(x = y, meanlog = pred, sdlog = sigma, log = TRUE))
-    } else {
-      stop("Unexpected error model: ", model)
-    }
-  }
-}
+
 
 
 #' Calculate Likelihood Priors
@@ -734,10 +982,10 @@ calculateLogLikelihood <- function(y, pred, model, sigma, isCensored, lloq, lowe
 #' @return The updated data.table with calculated probabilities.
 #' @keywords internal
 getLikelihoodPriors <- function(dtPrior) {
-  #initialize variable to avoid linter message
+  # initialize variable to avoid linter message
   logLikelihood <- NULL
 
-  dtPrior[, logLikelihood := apply(.SD, 1, calculateProbability, log = TRUE), by = "id"]
+  dtPrior[, logLikelihood := apply(.SD, 1, calculateProbability, log = TRUE)]
 
   return(sum(dtPrior$logLikelihood))
 }
@@ -774,8 +1022,8 @@ getLikelihoodHyperParameter <-
 #' @keywords internal
 getLikelihoodForIndividualGroup <-
   function(indGroup, dtHyperParameter) {
-    #initialize variable to avoid linter message
-    value <- scaling <- categoricCovariate <- name <-  NULL
+    # initialize variable to avoid linter message
+    value <- scaling <- categoricCovariate <- name <- NULL
 
     setDT(indGroup)
 
@@ -796,87 +1044,27 @@ getLikelihoodForIndividualGroup <-
     logLikelihood <-
       do.call(paste0("d", tmp$hyperDistribution[1]), c(list(x = indGroup$value, log = TRUE), paramList))
 
+    if (any(is.na(logLikelihood))) return(getOption("OSPSuite.BMLM.failValue"))
+
     return(sum(logLikelihood))
   }
 
 # process Result --------------
-saveFinalValuesToTables <- function(projectConfiguration, dtList) {
-  wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
-
-  addFinalValue <- function(wb, sheetName, identifier, newTable) {
-    dt <- xlsxReadData(wb, sheetName = sheetName)
-
-    headers <- names(dt)
-
-    dt <- dt %>%
-      dplyr::select(-dplyr::any_of(c("startValue", "finalValue"))) %>%
-      merge(
-        newTable %>%
-          dplyr::select(dplyr::all_of(c(identifier, "startValue", "value"))) %>%
-          data.table::setnames("value", "finalValue"),
-        by = identifier,
-        sort = FALSE
-      ) %>%
-      setcolorder(c(headers[seq(1, which(headers == "startValue"))], "finalValue"))
-
-    xlsxWriteData(wb, sheetName = sheetName, dt = dt)
-
-    return(wb)
-  }
-
-  wb <- addFinalValue(wb,
-    sheetName = "Prior",
-    identifier = c("name", "hyperParameter", "categoricCovariate"),
-    newTable = dtList$prior
-  )
-  wb <- addFinalValue(wb,
-    sheetName = "IndividualStartValues",
-    identifier = c("name", "individualId", "categoricCovariate"),
-    newTable = dtList$startValues
+saveDataTablesAsCSV <- function( dtList, outputDir) {
+  dtList <- setParameterToTables(
+    dtList = dtList,
+    params = result$par
   )
 
 
-  openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$addOns$bMLMConfigurationFile, overwrite = TRUE)
-}
-
-exportOptimizedPopulation <- function(projectConfiguration, dtList, scenarioList) {
-  #initialize variable to avoid linter message
-  scenario_name <- populationId <- NULL #nolint camelCase, variable is derived by column name esqlabR
-
-  invisible(lapply(names(scenarioList), function(scenarioName) {
-    updateParameterValues(
-      scenarioName = scenarioName,
-      scenario = scenarioList[[scenarioName]],
-      dtPrior = dtList$prior,
-      dtStartValues = dtList$startValues,
-      dtMappedPaths = dtList$mappedPaths
-    )
-  }))
-
-  nameOfBMLM <- gsub(".xlsx", "", gsub("^BMLMConfiguration", "", basename(projectConfiguration$addOns$bMLMConfigurationFile)))
-
-  for (scenarioName in names(scenarioList)) {
-    ospsuite::exportPopulationToCSV(
-      population = scenarioList[[scenarioName]]$population,
-      filePath = file.path(
-        projectConfiguration$populationsFolder,
-        paste0(scenarioList[[scenarioName]]$scenarioConfiguration$populationId, nameOfBMLM, ".csv")
-      )
-    )
+  for (name in names(dtList)) {
+    filePath <- file.path(outputDir, paste0(name, ".csv"))
+    write.csv(dtList[[name]], file = filePath, row.names = FALSE)
   }
-
-  wb <- openxlsx::loadWorkbook(projectConfiguration$scenariosFile)
-  dt <- xlsxReadData(wb, sheetName = "Scenarios")
-  dtSc <- dt[scenario_name %in% names(scenarioList)]
-  dtSc[, scenario_name := paste0(scenario_name, nameOfBMLM)]
-  dtSc[, populationId := paste0(populationId, nameOfBMLM)]
-
-  dt <- dt[!(scenario_name %in% dtSc$scenario_name)]
-
-  xlsxWriteData(wb, sheetName = "Scenarios", dt = rbind(dt, dtSc))
-
-  openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$scenariosFile, overwrite = TRUE)
 }
+
+
+
 
 # auxiliaries  -----
 #' Get All Distributions
@@ -918,7 +1106,7 @@ getDistributionRow <-
 
     tempDistributionTable <- as.data.table(distributionTable)
     return(tempDistributionTable[distribution == distributionName &
-                                   parameter == distributionParameter])
+      parameter == distributionParameter])
   }
 
 #' Calculate Probability Based on Distribution
@@ -980,27 +1168,4 @@ calculateProbability <- function(row, log = FALSE) {
   }
 
   return(prob)
-}
-
-#' Set Parameter to Tables
-#'
-#' This function updates the parameter values in the provided data.tables based on the optimization results.
-#'
-#' @param dtList A list containing various data.tables used in the optimization process.
-#' @param params A numeric vector of parameters for the likelihood calculation.
-#' @param logScaleIndex A logical vector indicating which parameters are on a log scale.
-#'
-#' @return A list containing the updated data.tables.
-#' @keywords internal
-setParameterToTables <- function(dtList, params, logScaleIndex) {
-  # set fit parameter to BMLM tables
-  params[which(logScaleIndex)] <-
-    exp(params[which(logScaleIndex)])
-
-  dtList$prior$value <- params[seq_len(nrow(dtList$prior))]
-  dtList$startValues$value <-
-    params[nrow(dtList$prior) + seq_len(nrow(dtList$startValues))]
-
-
-  return(dtList)
 }

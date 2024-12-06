@@ -4,14 +4,12 @@
 \alias{setParameterToTables}
 \title{Set Parameter to Tables}
 \usage{
-setParameterToTables(dtList, params, logScaleIndex)
+setParameterToTables(dtList, params)
 }
 \arguments{
 \item{dtList}{A list containing various data.tables used in the optimization process.}
 
 \item{params}{A numeric vector of parameters for the likelihood calculation.}
-
-\item{logScaleIndex}{A logical vector indicating which parameters are on a log scale.}
 }
 \value{
 A list containing the updated data.tables.

@@ -70,7 +70,7 @@ $$ log(\mathcal{L}_t(\theta,\mathbf {y})) =  \sum_{i,j}(log(\mathcal{L}u_{i,j}(\
 
 <u>uncensored data points</u>
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2.}{\epsilon_j^2} - log(2\pi * \epsilon_j^2)\right)$$
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2.}{\epsilon_j^2} - log(2\pi * \epsilon_j^2)\right) - log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)\right)$$
    <u>censored data points</u>
    
    
@@ -86,11 +86,11 @@ $$ \Phi(x) = \frac{1}{\sqrt{2*\pi}}\int_{-\inf}^xe^{-\frac{x^2}{2}} $$
 
 
 
-#### multiplicative 
+#### proportional 
 
 <u>uncensored data points</u>
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))^2.}{\epsilon_j*f_{i,j}(\theta,t)^2} - log(2\pi * \epsilon_j^2)\right)$$
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))^2.}{\epsilon_j*f_{i,j}(\theta,t)^2} - log(2\pi * \epsilon_j^2*f_{i,j}(\theta,t)^2})\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right)\right)$$
 
    <u>censored data points</u>
    
@@ -101,7 +101,7 @@ $$ \Phi(x) = \frac{1}{\sqrt{2*\pi}}\int_{-\inf}^xe^{-\frac{x^2}{2}} $$
 
    <u>uncensored data points</u>
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))^2.}{\epsilon_j^2} - log(2\pi*\epsilon_j*d_{i,j}(t)(t_u)^2)\right)$$
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))^2.}{\epsilon_j^2} - log(2\pi*\epsilon_j*d_{i,j}(t)(t_u)^2)\right) -log\left(1-\Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right)\right)$$
 
 
    <u>censored data points</u>

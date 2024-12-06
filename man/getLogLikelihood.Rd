@@ -4,18 +4,10 @@
 \alias{getLogLikelihood}
 \title{Get Log Likelihood}
 \usage{
-getLogLikelihood(
-  params,
-  logScaleIndex,
-  scenarioList,
-  dtList,
-  simulationRunOptions
-)
+getLogLikelihood(params, scenarioList, dtList, simulationRunOptions)
 }
 \arguments{
 \item{params}{A numeric vector of parameters for the likelihood calculation.}
-
-\item{logScaleIndex}{A logical vector indicating which parameters are on a log scale.}
 
 \item{scenarioList}{A list of scenarios for the optimization.}
 

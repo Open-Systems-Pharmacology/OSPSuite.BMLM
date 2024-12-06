@@ -4,10 +4,10 @@
 \alias{prepareInputData}
 \title{Prepare Input Data for L-BFGS-B Algorithm}
 \usage{
-prepareInputData(dtPrior, dtStartValues, dtDefinition)
+prepareInputData(dtPrior, dtStartValues)
 }
 \arguments{
-\item{dtPrior}{A data.table containing prior values with columns: 'value', 'MinValue', 'MaxValue', 'Scaling', 'valueMode'.}
+\item{dtPrior}{A data.table containing prior values with columns: 'value', 'MinValue', 'MaxValue',}
 
 \item{dtStartValues}{A data.table containing start values with at least a 'Name' column.}
 

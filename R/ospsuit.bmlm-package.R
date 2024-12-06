@@ -6,7 +6,7 @@
 
 ## usethis namespace: start
 #' @import ospsuite.utils
-#' @import ospsuite.reportingframwork
+#' @import ospsuite.reportingframework
 #' @import data.table
 #' @importFrom data.table .BY
 #' @importFrom data.table .EACHI

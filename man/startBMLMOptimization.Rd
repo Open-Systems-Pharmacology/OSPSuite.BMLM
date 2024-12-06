@@ -6,16 +6,20 @@
 \usage{
 startBMLMOptimization(
   projectConfiguration,
+  runName,
   scenarioList,
   dataObserved,
   seed = 1234,
   method = "L-BFGS-B",
   control = list(),
-  simulationRunOptions = NULL
+  simulationRunOptions = NULL,
+  restartAtBestValues = FALSE
 )
 }
 \arguments{
 \item{projectConfiguration}{An object of class ProjectConfiguration containing project configuration details, including the path to the BMLM configuration file.}
+
+\item{runName}{A string representing the run name for the optimization.}
 
 \item{scenarioList}{A list of scenarios to be used in the optimization.}
 
@@ -27,7 +31,7 @@ startBMLMOptimization(
 
 \item{control}{A list of control parameters for the optimization.}
 
-\item{simulationRunOptions}{an object of class ospsuite::SimulationRunOptions. Optional parameters for running simulations.}
+\item{simulationRunOptions}{An object of class ospsuite::SimulationRunOptions. Optional parameters for running simulations.}
 }
 \value{
 An invisible NULL. The results of the optimization process are saved in files.

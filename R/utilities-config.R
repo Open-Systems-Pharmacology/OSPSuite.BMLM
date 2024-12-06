@@ -142,6 +142,8 @@ updateDefinitionDT <- function(linkedParameterDT, definitionDTHeader, wb) {
   # Initialize variables to NULL to avoid linter messages
   isFixed <- useAsFactor <- NULL
 
+  definitionDT <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition") # nolint
+
   if ("isFixed" %in% names(linkedParameterDT)) {
     definitionDT[, isFixed := as.logical(isFixed)]
     definitionDT <- linkedParameterDT[is.na(isFixed) | isFixed == FALSE]
@@ -250,7 +252,7 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
     dtOutputMappings[, path := NULL]
   }
 
-  dtOutputMappings[, errorModel := ifelse(scaling == SCALING$log, "relative", "absolute"),
+  dtOutputMappings[, errorModel := ifelse(scaling == SCALING$log, ERRORMODEL$log_absolute, ERRORMODEL$absolute),
     by = "outputPathId"
   ] # nolint identation
 
@@ -306,14 +308,14 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
     ) %>%
     dplyr::mutate(name = NULL)
 
-  checkmate::assertFileExists(projectConfiguration$paramsFile)
+  checkmate::assertFileExists(projectConfiguration$modelParamsFile)
 
-  if (!(nameOfParameterIdentfication %in% openxlsx::getSheetNames(projectConfiguration$paramsFile))) {
-    wbP <- openxlsx::loadWorkbook(projectConfiguration$paramsFile)
-    wbP <- xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = nameOfParameterIdentfication, dt = modelParameters)
-    openxlsx::saveWorkbook(wb = wbP, projectConfiguration$paramsFile, overwrite = TRUE)
+  if (!(nameOfParameterIdentfication %in% openxlsx::getSheetNames(projectConfiguration$modelParamsFile))) {
+    wbP <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
+    xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = nameOfParameterIdentfication, dt = modelParameters)
+    openxlsx::saveWorkbook(wb = wbP, projectConfiguration$modelParamsFile, overwrite = TRUE)
   } else {
-    warning(paste("Sheet", nameOfParameterIdentfication, "exists already in", projectConfiguration$paramsFile))
+    warning(paste("Sheet", nameOfParameterIdentfication, "exists already in", projectConfiguration$modelParamsFile))
   }
 }
 
@@ -333,7 +335,7 @@ extractIdentificationParameter <- function(linkedParameter) {
       linkedParameter %>%
         dplyr::select(!c("Parameters", "LinkedParameters")) %>%
         setDT(),
-      rbindlist(
+      data.table::rbindlist(
         lapply(
           seq_len(nrow(linkedParameter)),
           function(iRow) {
@@ -391,11 +393,16 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
   dtDefinition <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition", skipDescriptionRow = TRUE) # nolint
 
   validateParameterDefinition(dtDefinition)
-
   isEdited <- FALSE
 
   if (nrow(dtPrior) == 1 | overwrite) {
-    dtPrior <- updatePriorParameters(dtPrior = dtPrior, dtDefinition = dtDefinition, wb = wb)
+    dtPrior <-
+      updatePriorParameters(
+        dtPrior = dtPrior,
+        dtDefinition = dtDefinition,
+        dataObserved = dataObserved,
+        wb = wb
+      )
     isEdited <- TRUE
   } else {
     warning("sheet 'Prior' is already edited") # nolint
@@ -454,14 +461,21 @@ validateParameterDefinition <- function(dtDefinition) {
     dtDefinition$name,
     unique = TRUE,
     any.missing = FALSE,
-    .var.name = paste("column Name in", "ParameterDefinition")
+    .var.name = paste("column 'Name' in", "ParameterDefinition")
   )
 
   checkmate::assertNames(
     unique(dtDefinition$distribution),
     subset.of = getAllDistributions(),
-    .var.name = paste("column Distribution in", "ParameterDefinition")
+    .var.name = paste("column 'Distribution' in", "ParameterDefinition")
   )
+
+  checkmate::assertNames(
+    unique(dtDefinition[!is.na(categoricCovariate) & categoricCovariate !='']$categoricCovariate),
+    subset.of = names(dataObserved),
+    .var.name = paste("column 'CategoricCovariate' in", "ParameterDefinition")
+  )
+
 
   return(invisible())
 }
@@ -474,16 +488,17 @@ validateParameterDefinition <- function(dtDefinition) {
 #'
 #' @param dtPrior A data.table containing the existing prior parameters.
 #' @param dtDefinition A data.table containing parameter definitions.
+#' @param dataObserved A data.table of observed data.
 #' @param wb An open workbook object where the updated prior parameters will be written.
 #'
 #' @return A data.table containing the updated prior parameters.
 #' @keywords internal
-updatePriorParameters <- function(dtPrior, dtDefinition, wb) {
+updatePriorParameters <- function(dtPrior, dtDefinition, dataObserved, wb) {
   # Initialize variables to NULL to avoid linter messages
   valueMode <- startValue <- hyperParameter <- NULL
 
   dtPrior <- addGlobalPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition)
-  dtPrior <- addHyperPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition)
+  dtPrior <- addHyperPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition, dataObserved = dataObserved)
 
   dtPrior <- addModelErrorParameter(dtPrior, wb)
 
@@ -538,11 +553,18 @@ createStartValues <- function(dtDefinition, dataObserved) {
       dplyr::select(dplyr::any_of(c("individualId", covariates))) %>%
       unique() %>%
       dplyr::mutate(name = dtDefinition$name[iRow]) %>%
-      dplyr::mutate(unit = dtDefinition$unit[iRow])
+      dplyr::mutate(unit = dtDefinition$unit[iRow]) %>%
+      data.table::setDT()
+
+    if (!is.null(covariates)) {
+      tmpStartValues[,categoricCovariate := paste(.SD),by = c('individualId','name'),.SDcols = covariates]
+      tmpStartValues %>% dplyr::select(!all_of(covariates))
+    }
 
     dtStartValues <- rbind(
       dtStartValues,
-      tmpStartValues
+      tmpStartValues,
+      fill = TRUE
     )
   }
 
@@ -599,10 +621,11 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
     par <- dtDefinition[iRow, ]
 
     # Determine subgroups
-    subGroups <- ifelse(!is.na(par$categoricCovariate) && par$categoricCovariate != "",
-      unique(dataObserved[[par$categoricCovariate]]), # nolint identation
-      ""
-    )
+    if(!is.na(par$categoricCovariate) && par$categoricCovariate != ""){
+       subGroups <-   unique(dataObserved[[par$categoricCovariate]])
+    } else{
+      subGroups <-  ''
+    }
 
     # Create rows for each subgroup
     for (sG in subGroups) {
@@ -657,7 +680,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
   }
 
   # Combine all new rows into dtPrior
-  dtPrior <- rbind(dtPrior, rbindlist(newRows))
+  dtPrior <- rbind(dtPrior, data.table::rbindlist(newRows))
 
   return(dtPrior)
 }
