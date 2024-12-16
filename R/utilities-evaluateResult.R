@@ -32,9 +32,9 @@ exportOptimizedPopulation(projectConfiguration, scenarioList,runName)
 #' @export
 loadListsForRun <- function(projectConfiguration,runName){
 
-  outputDir <- file.path(projectConfiguration$outputFolder, "BMLM", runName)
+  outputDir <- getOutputDirectoryForRun(projectConfiguration, runName)
 
-  csvFiles <- c("data.csv","definition.csv","input.csv","mappedPaths.csv","prior.csv","startValues.csv")
+  csvFiles <- c("data.csv","input.csv","mappedPaths.csv","prior.csv","startValues.csv")
 
   dtList = list()
   for (csvFile in csvFiles) {

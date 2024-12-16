@@ -87,7 +87,7 @@ plotIndividualValues <- function(rmdContainer,dtList,maxPlots = 12,colorVector){
 
     for (hyperDist in unique(currentPrior$hyperDistribution)){
       # Create a data frame for the table
-      tableData <- melt(currentPrior[hyperDist == hyperDistribution], id.vars = "hyperParameter", measure.vars = c("start", "final"),
+      tableData <- data.table::melt(currentPrior[hyperDist == hyperDistribution], id.vars = "hyperParameter", measure.vars = c("start", "final"),
                         variable.name = "status", value.name = "value")[, dcast(.SD, hyperParameter ~ status, value.var = "value")]
 
 
@@ -123,7 +123,7 @@ plotOverlayHistogramDistribution <- function(dtPrior,
   xScale <- match.arg(xScale)
 
   # Prepare the data for the histogram
-  dtValues <- melt(dtStartValues[, .(start, final, individualId,parameter,categoricCovariate)] ,
+  dtValues <- data.table::melt(dtStartValues[, .(start, final, individualId,parameter,categoricCovariate)] ,
                    measure.vars = c("start", "final"),
                    variable.name = "status",
                    value.name = "value") %>%

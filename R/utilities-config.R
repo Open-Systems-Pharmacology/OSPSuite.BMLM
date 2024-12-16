@@ -214,7 +214,7 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
   # Initialize variables to NULL to avoid linter messages
   path <- errorModel <- scaling <- modelErrorId <- outputPathId <- NULL
 
-  dtOutputPathIds <- getOutputPathIds(projectConfiguration)
+  dtOutputPathIds <- getOutputPathIds(projectConfiguration$plotsFile)
 
   dtOutputMappings <- data.table::copy(snp$ParameterIdentifications$OutputMappings[[selectedPI]]) %>%
     data.table::setDT() %>%
@@ -353,8 +353,7 @@ extractIdentificationParameter <- function(linkedParameter) {
       )
     ) %>%
     dplyr::mutate(valueMode = "global") %>%
-    dplyr::mutate(distribution = "unif") %>%
-    dplyr::mutate(hasHyperparameter = FALSE)
+    dplyr::mutate(distribution = "")
 
   data.table::setDT(linkedParameterDT)
 
@@ -391,6 +390,8 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dtPrior <- loadPriorData(wb, overwrite)
   dtDefinition <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition", skipDescriptionRow = TRUE) # nolint
+  dtDefinition[,categoricCovariate := as.character(categoricCovariate)]
+  dtDefinition[is.na(categoricCovariate),categoricCovariate := '']
 
   validateParameterDefinition(dtDefinition)
   isEdited <- FALSE
@@ -443,6 +444,9 @@ loadPriorData <- function(wb, overwrite) {
   if (overwrite & nrow(dtPrior) > 1) {
     dtPrior <- dtPrior[1]
   }
+  setnames(dtPrior,
+           old = c("distribution of Individual Values","prior Distribution"),
+           new = c('hyperDistribution','distribution'))
   return(dtPrior)
 }
 
@@ -465,7 +469,7 @@ validateParameterDefinition <- function(dtDefinition) {
   )
 
   checkmate::assertNames(
-    unique(dtDefinition$distribution),
+    unique(dtDefinition[valueMode == PARAMETERTYPE$individual]$distribution),
     subset.of = getAllDistributions(),
     .var.name = paste("column 'Distribution' in", "ParameterDefinition")
   )
@@ -501,10 +505,6 @@ updatePriorParameters <- function(dtPrior, dtDefinition, dataObserved, wb) {
   dtPrior <- addHyperPriorParameter(dtPrior = dtPrior, dtDefinition = dtDefinition, dataObserved = dataObserved)
 
   dtPrior <- addModelErrorParameter(dtPrior, wb)
-
-  # setDefault startValues
-  dtPrior[hyperParameter == "sdlog", startValue := 1.4]
-  dtPrior[valueMode == "outputError", startValue := 1]
 
 
   xlsxWriteData(wb = wb, sheetName = "Prior", dt = dtPrior)
@@ -547,18 +547,17 @@ createStartValues <- function(dtDefinition, dataObserved) {
 
   for (iRow in which(dtDefinition$valueMode == PARAMETERTYPE$individual)) {
     covariates <- dtDefinition$categoricCovariate[iRow]
-    if (is.na(covariates)) covariates <- NULL
+    if (is.na(covariates) | covariates == '') covariates <- NULL
 
     tmpStartValues <- dataObserved %>%
       dplyr::select(dplyr::any_of(c("individualId", covariates))) %>%
       unique() %>%
-      dplyr::mutate(name = dtDefinition$name[iRow]) %>%
-      dplyr::mutate(unit = dtDefinition$unit[iRow]) %>%
       data.table::setDT()
+    tmpStartValues <- cbind(tmpStartValues,dtDefinition[iRow,c('name','minValue','maxValue','scaling','useAsFactor')])
 
     if (!is.null(covariates)) {
       tmpStartValues[,categoricCovariate := paste(.SD),by = c('individualId','name'),.SDcols = covariates]
-      tmpStartValues %>% dplyr::select(!all_of(covariates))
+      tmpStartValues <-  tmpStartValues %>% dplyr::select(!all_of(covariates))
     }
 
     dtStartValues <- rbind(
@@ -585,11 +584,7 @@ addGlobalPriorParameter <- function(dtPrior, dtDefinition) {
   valueMode <- startValue <- NULL # nolint camelCase
 
   globalParams <- dtDefinition[valueMode == PARAMETERTYPE$global] %>% # nolint identation
-    data.table::setnames(
-      old = c("minValue", "maxValue", "unit"),
-      new = c("p1_value", "p2_value", "unit_of_distributed_Parameter")
-    ) %>%
-    dplyr::mutate(p1_type = "min", p2_type = "max", p3_type = "")
+    dplyr::mutate(distribution = 'flat')
 
   dtPrior <-
     rbind(
@@ -635,7 +630,10 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
           name = par$name,
           categoricCovariate = sG,
           hyperParameter = parType,
-          unit_of_distributed_Parameter = par$unit
+          hyperDistribution = par$distribution,
+          unit = par$unit,
+          scaling = par$scaling,
+          useAsFactor = par$useAsFactor
         )
 
         # Prepare specific values based on parameter type
@@ -644,34 +642,23 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
           distributionParameter = parType
         )
 
-        specificValues <- list()
-        specificValues[c("p1_value", "p2_value", "startValue", "scaling")] <-
-          mapply(
-            function(value) {
-              if (value %in% names(par)) {
-                return(par[[value]])
-              } else {
-                return(value)
-              }
-            },
-            c(
-              distributionRow$minValue,
-              distributionRow$maxValue,
-              distributionRow$defaultValue,
-              distributionRow$scaling
-            ),
-            SIMPLIFY = TRUE
-          )
+        valueNames <- c("minValue", "maxValue", "startValue", "scaling")
+        specificValues <- stats::setNames(lapply(valueNames, function(name) {
+          newValue <- distributionRow[[name]]
+          if (newValue %in% names(par)) {
+            return(par[[name]])
+          } else {
+            return(newValue)
+          }
+        }),valueNames)
 
         # Create the hyperparameter row with common and specific values
         newRows[[length(newRows) + 1]] <-
           stats::setNames(as.list(rep(NA, ncol(dtPrior))), names(dtPrior)) %>%
           utils::modifyList(list(
             valueMode = PARAMETERTYPE$hyperParameter,
-            distribution = "unif",
-            hyperParameter = "",
-            p1_type = "min",
-            p2_type = "max"
+            distribution = "flat",
+            hyperParameter = parType
           )) %>%
           utils::modifyList(commonValues) %>%
           utils::modifyList(specificValues)
@@ -703,12 +690,11 @@ addModelErrorParameter <- function(dtPrior, wb) {
   modelErrorParams <-
     dtOutputMappings[, .(
       valueMode = PARAMETERTYPE$outputError,
-      distribution = "unif",
-      scaling = ifelse(errorModel == ERRORMODEL$log_absolute, SCALING$log, SCALING$linear),
-      p1_type = "min",
-      p1_value = 0,
-      p2_type = "max",
-      p2_value = "Inf"
+      startValue = 1,
+      minValue = 0,
+      maxValue = 4,
+      distribution = "flat",
+      scaling = SCALING$linear
     ),
     by = "modelErrorId"
     ] %>%

@@ -43,52 +43,38 @@ for (distribution in names(hyperParameters)) {
   # Loop through each parameter
   for (parameter in parameters) {
     # Get the default value if it exists
-    defaultValue <- NA
+    startValue <- NA
     if (parameter %in% names(args) &&
       !is.symbol(args[[parameter]]) && # nolint identation
       !is.language(args[[parameter]])) {
-      defaultValue <- args[[parameter]]
+      startValue <- args[[parameter]]
     }
-
-
 
     # Set minValue and maxValue based on common knowledge of the distributions
     minValue <- NA
     maxValue <- NA
-    defaultValue <- NA
-    scaling <- SCALING$linear
+    startValue <- NA
+    scaling <- 'Linear'
 
     switch(paste(distribution, parameter, sep = "_"),
       norm_mean = {
         minValue <- "minValue"
         maxValue <- "maxValue"
-        defaultValue <- "startValue"
+        startValue <- "startValue"
       },
       norm_sd = {
         minValue <- 0
-        maxValue <- Inf
-      },
-      lnorm_meanlog = {
-        minValue <- "minValue"
-        maxValue <- "maxValue"
-        defaultValue <- "startValue"
-        scaling <- SCALING$log
       },
       lnorm_sdlog = {
-        minValue <- 1
-        maxValue <- Inf
+        minValue <- 0
       },
       unif_min = {
         minValue <- "minValue"
         maxValue <- "maxValue"
-        defaultValue <- "minValue"
-        scaling <- "scaling"
       },
       unif_max = {
         minValue <- "minValue"
         maxValue <- "maxValue"
-        defaultValue <- "maxValue"
-        scaling <- "scaling"
       }
     )
 
@@ -100,8 +86,8 @@ for (distribution in names(hyperParameters)) {
         parameter = parameter,
         minValue = minValue,
         maxValue = maxValue,
-        defaultValue = defaultValue,
-        scaling = scaling
+        scaling = scaling,
+        startValue = startValue
       )
     )
   }
@@ -109,6 +95,22 @@ for (distribution in names(hyperParameters)) {
 
 # Convert the list to a data.table
 distributionTable <- rbind(distributionList)
+
+# add lnorm_geomean
+newLines <- distributionTable[distribution == 'lnorm']
+newLines[,distribution := 'lnorm_geomean']
+newLines[parameter == 'meanlog', `:=`(parameter = 'geomean',
+                                      minValue = 'minValue',
+                                      maxValue = 'maxValue',
+                                      startValue = 'startValue',
+                                      scaling ='Log')]
+newLines[parameter == 'sdlog', `:=`(parameter = 'geosd',
+                                      minValue = 1,
+                                      scaling ='Linear')]
+
+distributionTable <- rbind(distributionTable,
+                           newLines)
+
 
 setDF(distributionTable)
 
