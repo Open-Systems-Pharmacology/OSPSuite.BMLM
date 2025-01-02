@@ -4,7 +4,13 @@
 \alias{getLogLikelihood}
 \title{Get Log Likelihood}
 \usage{
-getLogLikelihood(params, scenarioList, dtList, simulationRunOptions)
+getLogLikelihood(
+  params,
+  scenarioList,
+  dtList,
+  simulationRunOptions,
+  optimEnv = NULL
+)
 }
 \arguments{
 \item{params}{A numeric vector of parameters for the likelihood calculation.}

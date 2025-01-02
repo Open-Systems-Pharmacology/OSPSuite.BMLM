@@ -16,7 +16,8 @@ Scalings
 \seealso{
 Other enum helpers: 
 \code{\link{ERRORMODEL}},
-\code{\link{PARAMETERTYPE}}
+\code{\link{PARAMETERTYPE}},
+\code{\link{RUNSTATUS}}
 }
 \concept{enum helpers}
 \keyword{datasets}

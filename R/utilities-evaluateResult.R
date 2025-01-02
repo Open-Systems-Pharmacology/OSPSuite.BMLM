@@ -16,46 +16,7 @@ exportOptimizedPopulation(projectConfiguration, scenarioList,runName)
 
 }
 
-#' Load Lists for Run
-#'
-#' This function loads various CSV files from a specified output directory for a given name of a BLMLM run,
-#' processes them into data.tables, and returns them as a list.
-#'
-#' @param projectConfiguration An object of class projectConfiguration containing configuration settings, including
-#'                             the output folder path where the CSV files are located.
-#' @param runName A character string representing the name of the run, which is used to
-#'                 construct the output directory path.
-#'
-#' @return A list of data.tables, each corresponding to one of the CSV files loaded. The
-#'         list elements are named after the CSV files (without the '.csv' extension).
-#'
-#' @export
-loadListsForRun <- function(projectConfiguration,runName){
 
-  outputDir <- getOutputDirectoryForRun(projectConfiguration, runName)
-
-  csvFiles <- c("data.csv","input.csv","mappedPaths.csv","prior.csv","startValues.csv")
-
-  dtList = list()
-  for (csvFile in csvFiles) {
-    tmp <- data.table::fread(file.path(outputDir,csvFile))
-
-    if ('individualId' %in% names(tmp)){
-      tmp[,individualId := as.character(individualId)]
-    }
-
-    # add new column parameter as column name 'name' get confused in some applications
-    if ('name' %in% names(tmp)){
-      tmp[,parameter := name]
-    }
-
-    dtList[[gsub('.csv','',csvFile)]] <- tmp
-  }
-
-
-  return(dtList)
-
-}
 
 
 saveFinalValuesToTables <- function(projectConfiguration, dtList) {

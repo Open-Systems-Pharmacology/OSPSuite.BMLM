@@ -10,7 +10,8 @@ getLikelihoodTimeProfiles(
   dtStartValues,
   dataObservedForMatch,
   dtMappedPaths,
-  simulationRunOptions
+  simulationRunOptions,
+  optimEnv = NULL
 )
 }
 \arguments{

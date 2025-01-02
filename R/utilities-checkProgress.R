@@ -3,9 +3,7 @@
 #' This function checks the convergence of model parameters by reading a CSV file
 #' containing convergence data and visualizing the results using ggplot2.
 #'
-#' @param projectConfiguration A list containing configuration settings for the project,
-#' including the output folder path.
-#' @param runName A character string specifying the name of the run.
+#' @param dtConvergence A data.table containing the loglikelihood vsplot titlename of the run.
 #' @param nPoints An integer specifying the number of points to select for plotting.
 #' Default is 200.
 #' @param selectionMode A character string indicating the mode of selection for points.
@@ -15,34 +13,15 @@
 #' The plot shows the values of logTimeProfile, logHyperParameter, logPrior,
 #' and objectiveValue over iterations.
 #'
-#' @examples
-#' \dontrun{
-#' # Example usage:
-#' plot <- checkConvergence(projectConfiguration, "run1")
-#' print(plot)
-#' }
-#'
-#' @export
-checkConvergence <- function(projectConfiguration,
-                             runName,
+#' @keywords internal
+plotConvergence <- function(dtConvergence,
+                             titletxt = NULL,
                              nPoints = 200,
                              selectionMode = c('last','random','first')){
 
   # Match the selection mode to ensure it's one of the allowed values
   selectionMode <- match.arg(selectionMode)
 
-  # Construct the output directory path
-  outputDir <- getOutputDirectoryForRun(projectConfiguration, runName)
-
-  # Check if the convergence CSV file exists
-  if (!file.exists(file.path(outputDir,'convergence.csv'))) {
-    message(paste('convergence.csv does not exist yet, please wait'))
-    return(NULL)
-  }
-
-  # Read the convergence data from the CSV file
-  dtConvergence <- fread(file.path(outputDir,'convergence.csv'),
-                         colClasses = c('integer','double','double','double'))
 
   # Calculate the objective value as the negative sum of log likelihoods
   dtConvergence[, objectiveValue := -(logTimeProfile + logHyperParameter + logPrior)]
@@ -57,11 +36,12 @@ checkConvergence <- function(projectConfiguration,
   }
 
   # Select points based on the specified selection mode
+  # Attention sis sorted decending for print
   if (nPointsAvailable > nPoints) {
     ixSelected <- switch(selectionMode,
-                         last = seq(1, nPoints) + nPointsAvailable - nPoints,
+                         first = seq(1, nPoints) + nPointsAvailable - nPoints,
                          random = sort(c(1, sample(seq(2, nPointsAvailable - 1), size = nPoints - 2, replace = FALSE), nPointsAvailable)),
-                         first = seq(1, nPoints)
+                         last = seq(1, nPoints)
     )
     dtConvergence <- dtConvergence[ixSelected]
   }
@@ -85,55 +65,352 @@ checkConvergence <- function(projectConfiguration,
     scale_color_manual(values = c(current = 'black', start = 'darkred')) +
     scale_linetype_manual(values = c(current = 'solid', start = 'dotted')) +
     labs(y = '', color = '', linetype = '',
-         title = runName) +
-    theme(legend.title = element_blank(), legend.direction = 'horizontal')
+         title = titletxt) +
+    theme(legend.title = element_blank(), legend.direction = 'horizontal') +
+    layerWatermark()
 
   # Print the plot to the console
   print(plotObject)
 
   return(invisible(plotObject))
 }
-# ParameterValues ------------
-#' Check Parameter Values and Create Plots
-#'
-#' This function checks the parameter values for a given run, prepares the data for plotting,
-#' and creates visualizations of the current and best optimization statuses.
-#'
-#' @param projectConfiguration A list containing project configuration details.
-#' @param runName A string indicating the name of the run to check.
-#' @return A list of ggplot objects representing the plots for the parameter values.
-#' @export
-checkParameterValues <- function(projectConfiguration, runName,nCols = 2,nRows = 10, useInteractivePlots = FALSE,
-                                 colorScalingVector =  c(
-                                   start = 'lightblue',
-                                   current = 'darkgreen',
-                                   best = 'orange'
-                                 )) {
-  outputDir <- getOutputDirectoryForRun(projectConfiguration, runName)
 
-  if (!checkStatusFilesExist(outputDir)) {
-    message('Status files do not exist yet, please wait')
-    return(NULL)
+
+#' Create Plots
+#'
+#' This function creates ggplot objects based on the prepared plot data.
+#' If the number of plots exceeds the specified grid size, it splits the plots into multiple sets.
+#'
+#' @param plotData A data.table containing the reshaped plot data.
+#' @param titeltxt A string  to include in the plot title.
+#' @param nCols An integer specifying the number of columns for the plot layout.
+#' @param nRows An integer specifying the number of rows for the plot layout.
+#' @return A list of ggplot objects representing the plots for the parameter values.
+#' @keywords internal
+plotParameterLimits <-
+  function(plotData,
+           titeltxt,
+           nCols,
+           nRows,
+           useInteractivePlots = FALSE,
+           colorScalingVector =  c(
+             start = 'lightblue',
+             current = 'darkgreen',
+             best = 'orange'
+           )) {
+
+    # Get the unique combinations for the current set of plots
+    uniqueCombinations <- unique(plotData[!(valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError)), .(categoricCovariate, name)])
+    setorderv(uniqueCombinations,c('categoricCovariate','name'))
+    nPlots <- nrow(uniqueCombinations)
+
+    # Determine how many sets of plots are needed
+    totalPlots <- ceiling(nPlots / (nCols * nRows))
+
+    mapping <- aes(y = statusParam, color = status, shape = status)
+    if (useInteractivePlots)
+      mapping <- utils::modifyList(mapping,aes(text = paste("Value:", signif(statusValue,3))))
+
+    for (setIndex in seq(0,totalPlots)) {
+      if (setIndex == 0) {
+        plotObject <- ggplot(plotData[valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError)]) +
+          suppressWarnings(geom_point(utils::modifyList(mapping,aes(x = name)))) +
+          facet_wrap(vars(valueMode), ncol = 2, scales = 'free_y')
+      } else {
+        # Subset the data for the current set of plots
+        startIndex <- (setIndex - 1) * (nCols * nRows) + 1
+        endIndex <- min(startIndex + (nCols * nRows) - 1, nPlots)
+
+        # Determine the rows to plot for the current set
+        rowsToPlot <- seq(startIndex, endIndex)
+        plotDataSubset <- uniqueCombinations[rowsToPlot]
+
+        # Create the plot using the subset
+        plotObject <- ggplot(plotData[.(plotDataSubset), on = .(categoricCovariate, name)]) +
+          suppressWarnings(geom_point(utils::modifyList(mapping,aes(x = label)))) +
+          facet_wrap(vars(categoricCovariate, name), ncol = nCols, scales = 'free_y')
+
+      }
+
+      plotObject <-
+        plotObject +
+        geom_hline(yintercept = c(0, 1)) +
+        scale_color_manual(
+          values = colorScalingVector
+        ) +
+        coord_flip() +
+        labs(
+          x = '',
+          y = '',
+          color = '',
+          shape = '',
+          title = titeltxt
+        ) +
+        scale_y_continuous(
+          breaks = seq(0, 1, by = 0.25),
+          labels = c('min', rep('', 3), 'max')
+        ) +
+        layerWatermark()
+
+      if (useInteractivePlots){
+        # Convert ggplot to plotly for interactivity
+        plotlyPlot <- plotly::ggplotly(plotObject, tooltip = "text")
+        plotlyPlot <- plotly::config(plotlyPlot, displayModeBar = FALSE)
+        print(plotlyPlot)
+      } else {
+        plotObject <- plotObject +
+          theme(legend.direction = 'horizontal')
+        print(plotObject)
+      }
+
+    }
+
+    return(invisible())
   }
 
-  dtList <- loadListsForRun(projectConfiguration, runName)
-  plotData <- preparePlotDataParameterValues(dtList, outputDir)
+#' Plot Distributions
+#'
+#' This function creates a series of plots to visualize the cumulative distribution of individual values and hyperparameters.
+#'
+#' @param plotData A data.table containing the data to be plotted.
+#' @param nCols An integer specifying the number of columns for faceting. Default is 2.
+#' @param nRows An integer specifying the maximum number of rows for faceting. Default is 3.
+#' @param xScale A character string specifying the scale of the x-axis. Default is 'Log'
+#' @param colorScalingVector A named vector of colors for different statuses. Default includes light blue, dark green, and orange.
+#'
+#' @return Returns an invisible NULL after printing the plots.
+#'
+#' @export
+plotDistributions <- function(plotData,
+                              nCols = 2,
+                              nRows = 3,
+                              xScale = unlist(SCALING),
+                              colorScalingVector =  c(
+                                start = 'lightblue',
+                                current = 'darkgreen',
+                                best = 'orange'
+                              )) {
 
-  createPlotsParameterValues(plotData, runName,nCols = nCols, nRows = nRows,useInteractivePlots,colorScalingVector)
+  xScale <- match.arg(xScale)
+
+  dtValues <- plotData[valueMode == PARAMETERTYPE$individual] %>%
+    setorderv(c('name', 'categoricCovariate', 'status', 'statusValue'))
+
+  dtValues[, ecdf := cumsum(statusValue) / sum(statusValue), by = c('status', 'name', 'categoricCovariate')]
+
+  # Determine unique facets
+  uniqueFacets <- unique(dtValues[, .(categoricCovariate, name)])
+  totalFacets <- nrow(uniqueFacets)
+
+  # Calculate how many plots are needed
+  totalPlots <- ceiling(totalFacets / (nCols * nRows))
+
+  # Create a list to store individual plots
+  plotList <- vector("list", totalPlots)
+
+  for (i in seq_len(totalPlots)) {
+
+    # Determine the facets for the current plot
+    startIndex <- (i - 1) * nCols * nRows + 1
+    endIndex <- min(startIndex + (nCols * nRows) - 1, totalFacets)
+
+    facetsToPlot <- uniqueFacets[startIndex:endIndex]
+
+    # Subset the data for the current plot
+    dtValuesSubset <- dtValues[categoricCovariate %in% facetsToPlot$categoricCovariate &
+                                 name %in% facetsToPlot$name]
+
+    lineData <- createLineData(plotData = plotData[categoricCovariate %in% facetsToPlot$categoricCovariate &
+                                                     name %in% facetsToPlot$name],
+                               dtValues = dtValuesSubset,
+                              xScale = xScale)
+
+    # Create the plot for the current subset
+    plotSubset <- ggplot(data = dtValuesSubset) +
+      geom_point(mapping = aes(x = statusValue, y = ecdf, fill = status, shape = status)) +
+      labs(x = '', y = 'cumulative distribution')
+
+    if (xScale == SCALING$log) {
+      plotSubset <- plotSubset + scale_x_log10()
+    }
+
+    plotSubset <- plotSubset +
+      geom_line(data = lineData, aes(x = x, y = value, color = status, linetype = status), size = 1)
+
+    plotSubset <- customizeLegend(plotSubset, colorScalingVector)
+
+    # Add facetting to the plot
+    plotSubset <- plotSubset +
+      facet_wrap(vars(categoricCovariate, name), scales = 'free_x', ncol = nCols) +
+      layerWatermark()
+
+    # Store the plot in the list
+    plotList[[i]] <- plotSubset
+  }
+
+  # Print all plots
+  for (plot in plotList) {
+    print(plot)
+  }
 
   return(invisible())
 }
 
-#' Check if Status Files Exist
+#' Create and Print Predicted vs Observed
 #'
-#' This function checks if the required optimization status files exist in the specified output directory.
+#' This function generates a plot for each unique outputPathId in the provided dataset.
+#' Each plot displays predicted vs observed values and includes facets for scenario and group.
 #'
-#' @param outputDir A string representing the output directory path.
-#' @return A logical value indicating whether the status files exist.
-checkStatusFilesExist <- function(outputDir) {
-  return(file.exists(file.path(outputDir, 'bestOptimStatus.RDS')) &&
-           file.exists(file.path(outputDir, 'optimStatus.RDS')))
+#' @param dtRes A data frame containing the data to be plotted. It should include columns for
+#'              scenario, outputPathId, and group.
+#' @param addRegression A logical value indicating whether to add regression lines to the plot.
+#' @param xyScale A character string specifying the scale type for the x and y axes (default "Log").
+#' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
+#' @param ... additional arguments passed on to ospsuite.plots::plotPredVsObs
+#'
+#' @return NULL This function does not return a value; it prints the plots directly.
+plotPredictedVsObserved <- function(dtRes, addRegression = TRUE, xyScale = unlist(SCALING), nCols = 2,...) {
+
+  xyScale <- tolower(match.arg(xyScale))
+
+  # Get unique outputPathIds
+  outputPathIds <- unique(dtRes$outputPathId)
+
+  # Loop through each outputPathId and create a plot
+  for (id in outputPathIds) {
+    # Filter data for the current outputPathId
+    filteredData <- dtRes[dtRes$outputPathId == id, ]
+
+    # Create the base plot
+    basePlot <- ospsuite_plotPredictedVsObserved(
+      plotData = filteredData,
+      addRegression = addRegression,
+      comparisonLineVector = getFoldDistanceList(folds = c()),
+      xyscale = xyScale,
+      groupAesthetics = c(),
+      ...
+    ) +
+      labs(title = outputPathIds)
+
+    # Add facet wrapping by scenario and group
+    finalPlot <- basePlot +
+      facet_wrap(vars(scenario, group), ncol = nCols)
+
+    # Print the plot
+    print(finalPlot)
+  }
 }
+#' Create and Print Residuals vs Observed Plots for Each Output Path ID
+#'
+#' This function generates a plot for residuals versus observed values from the provided dataset.
+#' Each plot includes facets for scenario and group, and is created for each unique outputPathId.
+#' The facets are arranged in a grid defined by the number of columns and rows.
+#'
+#' @param dtRes A data frame containing the data to be plotted. It should include columns for
+#'              scenario, outputPathId, group, and the residuals.
+#' @param xscale A character string specifying the scale type for the x-axis (e.g., "log").
+#' @param nCols An integer specifying the number of columns for the facet wrap.
+#' @param nRows An integer specifying the number of rows for the facet wrap.
+#'
+#' @return NULL This function does not return a value; it prints the plots directly.
+#'
+#' @examples
+#' createResidualsPlot(dtRes, "log", 3, 2)
+#'
+#' @import ggplot2
+plotResidualsVsTime <- function(dtRes, nCols = 2,...) {
+  # Get unique outputPathIds
+  outputPathIds <- unique(dtRes$outputPathId)
+
+  # Loop through each outputPathId and create a plot
+  for (id in outputPathIds) {
+    # Filter data for the current outputPathId
+    filteredData <- dtRes[dtRes$outputPathId == id, ]
+
+    # Create the base plot for residuals vs observed
+    basePlot <- ospsuite_plotResidualsVsTime(filteredData)
+
+    # Add facet wrapping by scenario and group
+    finalPlot <- basePlot +
+      facet_wrap(vars(scenario, group), ncol = nCols)
+
+    # Print the plot
+    print(finalPlot)
+  }
+}
+
+# auxiliary ------------
+
+#' Create Line Data for Hyperparameters
+#'
+#' This function generates the line data for hyperparameters based on their distributions.
+#'
+#' @param plotData A data.table containing the data to be processed.
+#' @param dtValues A data.table with ECDF calculated.
+#' @param xScale A character string specifying the scale of the x-axis.
+#' @return A data.table containing the line data for hyperparameters.
+#' @keywords internal
+createLineData <- function(plotData, dtValues, xScale) {
+  dtHyper <- plotData[valueMode == PARAMETERTYPE$hyperParameter]
+  lineData <- data.table()
+
+  for (dtHyperPar in split(dtHyper, by = c('name', 'categoricCovariate', 'status'))) {
+    dtHyperPar <- dtHyperPar %>% setDT()
+
+    x <- if (xScale == SCALING$log) {
+      exp(seq(log(dtValues[name == dtHyperPar$name[1]]$minValue[1]),
+              log(dtValues[name == dtHyperPar$name[1]]$maxValue[1]),
+              length.out = 100))
+    } else {
+      seq(dtValues[name == dtHyperPar$name[1]]$minValue[1],
+          dtValues[name == dtHyperPar$name[1]]$maxValue[1],
+          length.out = 100)
+    }
+
+    argList <- stats::setNames(as.numeric(dtHyperPar[['statusValue']]), as.character(dtHyperPar[['label']]))
+
+    y <- do.call(paste0('p', dtHyperPar$hyperDistribution[1]), args = c(list(q = x), argList))
+
+    lineData <- rbind(lineData,
+                      data.table(x = x,
+                                 value = y,
+                                 status = dtHyperPar$status[1],
+                                 name = dtHyperPar$name[1],
+                                 categoricCovariate = dtHyperPar$categoricCovariate[1]))
+
+  }
+
+  return(lineData)
+}
+
+#' Customize Legend
+#'
+#' This function customizes the legend for the plot.
+#'
+#' @param plotObject The ggplot object to which the legend will be added.
+#' @param colorScalingVector A named vector of colors for different statuses.
+#' @return A ggplot object with a customized legend.
+#' @keywords internal
+customizeLegend <- function(plotObject, colorScalingVector) {
+  legendTitleShape <- 'Individual Values'
+  legendTitleLine <- 'Distribution'
+
+  plotObject +
+    scale_linetype_manual(values = c('dotted', 'solid', 'twodash'),
+                          breaks = names(colorScalingVector)) +
+    scale_shape_manual(values = c('square filled', 'triangle filled', 'circle filled'),
+                       breaks = names(colorScalingVector)) +
+    scale_color_manual(values = colorScalingVector,
+                       breaks = names(colorScalingVector)) +
+    scale_fill_manual(values = colorScalingVector,
+                      breaks = names(colorScalingVector)) +
+    guides(shape = guide_legend(title = legendTitleShape, order = 1),
+           fill = guide_legend(title = legendTitleShape, order = 1),
+           color = guide_legend(title = legendTitleLine, order = 2),
+           linetype = guide_legend(title = legendTitleLine, order = 2))
+}
+
+
 
 #' Prepare Plot Data
 #'
@@ -141,43 +418,34 @@ checkStatusFilesExist <- function(outputDir) {
 #' transforming the data into a suitable format for visualization.
 #'
 #' @param dtList A list containing prior and start values data tables.
-#' @param outputDir A string representing the output directory path.
+#' @param currentStatus A list which contains the current values.
+#' @param bestStatus A list which contains the best values.
 #' @return A data.table containing the prepared plot data.
-preparePlotDataParameterValues <- function(dtList, outputDir) {
+preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
+  # startValue
   plotData <- prepareInputData(dtPrior = dtList$prior,
                                dtStartValues = dtList$startValues,
                                valueColumn = 'startValue') %>%
     setnames(old = 'value',new = 'startValue')
 
-  plotData[, startParam := plogis(param), .I]
+  plotData[, startParam := plogis(transformToUnbounded(value = startValue,minValue = minValue,maxValue = maxValue,scaling = scaling)), .I]
 
-  currentStatus <- readRDS(file.path(outputDir, 'optimStatus.RDS'))
+  # current
   plotData$param <- currentStatus$params
+  plotData[, currentValue := inverseTransformParams(param = param,minValue = minValue,maxValue = maxValue,scaling = scaling), .I]
   plotData[, currentParam := plogis(param), .I]
-  plotData[, currentValue := inverseTransformParams(param, maxValue, minValue, scaling), .I]
-  printOptimizationStatus('current', currentStatus)
 
-  bestStatus <- readRDS(file.path(outputDir, 'bestOptimStatus.RDS'))
+  # best
   plotData$param <- bestStatus$params
   plotData[, bestParam := plogis(param), .I]
-  plotData[, bestValue := inverseTransformParams(param, maxValue, minValue, scaling), .I]
-  printOptimizationStatus('best', bestStatus)
+  plotData[, bestValue := inverseTransformParams(param = param,minValue = minValue,maxValue = maxValue,scaling = scaling), .I]
 
   plotData <- enhancePlotDataParameterValues(plotData, dtList)
 
   return(plotData)
 }
 
-#' Print Optimization Status
-#'
-#' This function prints the optimization status information for the current or best status.
-#'
-#' @param statusType A string indicating whether the status is 'current' or 'best'.
-#' @param status A list containing the optimization status details.
-printOptimizationStatus <- function(statusType, status) {
-  cat(sprintf('%s:\n    iteration: %d\n    objective function value: %.2f\n',
-              statusType, status$iteration, -sum(status$loglikelihood)))
-}
+
 
 #' Enhance Plot Data
 #'
@@ -187,13 +455,17 @@ printOptimizationStatus <- function(statusType, status) {
 #' @param dtList A list containing prior and start values data tables.
 #' @return A data.table with enhanced plot data.
 enhancePlotDataParameterValues <- function(plotData, dtList) {
-  plotData$name <- c(dtList$prior$name, dtList$startValues$name)
-  plotData$valueMode <- c(dtList$prior$valueMode, rep('individualValue', nrow(dtList$startValues)))
-  plotData$label <- c(dtList$prior$hyperParameter, dtList$startValues$individualId)
-  plotData$categoricCovariate <- c(dtList$prior$categoricCovariate, dtList$startValues$categoricCovariate)
 
-  plotData[, categoricCovariate := as.character(categoricCovariate)]
-  plotData[is.na(categoricCovariate), categoricCovariate := '']
+  # Create the plotData data.table
+  plotData <- cbind(plotData,
+                    rbindlist(list(dtList$prior[, .(name, valueMode, label = hyperParameter, hyperDistribution, categoricCovariate)],
+                                   dtList$startValues[, .(
+                                     name,
+                                     valueMode = PARAMETERTYPE$individual,
+                                     label = individualId,
+                                     hyperDistribution = '',
+                                     categoricCovariate
+                                   )])))
 
   plotData$label <- factor(plotData$label, levels = unique(plotData$label), ordered = TRUE)
 
@@ -215,96 +487,8 @@ enhancePlotDataParameterValues <- function(plotData, dtList) {
 
   return(plotData)
 }
-#' Create Plots
-#'
-#' This function creates ggplot objects based on the prepared plot data.
-#' If the number of plots exceeds the specified grid size, it splits the plots into multiple sets.
-#'
-#' @param plotData A data.table containing the reshaped plot data.
-#' @param runName A string indicating the name of the run to include in the plot title.
-#' @param nCols An integer specifying the number of columns for the plot layout.
-#' @param nRows An integer specifying the number of rows for the plot layout.
-#' @return A list of ggplot objects representing the plots for the parameter values.
-createPlotsParameterValues <- function(plotData, runName, nCols, nRows,useInteractivePlots,colorScalingVector) {
 
-  # Get the unique combinations for the current set of plots
-  uniqueCombinations <- unique(plotData[!(valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError)), .(categoricCovariate, name)])
-  setorderv(uniqueCombinations,c('categoricCovariate','name'))
-  nPlots <- nrow(uniqueCombinations)
 
-  # Determine how many sets of plots are needed
-  totalPlots <- ceiling(nPlots / (nCols * nRows))
-
-  mapping <- aes(y = statusParam, color = status, shape = status)
-  if (useInteractivePlots)
-    mapping <- utils::modifyList(mapping,aes(text = paste("Value:", signif(statusValue,3))))
-
-  for (setIndex in seq(0,totalPlots)) {
-    if (setIndex == 0) {
-      p <- ggplot(plotData[valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError)]) +
-        geom_point(utils::modifyList(mapping,aes(x = name))) +
-        facet_wrap(vars(valueMode), ncol = 2, scales = 'free_y')
-    } else {
-      # Subset the data for the current set of plots
-      startIndex <- (setIndex - 1) * (nCols * nRows) + 1
-      endIndex <- min(startIndex + (nCols * nRows) - 1, nPlots)
-
-      # Determine the rows to plot for the current set
-      rowsToPlot <- seq(startIndex, endIndex)
-      plotDataSubset <- uniqueCombinations[rowsToPlot]
-
-      # Create the plot using the subset
-      p <- ggplot(plotData[.(plotDataSubset), on = .(categoricCovariate, name)]) +
-        geom_point(utils::modifyList(mapping,aes(x = label))) +
-        facet_wrap(vars(categoricCovariate, name), ncol = nCols, scales = 'free_y')
-
-    }
-
-    p <- customizePlotAppearance(plot = p, runName = runName,colorScalingVector = colorScalingVector)
-
-    if (useInteractivePlots){
-      # Convert ggplot to plotly for interactivity
-      plotlyPlot <- plotly::ggplotly(p, tooltip = "text")
-      plotlyPlot <- plotly::config(plotlyPlot, displayModeBar = FALSE)
-      print(plotlyPlot)
-    } else {
-      print(p)
-    }
-
-  }
-
-  return(invisible())
-}
-
-#' Customize Plot Appearance
-#'
-#' This function customizes the appearance of a ggplot object.
-#'
-#' @param plot A ggplot object to be customized.
-#' @param runName A string indicating the name of the run to include in the plot title.
-#' @return A customized ggplot object.
-customizePlotAppearance <- function(plot, runName,colorScalingVector) {
-  return(
-    plot +
-      geom_hline(yintercept = c(0, 1)) +
-      theme(legend.direction = 'horizontal') +
-      scale_color_manual(
-        values = colorScalingVector
-      ) +
-      coord_flip() +
-      labs(
-        x = '',
-        y = '',
-        color = '',
-        shape = '',
-        title = runName
-      ) +
-      scale_y_continuous(
-        breaks = seq(0, 1, by = 0.25),
-        labels = c('min', rep('', 3), 'max')
-      )
-  )
-}
 # debug -------------------
 evaluateLogLikelihoodAtFailedStatus <- function(projectConfiguration,runName,scenarioList){
   outputDir <- getOutputDirectoryForRun(projectConfiguration, runName)

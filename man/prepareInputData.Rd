@@ -18,7 +18,7 @@ prepareInputData(
 \item{valueColumn}{Name of column with value of interest either 'value' or 'startValue'.}
 }
 \value{
-A data.table with combined and transformed input data for the L-BFGS-B algorithm.
+A data.table with combined and transformed input data.
 }
 \description{
 This function prepares the input data for the L-BFGS-B algorithm by merging and transforming

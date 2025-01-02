@@ -13,7 +13,8 @@ getLogLikelihood <-
   function(params,
            scenarioList,
            dtList,
-           simulationRunOptions) {
+           simulationRunOptions,
+           optimEnv = NULL) {
     dtList <- setParameterToTables(
       dtList = dtList,
       params = params
@@ -25,7 +26,8 @@ getLogLikelihood <-
       dtStartValues = dtList$startValues,
       dataObservedForMatch = dtList$data,
       dtMappedPaths = dtList$mappedPaths,
-      simulationRunOptions = simulationRunOptions
+      simulationRunOptions = simulationRunOptions,
+      optimEnv = optimEnv
     )
     # Likelihood of hyper parameter
     logHyperParameter <- getLikelihoodHyperParameter(
@@ -55,7 +57,8 @@ getLikelihoodTimeProfiles <- function(scenarioList,
                                       dtStartValues,
                                       dataObservedForMatch,
                                       dtMappedPaths,
-                                      simulationRunOptions) {
+                                      simulationRunOptions,
+                                      optimEnv = NULL) {
   # initialize variables to avoid linter messages
   yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
   # update parameter values and run result
@@ -85,6 +88,10 @@ getLikelihoodTimeProfiles <- function(scenarioList,
 
   # Apply the function to calculate likelihood
   dtRes[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
+
+  if (!is.null(optimEnv)){
+    optimEnv$Residuals <- dtRes
+  }
 
   # Calculate total log-likelihood
   if (any(!is.finite(dtRes$logLikelihood))) {

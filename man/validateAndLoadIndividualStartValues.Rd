@@ -7,7 +7,6 @@
 validateAndLoadIndividualStartValues(
   projectConfiguration,
   dtHyperParameter,
-  dtDefinition,
   dataObserved,
   seed
 )
@@ -16,8 +15,6 @@ validateAndLoadIndividualStartValues(
 \item{projectConfiguration}{An object of class ProjectConfiguration containing project configuration details.}
 
 \item{dtHyperParameter}{A data.table containing hyperparameters and their distributions.}
-
-\item{dtDefinition}{A data.table containing parameter definitions.}
 
 \item{dataObserved}{A data.table containing observed data.}
 

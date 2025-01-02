@@ -8,14 +8,14 @@
 \alias{rlnorm_geomean}
 \title{Log-Normal Functions with Geometric Mean}
 \usage{
-dlnorm_geomean(x, geomean = 1, sdlog = 1, log = FALSE)
+dlnorm_geomean(x, geomean = 1, geosd = 1, log = FALSE)
 }
 \arguments{
 \item{x}{A numeric vector of quantiles (for \code{dlnorm_geomean}).}
 
 \item{geomean}{A numeric value representing the geometric mean. Default is 1.}
 
-\item{sdlog}{A numeric value representing the standard deviation of the logarithm. Default is 1.}
+\item{geosd}{A numeric value representing the standard deviation of the logarithm. Default is 1.}
 
 \item{log}{A logical value indicating whether to return the logarithm of the density. Default is FALSE.}
 
@@ -40,17 +40,17 @@ A numeric value or vector depending on the function:
 }
 \description{
 These functions provide an interface to the log-normal distribution using
-the geometric mean instead of the log mean. They internally call the
+the geometric mean and geometric standard deviation instead of the log mean and log sd. They internally call the
 corresponding base R functions: \code{dlnorm}, \code{plnorm}, \code{qlnorm}, and \code{rlnorm}.
-e.g. dlnorm_geomean(geomean, sdlog, x = x) calls dlnorm(log(geomean),sdlog,x = s)
+e.g. dlnorm_geomean(geomean, geosd, x = x) calls dlnorm(logmean = log(geomean), logsd = log(geosd), x = x)
 }
 \section{Functions}{
 
 \describe{
-\item{\code{dlnorm_geomean(geomean, sdlog, ...)}}{Density of the log-normal distribution.}
-\item{\code{plnorm_geomean(q, geomean, sdlog, ...)}}{Cumulative distribution function of the log-normal distribution.}
-\item{\code{qlnorm_geomean(p, geomean, sdlog, ...)}}{Quantile function of the log-normal distribution.}
-\item{\code{rlnorm_geomean(n, geomean, sdlog, ...)}}{Random generation from the log-normal distribution.}
+\item{\code{dlnorm_geomean(geomean, geosd, ...)}}{Density of the log-normal distribution.}
+\item{\code{plnorm_geomean(q, geomean, geosd, ...)}}{Cumulative distribution function of the log-normal distribution.}
+\item{\code{qlnorm_geomean(p, geomean, geosd, ...)}}{Quantile function of the log-normal distribution.}
+\item{\code{rlnorm_geomean(n, geomean, geosd, ...)}}{Random generation from the log-normal distribution.}
 }
 }
 

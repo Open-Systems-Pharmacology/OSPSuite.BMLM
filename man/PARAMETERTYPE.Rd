@@ -16,6 +16,7 @@ Parameter types
 \seealso{
 Other enum helpers: 
 \code{\link{ERRORMODEL}},
+\code{\link{RUNSTATUS}},
 \code{\link{SCALING}}
 }
 \concept{enum helpers}

@@ -4,12 +4,15 @@
 \alias{validateAndLoadMappedPaths}
 \title{Validate and Load Mapped Paths}
 \usage{
-validateAndLoadMappedPaths(projectConfiguration, dtDefinition, scenarioList)
+validateAndLoadMappedPaths(
+  projectConfiguration,
+  dtPrior,
+  dtStartValues,
+  scenarioList
+)
 }
 \arguments{
 \item{projectConfiguration}{An object of class ProjectConfiguration containing project configuration details.}
-
-\item{dtDefinition}{A data.table containing parameter definitions.}
 
 \item{scenarioList}{A list of scenarios to be used in the optimization.}
 }

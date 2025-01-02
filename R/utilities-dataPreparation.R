@@ -787,3 +787,70 @@ checkDuplicates <- function(dt, identifierCols, sheetName) {
     ))
   }
 }
+
+
+#' Save Data Tables as CSV
+#'
+#' Saves the provided data tables to CSV files in the specified output directory.
+#'
+#' @param dtList A list containing data tables to be saved.
+#' @param outputDir A character string representing the path to the output directory.
+#' @param params Optional; a numeric vector of parameters to set in the data tables (default is NULL).
+#'
+#' @keywords internal
+saveDataTablesAsCSV <- function(dtList, outputDir, params = NULL) {
+  if (!is.null(params)) {
+    dtList <- setParameterToTables(
+      dtList = dtList,
+      params = params
+    )
+  }
+
+  for (name in   csvFiles <- c("data","mappedPaths","prior","startValues")) {
+      filePath <- file.path(outputDir, paste0(name, ".csv"))
+      write.csv(dtList[[name]], file = filePath, row.names = FALSE)
+  }
+}
+
+
+#' Load Lists for Run
+#'
+#' This function loads various CSV files from a specified output directory for a given name of a BLMLM run,
+#' processes them into data.tables, and returns them as a list.
+#'
+#' @param projectConfiguration An object of class projectConfiguration containing configuration settings, including
+#'                             the output folder path where the CSV files are located.
+#' @param runName A character string representing the name of the run, which is used to
+#'                 construct the output directory path.
+#'
+#' @return A list of data.tables, each corresponding to one of the CSV files loaded. The
+#'         list elements are named after the CSV files (without the '.csv' extension).
+#'
+#' @export
+loadListsForRun <- function(outputDir,runName){
+
+
+  csvFiles <- c("data.csv","mappedPaths.csv","prior.csv","startValues.csv")
+
+  dtList = list()
+  for (csvFile in csvFiles) {
+    tmp <- data.table::fread(file.path(outputDir,csvFile))
+
+    if ('individualId' %in% names(tmp)){
+      tmp[,individualId := as.character(individualId)]
+    }
+
+    # add new column parameter as column name 'name' get confused in some applications
+    if ('name' %in% names(tmp)){
+      tmp[,parameter := name]
+    }
+
+    dtList[[gsub('.csv','',csvFile)]] <- tmp
+  }
+
+  dtList[['input']] <-  prepareInputData(dtPrior = dtList$prior,
+                                     dtStartValues = dtList$startValues)
+
+  return(dtList)
+
+}

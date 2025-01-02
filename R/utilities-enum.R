@@ -25,3 +25,12 @@ SCALING <- ospsuite.utils::enum(c( #nolint camelCase
   log = "Log",
   linear = "Linear"
 ))
+
+#' @title Status of optimization Runs
+#' @family enum helpers
+RUNSTATUS <- ospsuite.utils::enum(c( #nolint camelCase
+  initialized = "initialized",
+  running = "running",
+  stopped = "stopped",
+  corrupt = "corrupt"
+))

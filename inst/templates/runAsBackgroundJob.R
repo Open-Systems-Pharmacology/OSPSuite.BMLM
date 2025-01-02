@@ -5,6 +5,7 @@ library(ospsuite.bmlm)
 message('reload scenarios')
 scenarioList <-
   createScenarios.wrapped(projectConfiguration = projectConfiguration,
-                          scenarioNames = names(argList[['scenarioList']]))
+                          scenarioNames = names(argListForJob[['scenarioList']]))
 
-do.call(what = optimizeParameters,args = utils::modifyList(x = argList,val = list(scenarioList = scenarioList)))
+message('start optimization')
+do.call(what = optimizeParameters,args = utils::modifyList(x = argListForJob,val = list(scenarioList = scenarioList)))

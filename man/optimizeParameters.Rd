@@ -11,9 +11,7 @@ optimizeParameters(
   method,
   control,
   outputDir,
-  lastStatusSavingInterval,
-  bestValue,
-  logFile,
+  lastStatusSavingIntervalInSecs,
   startTime,
   failValue,
   ...
@@ -32,17 +30,15 @@ optimizeParameters(
 
 \item{outputDir}{A character string representing the path to the output directory.}
 
-\item{lastStatusSavingInterval}{An integer specifying the interval for saving the last status.}
-
-\item{bestValue}{A numeric value representing the current best value of optimization.}
-
-\item{logFile}{A character string representing the file path for the log file.}
-
 \item{startTime}{A POSIXct object representing the start time of the optimization process.}
 
 \item{failValue}{A numeric value to set if evaluation of the objective function fails.}
 
 \item{...}{Additional arguments passed to the optimization function.}
+
+\item{lastStatusSavingInterval}{An integer specifying the interval for saving the last status.}
+
+\item{bestValue}{A numeric value representing the current best value of optimization.}
 }
 \value{
 The result of the optimization process.

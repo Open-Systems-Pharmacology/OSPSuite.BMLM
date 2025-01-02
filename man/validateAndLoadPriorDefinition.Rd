@@ -4,12 +4,10 @@
 \alias{validateAndLoadPriorDefinition}
 \title{Get Prior Definition}
 \usage{
-validateAndLoadPriorDefinition(projectConfiguration, dtDefinition)
+validateAndLoadPriorDefinition(projectConfiguration)
 }
 \arguments{
 \item{projectConfiguration}{An object of class ProjectConfiguration containing project configuration details.}
-
-\item{dtDefinition}{A data.table containing parameter definitions.}
 }
 \value{
 A data.table with prior definitions.
