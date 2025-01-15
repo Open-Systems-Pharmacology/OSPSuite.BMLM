@@ -12,6 +12,7 @@ optimizeParameters(
   control,
   outputDir,
   lastStatusSavingIntervalInSecs,
+  withInternalOptimization,
   startTime,
   failValue,
   ...
@@ -22,7 +23,7 @@ optimizeParameters(
 
 \item{scenarioList}{A list of scenarios to be optimized.}
 
-\item{simulationRunOptions}{A list of options for simulation runs.}
+\item{simulationRunOptions}{An obkect of class SimulationRunOptions.}
 
 \item{method}{A character string specifying the optimization method.}
 
@@ -30,18 +31,18 @@ optimizeParameters(
 
 \item{outputDir}{A character string representing the path to the output directory.}
 
+\item{lastStatusSavingIntervalInSecs}{An integer specifying the interval for saving the last status in seconds.}
+
+\item{withInternalOptimization}{A logical indicating whether to perform internal optimization (default is TRUE).}
+
 \item{startTime}{A POSIXct object representing the start time of the optimization process.}
 
 \item{failValue}{A numeric value to set if evaluation of the objective function fails.}
 
 \item{...}{Additional arguments passed to the optimization function.}
-
-\item{lastStatusSavingInterval}{An integer specifying the interval for saving the last status.}
-
-\item{bestValue}{A numeric value representing the current best value of optimization.}
 }
 \value{
-The result of the optimization process.
+A list containing the result of the optimization process.
 }
 \description{
 Performs the optimization of parameters using the specified method and control settings.

@@ -4,17 +4,21 @@
 # make sure the configuration tables 'DataGroups' and 'Outputs' in Plots.xslx are updated,
 # for each dataGroup a defaultScenario is needed and the outputPaths have to be inserted for each OutputPathId
 
+# Configuration step ----------------
 # add BMLM configuration file and set up parameter identification from snapshot
 projectConfiguration <-
   addBMLMPConfiguration(projectConfiguration,
-                        bMLMConfigurationFile = "BMLMConfiguration.xlsx",
                         snapshotFile = file.path(projectConfiguration$modelFolder, 'mySnaphot.json'),
                         nameOfParameterIdentfication = 'myParameterIdentification',
                         overwrite = FALSE)
 
 # Manual adjust sheets ParameterDefinition, ParameterMappedPaths, ModelError
+
+# Configure Priors based on BMLM configuration file
 configurePriors(projectConfiguration = projectConfiguration,
                 dataObserved = dataObserved)
+
+# Set up and start optimization run ----------------
 
 # Initialize an optimization object
 myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
@@ -23,12 +27,23 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 dataObserved = dataObserved)
 
 # start the Optimization ( as default this is done as background job)
-myRun$startOptimization(projectConfiguration,method = 'SANN')
+optimization$startOptimization(
+  method = "BFGS",  # Specify the optimization method
+  control = list(maxit = 1000)  # Control parameters for the optimization
+)
 
-
-# check Progress of optimization
+# check Progress of optimization ----------------
 myRun$checkParameterLimits()
 myRun$checkDistributions()
 myRun$checkConvergence()
+myRun$checkPredictedVsTime()
+myRun$checkPredictedVsObserved()
+myRun$checkResidualsAsHistogram()
+myRun$checkResidualsVsTime()
+myRun$checkResidualsAsQQ()
 
-
+# export results ----------------
+myRun$exportFinalValuesToBMLConfigTable()
+myRun$exportResultAsPopulation()
+myRun$exportIndividualValuesToConfigTable()
+myRun$exportGlobalsParametersToConfigTables()

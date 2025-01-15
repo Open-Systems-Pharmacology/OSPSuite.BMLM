@@ -4,7 +4,7 @@
 \alias{getLikelihoodHyperParameter}
 \title{Get Likelihood Hyperparameter}
 \usage{
-getLikelihoodHyperParameter(dtStartValues, dtHyperParameter)
+getLikelihoodHyperParameter(dtStartValues, dtPrior)
 }
 \arguments{
 \item{dtStartValues}{A data.table containing start values.}

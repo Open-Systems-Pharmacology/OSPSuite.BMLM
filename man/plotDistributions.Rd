@@ -5,21 +5,30 @@
 \title{Plot Distributions}
 \usage{
 plotDistributions(
-  plotData,
+  dtList,
+  currentStatus = NULL,
+  bestStatus,
   nCols = 2,
   nRows = 3,
   xScale = unlist(SCALING),
+  titeltxt = NULL,
   colorScalingVector = c(start = "lightblue", current = "darkgreen", best = "orange")
 )
 }
 \arguments{
-\item{plotData}{A data.table containing the data to be plotted.}
+\item{dtList}{A data.table containing the data to be plotted.}
+
+\item{currentStatus}{A data.table with the current parameter values.}
+
+\item{bestStatus}{A data.table with the best parameter values.}
 
 \item{nCols}{An integer specifying the number of columns for faceting. Default is 2.}
 
 \item{nRows}{An integer specifying the maximum number of rows for faceting. Default is 3.}
 
-\item{xScale}{A character string specifying the scale of the x-axis. Default is 'Log'}
+\item{xScale}{A character string specifying the scale of the x-axis. Default is 'log'.}
+
+\item{titeltxt}{A string to include in the plot title.}
 
 \item{colorScalingVector}{A named vector of colors for different statuses. Default includes light blue, dark green, and orange.}
 }

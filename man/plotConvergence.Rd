@@ -6,27 +6,27 @@
 \usage{
 plotConvergence(
   dtConvergence,
+  displayVariablesIndx = seq(1, 5),
   titletxt = NULL,
   nPoints = 200,
   selectionMode = c("last", "random", "first")
 )
 }
 \arguments{
-\item{dtConvergence}{A data.table containing the loglikelihood vsplot titlename of the run.}
+\item{dtConvergence}{A data.table containing the convergence data.}
 
-\item{nPoints}{An integer specifying the number of points to select for plotting.
-Default is 200.}
+\item{displayVariablesIndx}{An integer vector specifying which variables to display.}
 
-\item{selectionMode}{A character string indicating the mode of selection for points.
-Options are 'last', 'random', and 'first'. Default is 'last'.}
+\item{titletxt}{A string to include in the plot title.}
+
+\item{nPoints}{An integer specifying the number of points to select for plotting. Default is 200.}
+
+\item{selectionMode}{A character string indicating the mode of selection for points. Options are 'last', 'random', and 'first'. Default is 'last'.}
 }
 \value{
 A ggplot object visualizing the convergence of model parameters.
-The plot shows the values of logTimeProfile, logHyperParameter, logPrior,
-and objectiveValue over iterations.
 }
 \description{
 This function checks the convergence of model parameters by reading a CSV file
 containing convergence data and visualizing the results using ggplot2.
 }
-\keyword{internal}

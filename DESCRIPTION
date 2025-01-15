@@ -30,6 +30,7 @@ Suggests:
     spelling,
     DiagrammeR,
     knitr,
+    vdiffr,
     rmarkdown,
     ggsci,
     testthat (>= 3.0.3),

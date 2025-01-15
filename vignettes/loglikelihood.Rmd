@@ -120,12 +120,7 @@ $$ log(\mathcal{L}_h(\theta))  = \sum_k log(\mathcal{L}_{h,k}(\theta)) = \sum_{k
 - $\phi(\theta_k)$ distribution for hyperparameter  
 - $\theta_{k}$ individual parameter values and distribution parameter values for hyperparameter k
 
-available distributions:
-
-- norm
-- lnorm
-
-easily extendable to all distributions available in package stats: (https://rdrr.io/r/stats/Distributions.html)
+available distributions are all distributions available in package stats: (https://rdrr.io/r/stats/Distributions.html)
 
 
 example for a multimodal normal distributed hyper parameter p:

@@ -252,9 +252,10 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
     dtOutputMappings[, path := NULL]
   }
 
-  dtOutputMappings[, errorModel := ifelse(scaling == SCALING$log, ERRORMODEL$log_absolute, ERRORMODEL$absolute),
-    by = "outputPathId"
-  ] # nolint identation
+  dtOutputMappings[, errorModel := ifelse(tolower(scaling) == SCALING$log,
+                                          ERRORMODEL$log_absolute,
+                                          ERRORMODEL$absolute),
+                   by = "outputPathId"] # nolint identation
 
   dtOutputMappings[, scaling := NULL]
 
@@ -632,7 +633,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
           hyperParameter = parType,
           hyperDistribution = par$distribution,
           unit = par$unit,
-          scaling = par$scaling,
+          scaling = tolower(par$scaling),
           useAsFactor = par$useAsFactor
         )
 

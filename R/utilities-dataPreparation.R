@@ -49,12 +49,6 @@ createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed)
     dataObservedForMatch = dtList$data
   )
 
-  dtList$input <-
-    prepareInputData(
-      dtPrior = dtList$prior,
-      dtStartValues = dtList$startValues
-    )
-
   return(dtList)
 }
 
@@ -309,9 +303,11 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
 
   dtPrior <- checkMinMaxValues(dtPrior)
 
-  checkmate::assertNames(dtPrior[valueMode != PARAMETERTYPE$outputError]$scaling, subset.of = unlist(SCALING))
+  checkmate::assertNames(tolower(dtPrior[valueMode != PARAMETERTYPE$outputError]$scaling),
+                         subset.of = unlist(SCALING))
   checkmate::assertLogical(as.logical(dtPrior[valueMode != PARAMETERTYPE$outputError]$useAsFactor), any.missing = FALSE)
-  checkmate::assertNames(dtPrior$distribution, subset.of = c('flat',getAllDistributions()))
+  checkmate::assertNames(dtPrior$distribution,
+                         subset.of = c('flat', getAllDistributions()))
 
   dtPrior[, probability := apply(.SD, 1, calculateProbability)]
 
@@ -328,6 +324,8 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
       paste(dtPrior[probability < 0 | probability > 1]$name, collapse = ", ")
     ))
   }
+
+  dtPrior[,id:=paste0('P',.I)]
 
   return(dtPrior)
 }
@@ -354,41 +352,10 @@ adjustHyperParameter <- function(dtPrior, dtStartValues) {
 
   # Reduce hyperparameter to match available data
   dtHyperParameter <- dtPrior[valueMode == PARAMETERTYPE$hyperParameter] %>%
-    merge(unique(dtStartValues[, .(name, categoricCovariate, minValue, maxValue)]),
-          by = c('name', 'categoricCovariate'),
-          suffixes = c('', '.indValues'))
+    merge(unique(dtStartValues[, .(name, categoricCovariate)]),
+          by = c('name', 'categoricCovariate'))
 
-  # Add truncationOffset column
-  dtPriorNew[, logTruncationOffset := NA_real_]
-
-  # Loop through each hyperparameter group
-  for (dtGroup in split(dtHyperParameter, by = c('name', 'categoricCovariate'))) {
-    setDT(dtGroup)
-
-    # Create a named list of parameters
-    paramList <- setNames(dtGroup$value, dtGroup$hyperParameter)
-
-    # Calculate logTruncationOffset
-    dtGroup[, logTruncationOffset :=
-              log(1 -
-                    do.call(paste0("p", dtGroup$hyperDistribution[1]),
-                            c(
-                              list(q = dtGroup$minValue.indValues[1], log = FALSE), paramList
-                            )) -
-                    do.call(paste0("p", dtGroup$hyperDistribution[1]),
-                            c(
-                              list(
-                                q = dtGroup$maxValue.indValues[1],
-                                log = FALSE,
-                                lower.tail = FALSE
-                              ),
-                              paramList
-                            )))]
-
-    # Combine results
-    selectedCols <- names(dtPriorNew)
-    dtPriorNew <- rbind(dtPriorNew, dtGroup[, ..selectedCols])
-  }
+  dtPriorNew <- rbind(dtPriorNew, dtHyperParameter)
 
   return(dtPriorNew)
 }
@@ -413,8 +380,7 @@ getHyperParameter <- function(dtPrior) {
       "categoricCovariate",
       "value",
       "hyperDistribution",
-      "scaling",
-      'logTruncationOffset'
+      "scaling"
     )))
 
   return(dtHyperParameter)
@@ -452,7 +418,7 @@ validateAndLoadIndividualStartValues <-
     dtStartValues <- dtStartValues[individualId %in% unique(dataObserved$individualId)]
 
     # validate
-    checkmate::assertNames(dtStartValues$scaling, subset.of = unlist(SCALING))
+    checkmate::assertNames(tolower(dtStartValues$scaling), subset.of = unlist(SCALING))
     checkmate::assertLogical(as.logical(dtStartValues$useAsFactor), any.missing = FALSE)
 
     validateGroupConsistency(dt = dtStartValues,
@@ -480,6 +446,9 @@ validateAndLoadIndividualStartValues <-
     )
 
     dtStartValuesNew[, startValue := value]
+
+    dtStartValuesNew[,id:=paste0('S',.I)]
+
 
     return(dtStartValuesNew)
   }
@@ -643,28 +612,47 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
 #'
 #' @return A data.table with combined and transformed input data.
 #' @keywords internal
-prepareInputData <- function(dtPrior, dtStartValues,valueColumn = c('value','startValue')) {
-  # initialize variables to avoid linter messages
+getParams <-
+  function(dtPrior,
+           dtStartValues,
+           valueColumn = c('value', 'startValue'),
+           optimizationGroup = c('both','external','internal')) {
+    # initialize variables to avoid linter messages
   value <- minValue <- maxValue <- scaling <- NULL
 
+  optimizationGroup <- match.arg(optimizationGroup)
   valueColumn <- match.arg(valueColumn)
 
   # Select relevant columns from dtPrior and dtStartValues and create logConversion column
   dtInput <- rbind(
-    dtPrior[, c(..valueColumn, 'minValue', 'maxValue', 'scaling')],
-    dtStartValues[, c(..valueColumn, 'minValue', 'maxValue', 'scaling')]
+    dtPrior[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling','valueMode')],
+    dtStartValues[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling')],
+    fill = TRUE
   ) %>%
   setnames(old =  valueColumn,new =  "value")
+
+  # split parameters for optimizations
+  dtInput <- switch(optimizationGroup,
+                    'external' = dtInput[is.na(valueMode) | valueMode == PARAMETERTYPE$global],
+                    'internal' = dtInput[valueMode %in% c(PARAMETERTYPE$hyperParameter,PARAMETERTYPE$outputError)],
+                    dtInput)
 
   checkmate::assertNumeric(dtInput$value, any.missing = FALSE)
   checkmate::assertNumeric(dtInput$minValue, any.missing = FALSE)
   checkmate::assertNumeric(dtInput$maxValue, any.missing = FALSE)
-  checkmate::assertNames(dtInput$scaling, subset.of = unlist(SCALING))
+  checkmate::assertNames(tolower(dtInput$scaling), subset.of = unlist(SCALING))
 
   # Transform params to unbounded values
-  dtInput[, param := transformToUnbounded(value, minValue, maxValue, scaling),by =.I]
+  dtInput[, param := transformToUnbounded(value = value,
+                                          minValue = minValue,
+                                          maxValue = maxValue,
+                                          scaling = tolower(scaling)),
+          by = .I]
 
-  return(dtInput)
+  initialValues <- stats::setNames(dtInput$param,
+                                   dtInput$id)
+
+  return(initialValues)
 }
 
 #' Set Parameter to Tables
@@ -677,14 +665,16 @@ prepareInputData <- function(dtPrior, dtStartValues,valueColumn = c('value','sta
 #' @return A list containing the updated data.tables.
 #' @keywords internal
 setParameterToTables <- function(dtList, params) {
-  dtList$input$param <- params
 
-  # Transform params to unbounded values
-  dtList$input[, value := inverseTransformParams(param, maxValue, minValue, scaling),by =.I]
-
-  dtList$prior$value <- dtList$input$value[seq_len(nrow(dtList$prior))]
-  dtList$startValues$value <-
-    dtList$input$value[nrow(dtList$prior) + seq_len(nrow(dtList$startValues))]
+  for (table in c('prior','startValues')){
+    dtList[[table]][id %in% names(params),param := params[id]]
+    dtList[[table]][id %in% names(params), value :=
+                      inverseTransformParams(param = param,
+                                             minValue = minValue,
+                                             maxValue = maxValue,
+                                             scaling = tolower(scaling)),
+                    by =.I]
+  }
 
   return(dtList)
 }
@@ -700,12 +690,15 @@ setParameterToTables <- function(dtList, params) {
 #' @return A numeric value of transformed values.
 #' @keywords internal
 transformToUnbounded <- function(value, minValue, maxValue, scaling) {
-  return(if(scaling == SCALING$log){
+  param <- if(tolower(scaling) == SCALING$log){
     qlogis((log(value) - log(minValue)) / (log(maxValue) - log(minValue)))
   } else {
     qlogis((value - minValue) / (maxValue - minValue))
   }
-  )
+
+  # keep param finite
+  param <- pmax(-20,pmin(20,param))
+  return(param)
 }
 
 #' Inverse Transform Parameters
@@ -720,12 +713,12 @@ transformToUnbounded <- function(value, minValue, maxValue, scaling) {
 #' @return A numeric vector of original values.
 #' @keywords internal
 inverseTransformParams <- function(param, minValue, maxValue, scaling) {
-  return(if(scaling == SCALING$log){
+  if(tolower(scaling) == SCALING$log){
     exp(plogis(param) * (log(maxValue) - log(minValue)) + log(minValue))
   } else{
     plogis(param) * (maxValue - minValue) + minValue
   }
-  )
+
 }
 
 
@@ -759,7 +752,7 @@ checkMinMaxValues <- function(dt) {
 
     if (nrow(tmpFailing) > 0) {
       writeTableToLog(tmpFailing)
-      stop("Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling Log")
+      stop("Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling log")
     }
   }
 
@@ -806,9 +799,15 @@ saveDataTablesAsCSV <- function(dtList, outputDir, params = NULL) {
     )
   }
 
-  for (name in   csvFiles <- c("data","mappedPaths","prior","startValues")) {
-      filePath <- file.path(outputDir, paste0(name, ".csv"))
-      write.csv(dtList[[name]], file = filePath, row.names = FALSE)
+  for (name in   csvFiles <-
+       c("data", "mappedPaths", "prior", "startValues")) {
+    filePath <- file.path(outputDir, paste0(name, ".csv"))
+    write.csv(
+      dtList[[name]],
+      file = filePath,
+      row.names = FALSE,
+      fileEncoding = 'UTF-8'
+    )
   }
 }
 
@@ -834,7 +833,7 @@ loadListsForRun <- function(outputDir,runName){
 
   dtList = list()
   for (csvFile in csvFiles) {
-    tmp <- data.table::fread(file.path(outputDir,csvFile))
+    tmp <- data.table::fread(file.path(outputDir,csvFile),encoding = 'UTF-8')
 
     if ('individualId' %in% names(tmp)){
       tmp[,individualId := as.character(individualId)]
@@ -848,8 +847,6 @@ loadListsForRun <- function(outputDir,runName){
     dtList[[gsub('.csv','',csvFile)]] <- tmp
   }
 
-  dtList[['input']] <-  prepareInputData(dtPrior = dtList$prior,
-                                     dtStartValues = dtList$startValues)
 
   return(dtList)
 

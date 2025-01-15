@@ -54,7 +54,7 @@ for (distribution in names(hyperParameters)) {
     minValue <- NA
     maxValue <- NA
     startValue <- NA
-    scaling <- 'Linear'
+    scaling <- SCALING$linear
 
     switch(paste(distribution, parameter, sep = "_"),
       norm_mean = {
@@ -103,10 +103,10 @@ newLines[parameter == 'meanlog', `:=`(parameter = 'geomean',
                                       minValue = 'minValue',
                                       maxValue = 'maxValue',
                                       startValue = 'startValue',
-                                      scaling ='Log')]
+                                      scaling = SCALING$log)]
 newLines[parameter == 'sdlog', `:=`(parameter = 'geosd',
                                       minValue = 1,
-                                      scaling ='Linear')]
+                                      scaling = SCALING$linear)]
 
 distributionTable <- rbind(distributionTable,
                            newLines)

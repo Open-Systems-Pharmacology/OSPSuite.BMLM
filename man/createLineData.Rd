@@ -4,14 +4,14 @@
 \alias{createLineData}
 \title{Create Line Data for Hyperparameters}
 \usage{
-createLineData(plotData, dtValues, xScale)
+createLineData(hyperParameter, dtPrior, xScale)
 }
 \arguments{
+\item{xScale}{A character string specifying the scale of the x-axis.}
+
 \item{plotData}{A data.table containing the data to be processed.}
 
 \item{dtValues}{A data.table with ECDF calculated.}
-
-\item{xScale}{A character string specifying the scale of the x-axis.}
 }
 \value{
 A data.table containing the line data for hyperparameters.

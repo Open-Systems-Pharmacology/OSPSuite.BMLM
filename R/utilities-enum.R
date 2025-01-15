@@ -22,8 +22,8 @@ ERRORMODEL <- ospsuite.utils::enum(c( #nolint camelCase
 #' @export
 #' @family enum helpers
 SCALING <- ospsuite.utils::enum(c( #nolint camelCase
-  log = "Log",
-  linear = "Linear"
+  log = "log",
+  linear = "linear"
 ))
 
 #' @title Status of optimization Runs

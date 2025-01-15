@@ -4,20 +4,12 @@
 \alias{getLikelihoodTimeProfiles}
 \title{This function calculates the likelihood of observed data given simulated time profiles.}
 \usage{
-getLikelihoodTimeProfiles(
-  scenarioList,
-  dtPrior,
-  dtStartValues,
-  dataObservedForMatch,
-  dtMappedPaths,
-  simulationRunOptions,
-  optimEnv = NULL
-)
+getLikelihoodTimeProfiles(dtPrior, dtRes)
 }
 \arguments{
-\item{scenarioList}{A list of scenarios for the optimization.}
-
 \item{dtPrior}{A data.table containing prior values.}
+
+\item{scenarioList}{A list of scenarios for the optimization.}
 
 \item{dtStartValues}{A data.table containing start values.}
 

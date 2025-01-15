@@ -2,31 +2,33 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{plotParameterLimits}
 \alias{plotParameterLimits}
-\title{Create Plots}
+\title{Create and Print Parameter Limits Plots}
 \usage{
 plotParameterLimits(
-  plotData,
+  dtList,
+  statusList,
   titeltxt,
   nCols,
   nRows,
-  useInteractivePlots = FALSE,
-  colorScalingVector = c(start = "lightblue", current = "darkgreen", best = "orange")
+  colorScalingVector = c(current = "darkgreen", start = "lightblue", best = "orange")
 )
 }
 \arguments{
-\item{plotData}{A data.table containing the reshaped plot data.}
+\item{dtList}{A list containing prior and start values data tables.}
 
-\item{titeltxt}{A string  to include in the plot title.}
+\item{statusList}{A list containing the current and best parameter values.}
+
+\item{titeltxt}{A string to include in the plot title.}
 
 \item{nCols}{An integer specifying the number of columns for the plot layout.}
 
 \item{nRows}{An integer specifying the number of rows for the plot layout.}
+
+\item{colorScalingVector}{A named vector of colors for different statuses. Default includes dark green, light blue, and orange.}
 }
 \value{
-A list of ggplot objects representing the plots for the parameter values.
+NULL This function does not return a value; it prints the plots directly.
 }
 \description{
-This function creates ggplot objects based on the prepared plot data.
-If the number of plots exceeds the specified grid size, it splits the plots into multiple sets.
+This function creates ggplot objects to display the current best and start values of the fitted parameters.
 }
-\keyword{internal}

@@ -1,3 +1,4 @@
-# ospsuite.bmlm 0.1.0
+# ospsuite.bmlm NEWS
 
-* Initial CRAN submission.
+## [0.1.0] - 2024-01-14
+- Initial setup of beta version

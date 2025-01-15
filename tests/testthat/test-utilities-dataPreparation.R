@@ -4,7 +4,7 @@ test_that("transformToUnbounded works correctly for log scaling", {
     transformToUnbounded(value = c(1, 3), minValue = c(1, 1), maxValue = c(3, 3), scaling = SCALING$log),
     transformToUnbounded(value = c(1, 3), minValue = c(1, 1), maxValue = c(3, 3), scaling = SCALING$linear)
   )
-  expect_false(any(is.finite(result)))
+  expect_equal(result,rep(c(-20,20),2))
 })
 
 

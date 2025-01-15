@@ -1,0 +1,203 @@
+---
+title: "BMLM Configuration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{BMLM_configuration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(ospsuite.bmlm)
+```
+
+
+# Introduction
+
+The `ospsuite.bmlm` package is designed to facilitate the fitting of Bayesian multilevel models within the OSPSuite framework. One of the critical components of this package is the configuration file, `BMLMConfiguration.xlsx`, which serves as the foundation for defining the parameters, priors, and mappings necessary for model optimization and analysis.
+
+The configuration file is structured into multiple sheets, each dedicated to specific aspects of the modeling process. By utilizing this file, users can efficiently set up their modeling environment, ensuring that all relevant parameters are correctly defined. This structured approach allows for flexibility in model configuration, enabling users to adapt the model to their specific data and research questions.
+
+In this vignette, we will guide you through the workflow for configuring your BMLM project, detailing each step necessary to prepare the `BMLMConfiguration.xlsx` file. We will also provide a comprehensive description of the contents of this configuration file, including the purpose of each sheet and the parameters that can be defined within them.
+
+
+# BMLM Configuration Workflow
+
+Configuring your Bayesian Multilevel Model (BMLM) involves several key steps to ensure that all parameters and settings are correctly defined. Below is the recommended workflow for setting up your BMLM configuration:
+
+1. **Add the BMLM Configuration Sheet**: 
+   Start by adding the BMLM configuration file to your project configuration. You can load a snapshot file that contains predefined parameters or - if `snapshotFile = NULL` add the empty template.
+
+```{r, eval=FALSE, echo=TRUE}
+   # Configuration step ----------------
+   # Add BMLM configuration file and set up parameter identification from snapshot
+   projectConfiguration <-
+     addBMLMPConfiguration(projectConfiguration,
+                           snapshotFile = file.path(projectConfiguration$modelFolder, 'mySnapshot.json'),
+                           nameOfParameterIdentfication = 'myParameterIdentification',
+                           overwrite = FALSE)
+```
+
+2. **Fill or Adjust the Sheets**: 
+   Manually fill or adjust the following sheets in the `BMLMConfiguration.xlsx` file:
+   - **ParameterDefinition**: Define the parameters used in your model.
+   - **ParameterMappedPaths**: Specify how outputs from the model map to the parameters.
+   - **ModelError**: Set up the model error parameters associated with the outputs.
+
+3. **Configure Priors**: 
+   After the sheets are populated, call the `configurePriors` function to fill in the **Priors** and **IndividualStartValues** sheets based on your BMLM configuration.
+
+```{r, eval=FALSE, echo=TRUE}
+   # Configure Priors based on BMLM configuration file
+   configurePriors(projectConfiguration = projectConfiguration,
+                   dataObserved = dataObserved)
+```
+
+4. **Adjust the Priors and Start Values**: 
+   Finally, review and manually adjust the **Priors** and **IndividualStartValues** sheets as necessary to ensure that they reflect the desired prior distributions and starting values for your parameters.
+
+
+# Description of BMLMConfiguration.xlsx
+
+The `BMLMConfiguration.xlsx` file is structured to include multiple sheets, each serving a specific purpose for configuring the Bayesian multilevel model. Below are the key sheets and their contents.
+
+## 1. Parameter Definition Sheet
+
+The **Parameter Definition** sheet is the primary sheet for configuring the parameters used in the Bayesian multilevel model. It is the base for the `Prior` and `StartValue` generation. After the generation of this sheets it is not used anymore. Below are the columns and their descriptions:
+
+| Column Name             | Description                                                                                                          |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **Name**                | The identifier and display name of the parameter in reports.  Mus be unique                                                     |
+| **ValueMode**           | Specifies if the parameter is global or individual.                                                                |
+| **Distribution**        | The distribution for parameters with valueMode "individual", which can be selected from various statistical distributions.         |
+| **CategoricCovariate**  | Indicates a categorical covariate e.g. "SEX", if not empty a distinct distribution is fitted for each subgroup defined by the covariate. It make only sense for parameters which valueMode "individual"|
+| **Unit**                | The unit of measurement for the parameter. |
+| **StartValue**          | The initial value for the parameter. |
+| **MinValue**            | The minimum allowable value for the parameter (mandatory).|
+| **MaxValue**            | The maximum allowable value for the parameter (mandatory).|
+| **Scaling**             | Indicates if the parameter should be log-transformed during optimization (if set to log). |
+| **UseAsFactor**         | If TRUE (1), the fitted value is applied as a factor to all mapped parameters.|
+| **Comment**             | Additional comments or notes regarding the parameter.                                                              |
+
+### Example Configuration
+
+Here is an example of how a configuration might look in the **Parameter Definition** sheet:
+
+| Name           | ValueMode | Distribution | CategoricCovariate | Unit | StartValue | MinValue | MaxValue | Scaling | UseAsFactor | Comment |
+|----------------|-----------|--------------|---------------------|------|------------|----------|----------|---------|-------------|---------|
+| parameter1     | global    | |                     | mg   | 10         | 1        | 100      | log     | 0           | Initial parameter for analysis |
+| parameter2     | individual | weibull     | ageGroup                 | years| 5          | 0        | 50       | linear  | 1           | Parameter related to age |
+
+
+## 2. ParameterMappedPaths Sheet
+
+The **ParameterMappedPaths** sheet defines the mapping of the parameters to the corresponding parameters. This is crucial for ensuring that the results are interpreted correctly.
+
+| Column Name             | Description                                                                                                          |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **Name**        | The identifier of the parameter.                                                                                 |
+| **LinkedParameters**     | The model path of all parameter that this parameter maps to.                                                                             |
+| **Scenarios**             | The scenario in which this parameters are used, (may be a comma separated list of scenarios). If empty all scenarios which includes this parameter are used.                                                                 |
+| **Comment**             | Additional comments regarding the parameter mappings.                                                                  |
+
+### Example Configuration
+
+| Name | LinkedParameters | Scenarios | Comment                      |
+|---------------|------------------|---------|------------------------------|
+| GET       | Organism\\|Lumen\\|Stomach\\|Gastric emptying time       |      | Mapping for gastic empty time          |
+| Lipophilicity	 | myCompound\\Lipophilicity       |   |          |
+
+---
+
+## 3. Model Error Sheet
+
+The **Model Error** sheet is used to specify the model error parameters associated with the outputs from your model. This is important for quantifying uncertainty in the model predictions.
+
+| Column Name             | Description                                                                                                          |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **OutputPathId**        | The identifier for the output path aus defined in the reporting framework                                                                                 |
+| **ErrorModel**          | The model used to represent the error (either proportional,absolute
+or log_absolute).                                                |
+| **ModelErrorId**             | Identifier for the parameters. For outputs with the same ModelErrorId the same sigma is fitted                                                       |
+| **Comment**             | Additional comments regarding the model error parameters.  
+
+
+### Example Configuration
+
+| OutputPathId | ErrorModel       | ModelErrorId | Comment                      |
+|---------------|------------------|---------|------------------------------|
+| output1       | log_absolute      | sigma_output1     | Error model for output1      |
+| output2       | absolute          | sigma_output2  | Error model for output2      |
+
+## 4. Priors Sheet 
+
+The **Priors** sheet is where you define the prior distributions for the parameters. This sheet allows you to set up hyperparameters and prior distributions that will be used during the Bayesian fitting process.
+
+| Column Name             | Description                                                                                                          |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **Name**                | The name of the parameter.                                                                                    |
+| **ValueMode**           | Specifies if the prior is global, a hyperparameter or an outptError.                                                                    |
+| **HyperParameter**      | Indicates inputparameter for the distribution of the hyperparameter, e.g. for a parameter which is normal distributed mean and sd are possible. For missing parameters default values are talken as fixed values                                                    |
+| **CategoricCovariate**  | Indicates a categorical covariate e.g. "SEX", if not empty a distinct distribution is fitted for each subgroup defined by the covariate. It make only sense for parameters which valueMode "hyperparameter".                                |
+| **StartValue**          | Initial value for the prior parameters.                                                                             |
+| **MinValue**            | Minimum limit for the prior parameters.                                                                             |
+| **MaxValue**            | Maximum limit for the prior parameters.                                                                             |
+| **Distribution of Individual Values** | The type of distribution used for the parameter .                                   |
+| **UseAsFactor**         | If TRUE (1), the fitted value is applied as a factor to all mapped parameters.                                     |
+| **Unit**                | The unit of measurement for the parameter.                                                                    |
+| **Scaling**             | Indicates if the prior parameter should be log-transformed.                                                  |
+| **Prior Distribution**  | The specific prior distribution being used (e.g., flat, norm) for all distribution except flat the input parameters can be defined in the following columns.                                                  |
+| **P1_type**            | The type of the first parameter for the prior distribution.                                                         |
+| **P1_value**           | The value of the first parameter for the prior distribution.                                                        |
+| **P2_type**            | The type of the second parameter for the prior distribution (if applicable).                                       |
+| **P2_value**           | The value of the second parameter for the prior distribution (if applicable).                                      |
+| **P3_type**            | The type of the third parameter for the prior distribution (if applicable).                                        |
+| **P3_value**           | The value of the third parameter for the prior distribution (if applicable).                                       |
+| **Comment**             | Additional comments regarding the prior parameters.                                                                 |
+
+### Example Configuration
+
+| Name           | ValueMode | HyperParameter | CategoricCovariate | StartValue | MinValue | MaxValue | Distribution of Individual Values | UseAsFactor | Unit | Scaling | Prior Distribution | P1_type | P1_value | P2_type | P2_value | P3_type | P3_value | Comment |
+|----------------|-----------|----------------|---------------------|------------|----------|----------|-----------------------------------|-------------|------|---------|-------------------|---------|----------|---------|----------|---------|----------|---------|
+| prior_param1   | global |                |                  | 0          | -1     | 1      |                             | 0           | mg   | log     | flat              |     |        |      |         |         |          | Prior for parameter1 |
+| prior_param2   | hyperparameter     |   geomean             | ageGroup                    | 1          | 0.001        | 10       | lnorm_geomean                           | 1           | years| log  | lnorm_geomean            |   geomean      | 1         |   geosd      |    1.4      |         |          |  |
+| prior_param2   | hyperparameter     |   geosd             | ageGroup                    | 2         | 1        | 10       | lnorm_geomean                           | 1           | years| linear  | flat            |         |          |         |          |         |          |  |
+| prior_sigam   | sigma_output1 |                |                  | 2          | 0     | 10      |                             | 0           |    | linear     | flat              |     |        |      |         |         |          | Prior for parameter1 |
+
+
+## 5. IndividualStartValues
+
+The **IndividualStartValues** sheet specifies the initial values for individual parameters used in the Bayesian fitting process. Properly setting these values is essential for the convergence of the optimization algorithm.
+
+| Column Name             | Description                                                                                                          |
+|-------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **Name**                | The name of the parameter for which the starting value is defined.                                                |
+| **IndividualId**        | The identifier for the individual .                                                                 |
+| **IndividualId**        | The identifier for the individual .                                                                 |
+| **CategoricCovariate**          |  Indicates a categorical covariate e.g. "SEX", if not empty a distinct distribution is fitted for each subgroup defined by the covariate.|
+| **MinValue**          |  The minimum allowable value for the parameter (mandatory)                                                          |
+| **MaxValue**          |  The maximal allowable value for the parameter (mandatory)                                                           |
+| **Scaling**          |  Indicates if the prior parameter should be log-transformed.|
+| **Comment**             | Additional comments regarding the starting values.                                                                 |
+
+### Example Configuration
+
+| Name           | IndividualId | StartValue | Comment                      |
+|----------------|---------------|------------|------------------------------|
+| GET     | individual1   |          | Starting value for GET for individual1 |
+| GET     | individual2   |           | Starting value for GET for individual2 |
+
+# Conclusion
+
+By following the outlined workflow and understanding the structure of the `BMLMConfiguration.xlsx` file, you can effectively configure your Bayesian Multilevel Models for optimal performance. For further details on optimization and monitoring, please refer to the other vignettes of this package.
+
+
+
+

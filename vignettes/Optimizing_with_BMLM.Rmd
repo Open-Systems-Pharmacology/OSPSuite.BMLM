@@ -1,0 +1,292 @@
+---
+title: "Optimizing_with_BMLM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Optimizing_with_BMLM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, echo = FALSE, message=FALSE}
+library(ospsuite.bmlm)
+```
+
+# Introduction
+
+In this vignette, we will explore how to do optimization runs using the `BMLMOptimization` class from the `ospsuite.bmlm` package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress and  various methods to transfer the results back to the reportingframework structure
+
+# What is the BMLMOptimization Object?
+
+The `BMLMOptimization` object encapsulates the functionality for performing Bayesian Multi-Level Modeling (BMLM) optimization. It manages the configuration, output directories, logging, and optimization processes. This object allows users to define scenarios, load observed data, and execute optimization routines efficiently.
+
+### Key Components of BMLMOptimization
+
+- **Configuration**: The object requires a project configuration file that contains details about the modeling setup. For detailed guidance on handling the BMLM configuration and setting up priors, please refer to the vignette titled "BMLM Configuration".
+- **Run Name**: Each optimization run can be identified by a unique name which corresponds to the output directory.
+- **Scenarios**: Users can define multiple scenarios to be optimized.
+- **Observed Data**: The object requires observed data to fit the model during optimization.
+
+# Initializing the Optimization
+
+To begin, we need to create an instance of the BMLMOptimization class. This involves loading the necessary project configuration, defining scenarios, and providing observed data.
+
+```{r echo=TRUE, eval=FALSE}
+# Create the BMLMOptimization object
+myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
+                                runName = 'myRun',
+                                scenarioList =  scenarioList,
+                                dataObserved = dataObserved)
+```
+
+# Starting the Optimization
+
+Once the `BMLMOptimization` object is initialized, you can start the optimization process using the `startOptimization` method. This method allows you to specify various parameters, including the optimization method, control settings, and whether to run the optimization in the background.
+
+## Basic Usage
+
+To initiate the optimization, you can call the `startOptimization` method as follows:
+
+```{r  echo=TRUE, eval=FALSE}
+# Start the optimization process
+optimization$startOptimization(
+  method = "BFGS",  # Specify the optimization method
+  control = list(maxit = 1000)  # Control parameters for the optimization
+)
+```
+
+## Parameters for startOptimization
+
+- **projectConfiguration**: A `ProjectConfiguration` object containing project configuration details.
+- **method**: A character string specifying the optimization method to be used (default is "BFGS").
+- **control**: A list of control parameters for the optimization process, such as maximum iterations (`maxit`).
+- **simulationRunOptions**: Optional additional simulation run options.
+- **failValue**: A numeric value to set if evaluation of the objective function fails (default is 1e+10).
+- **lastStatusSavingIntervalInSecs**: An integer specifying the interval for saving the last status (default is 60 seconds).
+- **startInBackground**: A logical indicating whether to start the optimization in the background (default is TRUE).
+- **withInternalOptimization**: A logical indicating whether to perform internal optimization (default is TRUE).
+- **...**: Additional arguments to be passed to the optimization function `optim`.
+
+## Restarting an Optimization
+
+If an optimization run is interrupted or if you wish to continue from a previous state, the `BMLMOptimization` object allows for restarting the optimization process. This can be particularly useful in scenarios where:
+
+- The optimization was stopped due to a manual intervention or an error.
+- You want to refine the results based on previous iterations, for example with another method, or with other optimization control parameters.
+
+!Attention, the configuration or data are not changed.
+
+To restart an optimization, you simply need to call the `startOptimization` method again after ensuring that the necessary previous results are available. The method will check for existing results and can load them to continue the optimization from the last saved state.
+
+Here’s how to restart the optimization:
+
+```{r echo=TRUE, eval=FALSE}
+# Restart the optimization process
+optimization$startOptimization(
+  method = "BFGS",  # Specify the optimization method
+  control = list(maxit = 1000)  # Control parameters for the optimization
+)
+```
+
+## Important Considerations for Restarting
+
+- **Previous Results**: Ensure that the output directory contains the necessary files from the previous run, such as `bestOptimStatus.RDS` and `convergence.csv`. These files store the best parameter estimates and convergence information, which are crucial for continuing the optimization.
+  
+- **Status Management**: The `cleanUpStatus` method can be used to reset the status of the optimization run if it is found to be corrupt or incomplete. This is useful if you encounter issues during the restart process.
+
+- **Logging**: The optimization log file (`optimization_log.txt`) provides a history of the optimization runs, which can be helpful for diagnosing issues or understanding the optimization process.
+
+# Output Directory
+
+When you initialize the `BMLMOptimization` object and start an optimization run, the results and logs are stored in a designated output directory. Understanding the structure and purpose of this directory is essential for effectively managing and interpreting the results of your optimization process.
+
+## Structure of the Output Directory
+
+The output directory is created based on the project configuration and the run name you specify when initializing the `BMLMOptimization` object. The directory typically contains the following components:
+
+- **Configuration Files**: These files define the configuration of the optimization and are created during the first initialization of the BMLMOptimization object. If the output directory already exists, these files will be reloaded.
+
+  - `data.csv`: The observed data used for fitting the model.
+  - `prior.csv`: The prior definition. This file is based on the prior sheet of the configuration xlsx.
+  - `startValues.csv`: The definitions of start values. This file is based on the startValues sheet of the configuration xlsx.
+  - `mappedPaths.csv`: The mapping of parameters to model paths. This file is based on the mappedPaths sheet of the configuration xlsx.
+
+- **Log Files**: These files track the progress of the optimization run and any messages generated during the process. For example:
+  - `optimization_log.txt`: A text file that logs important messages, warnings, and errors that occur during the optimization.
+
+- **Intermediate Files**: These files may include temporary results generated during the optimization process. For example:  
+
+  - `convergence.csv`: Contains data related to the convergence of the optimization algorithm, including log-likelihood values over iterations.
+  - `status.RDS`: This file contains the current status of the optimization ("initialized", "running" or "stopped").
+  - `bestOptimStatus.RDS`: Stores the best optimization status, including parameter values and log-likelihood.
+  - `bestPrediction.RDS`: Stores the data with the predictions based on the best optimization status.
+  - `optimStatus.RDS`: Stores the current optimization status, including parameter values and log-likelihood.
+
+- **Result Files**: These files store the final optimized results, including parameter estimates and model diagnostics:
+  - `result.RDS`: Contains the final results of the optimization process.
+
+## Accessing the Output Directory
+
+You can access the output directory by referencing the `outputDir` property of the `BMLMOptimization` object. This allows you to programmatically retrieve the path and examine its contents.
+
+```{r echo=TRUE, eval=FALSE}
+# Accessing the output directory
+outputDirectory <- optimization$outputDir
+print(outputDirectory)
+```
+
+## Importance of the Output Directory
+
+The output directory is crucial for:
+
+- **Reproducibility**: Keeping track of output files ensures that you can reproduce your results and share them with collaborators or stakeholders.
+- **Reviewing Results**: After and during the optimization process completes, you can review the results and diagnostics stored in the output files to assess the performance of your model.
+- **Debugging**: If the optimization encounters issues, the log files provide valuable information for diagnosing problems and understanding the steps taken during the optimization.
+
+By understanding the structure and purpose of the output directory, you can effectively manage the results of your optimization runs and make informed decisions based on the output generated.
+
+# Checking Optimization Progress
+
+Once the optimization has started, you can monitor its progress using several methods provided by the `BMLMOptimization` class. These methods allow you to visualize different aspects of the optimization process, including residuals, predicted vs. observed values, convergence of model parameters, and more.
+
+## 1. Convergence of Model Parameters
+
+Convergence refers to the process of approaching a final set of parameter estimates during optimization. Checking convergence helps ensure that the optimization algorithm is functioning correctly and that the model parameters are stabilizing. See the help of BMLMOptimization for further information regarding additional input parameters.
+
+- **Check Convergence of Model Parameters**
+  
+  This function reads a CSV file containing convergence data and visualizes the results using ggplot2. The plot typically displays the log-likelihood values or other relevant metrics over iterations. Monitoring convergence helps identify whether the optimization has reached a stable solution or if further iterations are needed.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkConvergence()
+```
+
+## 2. Check Residuals
+
+Residuals are the differences between the observed values and the predicted values generated by the model. Residuals are normalized by the fitted sigma for the model error. Analyzing residuals helps assess the model's fit and identify any patterns that may indicate issues with the model.
+
+- **Check Residuals as QQ Plot**
+  
+  This function generates a QQ (quantile-quantile) plot to assess the normality of the residuals. A QQ plot compares the quantiles of the residuals to the quantiles of a normal distribution. If the residuals follow a normal distribution, the points will lie approximately along a straight line.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkResidualsAsQQ()
+```
+
+- **Check Residuals as Histogram**
+  
+  This function creates a histogram of the residuals to visualize their distribution. A well-fitted model should have residuals that are symmetrically distributed around zero. The histogram can help identify skewness or kurtosis in the residuals.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkResidualsAsHistogram()
+```
+
+- **Check Residuals vs Time**
+  
+  This function generates plots of residuals against time or the independent variable. This visualization helps identify any trends or patterns in the residuals over time. Ideally, the residuals should be randomly scattered around zero without showing any systematic patterns.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkResidualsVsTime()
+```
+
+## 3. Predicted vs Observed
+
+Evaluating how well the model fits the observed data is crucial for understanding the model's performance.
+
+- **Check Predicted vs Observed Values**
+  
+  This function generates plots that compare predicted values against observed values. The plots can include regression lines to help visualize the relationship between the predicted and observed data. A good model fit will show points clustered around the line of equality (where predicted values equal observed values).
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkPredictedVsObserved()
+```
+
+- **Check Predicted vs Time**
+  
+  This function generates plots to compare predicted values against time. This visualization helps assess how well the model predicts outcomes over time and allows users to identify any discrepancies between predicted and observed trends.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkPredictedVsTime()
+```
+
+## 4. Checking Parameter Limits
+
+- **Check Parameter Limits**
+  
+  This function creates and prints plots that display current best and starting values of the fitted parameters. The plots visualize the relative parameter values between their minimum and maximum values using defined scaling. This helps users understand the range and behavior of the parameters being optimized.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkParameterLimits()
+```
+
+## 5. Checking Distributions
+
+- **Check Distributions**
+  
+  This function creates ggplot objects to display the individual values versus the fitted distributions. The plots help visualize how well the model's predicted distributions align with the observed data distributions. This is critical for assessing the model's performance and understanding the parameter distributions.
+
+```{r echo=TRUE, eval=FALSE}
+optimization$checkDistributions(nCols = 2, nRows = 3, xScale = "log")
+```
+
+# Exporting Results
+
+After completing the optimization process, you may want to export the results, individual values, global parameters, and final values to various formats for further analysis or reporting. The `BMLMOptimization` class provides several methods to facilitate these exports.
+
+## 1. Exporting Optimized Population
+
+The `exportResultAsPopulation` method allows you to export the optimized population data to CSV files for each scenario in the scenario list. The function exposrts for each population referenced in the scenarioList a new population containg the final values of the optimization.The new name is the old name with the run name as suffix.
+If input parameter `addAsNewScenarios = TRUE` all relevant scenarios are duplicated in the scenario configuration table with a reference to the new population.  
+
+```{r echo=TRUE, eval=FALSE}
+# Export optimized population data
+optimization$exportResultAsPopulation(projectConfiguration = projectConfiguration,
+                                       addAsNewScenarios = TRUE,
+                                       overwrite = FALSE)
+```
+
+## 2. Exporting Individual Values to Configuration Table
+
+You can export individual values from the optimization to the Individuals configuration table in an Excel workbook using the `exportIndividualValuesToConfigTable` method.
+
+
+```{r echo=TRUE, eval=FALSE}
+# Export individual values to configuration table
+optimization$exportIndividualValuesToConfigTable(projectConfiguration = projectConfiguration)
+```
+
+
+## 3. Exporting Global Parameters to Configuration Tables
+
+The `exportGlobalsParametersToConfigTables` method allows you to export global parameters from the optimization to a new sheet in the model parameters configuration file.
+
+```{r echo=TRUE, eval=FALSE}
+# Export global parameters to configuration tables
+optimization$exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
+                                                  overwrite = FALSE)
+```
+
+
+## 4. Exporting Final Values to BML Configuration Table
+
+You can save the final values from the optimization to specified sheets in the BMLM configuration table workbook using the `exportFinalValuesToBMLConfigTable` method.
+
+```{r echo=TRUE, eval=FALSE}
+# Export final values to BML configuration table
+optimization$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration)
+```
+
+
+# Summary
+
+By utilizing the export functions provided by the `BMLMOptimization` class, you can easily save and share your optimization results, individual values, global parameters, and final values. This functionality enhances the usability of the optimization process and facilitates collaboration and reporting.
+
+# Conclusion
+
+In this vignette, we have covered the essential aspects of using the `BMLMOptimization` class for performing Bayesian Multi-Level Modeling optimization. We discussed how to initialize the object, start the optimization process, check the progress, and export the results effectively. By leveraging these capabilities, you can optimize your models and gain valuable insights into your data.

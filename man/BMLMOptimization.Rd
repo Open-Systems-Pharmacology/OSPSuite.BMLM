@@ -15,8 +15,13 @@ It manages the configuration, output directories, logging, and optimization proc
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{runName}}{Identifier of optimization run.
-Initialize BMLMOptimization}
+\item{\code{runName}}{Identifier of optimization run.}
+
+\item{\code{outputDir}}{Identifier of optimization run.
+Initialize BMLMOptimization
+
+This method initializes the BMLMOptimization object with the provided project configuration,
+run name, scenario list, observed data, and random seed.}
 }
 \if{html}{\out{</div>}}
 }
@@ -24,12 +29,21 @@ Initialize BMLMOptimization}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-BMLMOptimization-new}{\code{BMLMOptimization$new()}}
-\item \href{#method-BMLMOptimization-startOptimization}{\code{BMLMOptimization$startOptimization()}}
 \item \href{#method-BMLMOptimization-cleanUpStatus}{\code{BMLMOptimization$cleanUpStatus()}}
 \item \href{#method-BMLMOptimization-print}{\code{BMLMOptimization$print()}}
-\item \href{#method-BMLMOptimization-checkConvergence}{\code{BMLMOptimization$checkConvergence()}}
+\item \href{#method-BMLMOptimization-exportResultAsPopulation}{\code{BMLMOptimization$exportResultAsPopulation()}}
+\item \href{#method-BMLMOptimization-exportIndividualValuesToConfigTable}{\code{BMLMOptimization$exportIndividualValuesToConfigTable()}}
+\item \href{#method-BMLMOptimization-exportGlobalsParametersToConfigTables}{\code{BMLMOptimization$exportGlobalsParametersToConfigTables()}}
+\item \href{#method-BMLMOptimization-exportFinalValuesToBMLConfigTable}{\code{BMLMOptimization$exportFinalValuesToBMLConfigTable()}}
+\item \href{#method-BMLMOptimization-checkResidualsAsQQ}{\code{BMLMOptimization$checkResidualsAsQQ()}}
+\item \href{#method-BMLMOptimization-checkResidualsVsTime}{\code{BMLMOptimization$checkResidualsVsTime()}}
+\item \href{#method-BMLMOptimization-checkResidualsAsHistogram}{\code{BMLMOptimization$checkResidualsAsHistogram()}}
+\item \href{#method-BMLMOptimization-checkPredictedVsObserved}{\code{BMLMOptimization$checkPredictedVsObserved()}}
+\item \href{#method-BMLMOptimization-checkPredictedVsTime}{\code{BMLMOptimization$checkPredictedVsTime()}}
 \item \href{#method-BMLMOptimization-checkParameterLimits}{\code{BMLMOptimization$checkParameterLimits()}}
 \item \href{#method-BMLMOptimization-checkDistributions}{\code{BMLMOptimization$checkDistributions()}}
+\item \href{#method-BMLMOptimization-checkConvergence}{\code{BMLMOptimization$checkConvergence()}}
+\item \href{#method-BMLMOptimization-startOptimization}{\code{BMLMOptimization$startOptimization()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -49,7 +63,7 @@ Initialize BMLMOptimization}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{projectConfiguration}}{A list containing project configuration details.}
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details.}
 
 \item{\code{runName}}{A character string representing the name of the current run.}
 
@@ -57,50 +71,7 @@ Initialize BMLMOptimization}
 
 \item{\code{dataObserved}}{A data.table containing the observed data to be fitted.}
 
-\item{\code{seed}}{numeric value set random seed for startValue generation
-Start the optimization process
-
-This method initiates the optimization process using the specified method and control parameters.
-Internally function \code{optim} is used, so please check help for more details}
-}
-\if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-BMLMOptimization-startOptimization"></a>}}
-\if{latex}{\out{\hypertarget{method-BMLMOptimization-startOptimization}{}}}
-\subsection{Method \code{startOptimization()}}{
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$startOptimization(
-  projectConfiguration,
-  method = "BFGS",
-  control = list(),
-  simulationRunOptions = NULL,
-  failValue = 1e+10,
-  lastStatusSavingIntervalInSecs = 60,
-  startInBackground = TRUE,
-  ...
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{projectConfiguration}}{A list containing project configuration details.}
-
-\item{\code{method}}{A character string specifying the optimization method to be used (default is "BFGS").}
-
-\item{\code{control}}{A list of control parameters for the optimization process.}
-
-\item{\code{simulationRunOptions}}{Optional additional simulation run options.}
-
-\item{\code{failValue}}{A numeric value to set if evaluation of the objective function fails (default is 1e+10).}
-
-\item{\code{lastStatusSavingIntervalInSecs}}{An integer specifying the interval for saving the last status (default is 60 seconds).}
-
-\item{\code{startInBackground}}{A logical indicating whether to start the optimization in the background (default is TRUE).}
-
-\item{\code{...}}{Additional arguments to be passed to the optimization function \code{optim}.}
+\item{\code{seed}}{A numeric value to set the random seed for start value generation (default is 1234).}
 }
 \if{html}{\out{</div>}}
 }
@@ -129,38 +100,233 @@ Print properties and status of the BMLMOptimization object
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-print}{}}}
 \subsection{Method \code{print()}}{
 This method prints the current properties and status of the BMLMOptimization object to the console.
-Check Convergence of Model Parameters
-
-This function checks the convergence of model parameters by reading a CSV file
-containing convergence data and visualizing the results using ggplot2.
+This function exports optimized population data to CSV files for each scenario in the scenario list.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$print()}\if{html}{\out{</div>}}
 }
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-BMLMOptimization-checkConvergence"></a>}}
-\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkConvergence}{}}}
-\subsection{Method \code{checkConvergence()}}{
+\if{html}{\out{<a id="method-BMLMOptimization-exportResultAsPopulation"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportResultAsPopulation}{}}}
+\subsection{Method \code{exportResultAsPopulation()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkConvergence(
-  nPoints = 200,
-  selectionMode = c("last", "random", "first")
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportResultAsPopulation(
+  projectConfiguration,
+  addAsNewScenarios = TRUE,
+  overwrite = FALSE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{nPoints}}{An integer specifying the number of points to select for plotting.
-Default is 200.}
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including paths for saving population files.}
 
-\item{\code{selectionMode}}{A character string indicating the mode of selection for points.
-Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.
-This function creates ggplot objects to display the current best and start values of the fitted parameter.
-all values a display as relative between min and max value using defined scaling}
+\item{\code{addAsNewScenarios}}{A boolean indicating whether to add new scenarios to the workbook.}
+
+\item{\code{overwrite}}{A boolean indicating whether to overwrite existing files.
+This function exports individual values from a given data table to a specified
+configuration table in an Excel workbook.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-exportIndividualValuesToConfigTable"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportIndividualValuesToConfigTable}{}}}
+\subsection{Method \code{exportIndividualValuesToConfigTable()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportIndividualValuesToConfigTable(projectConfiguration)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including the path to the Excel file.
+This function exports global parameters from the provided data table to a new sheet in the model parameters Excel file.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-exportGlobalsParametersToConfigTables"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportGlobalsParametersToConfigTables}{}}}
+\subsection{Method \code{exportGlobalsParametersToConfigTables()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportGlobalsParametersToConfigTables(
+  projectConfiguration,
+  overwrite = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including the path to the model parameters file.}
+
+\item{\code{overwrite}}{A boolean indicating whether to overwrite an existing sheet.
+This function saves final values from a provided data table to specified sheets in an Excel workbook.}
+
+\item{\code{dtList}}{A list of data.tables containing the prior values.}
+
+\item{\code{runName}}{A string representing the name of the run.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-exportFinalValuesToBMLConfigTable"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportFinalValuesToBMLConfigTable}{}}}
+\subsection{Method \code{exportFinalValuesToBMLConfigTable()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportFinalValuesToBMLConfigTable(projectConfiguration)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including paths to Excel files.
+Check Residuals as QQ Plot
+
+This method generates a QQ plot to assess the normality of the residuals.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkResidualsAsQQ"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsAsQQ}{}}}
+\subsection{Method \code{checkResidualsAsQQ()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsQQ(nCols = 2, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{...}}{Additional arguments passed to the plot function.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+Check Residuals vs Time
+
+This method generates residuals vs time plots to visualize the residuals over time.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkResidualsVsTime"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsVsTime}{}}}
+\subsection{Method \code{checkResidualsVsTime()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsVsTime(nCols = 2, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{...}}{Additional arguments passed to the plot function.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+Check Residuals as Histogram
+
+This method generates histogram plots of the residuals to visualize their distribution.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkResidualsAsHistogram"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsAsHistogram}{}}}
+\subsection{Method \code{checkResidualsAsHistogram()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsHistogram(nCols = 2, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{...}}{Additional arguments passed to the plot function.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+Create and Print Predicted vs Observed of best result
+
+This function generates a plot for each unique outputPathId in the provided dataset.
+Each plot displays predicted vs observed values and includes facets for scenario and group.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkPredictedVsObserved"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkPredictedVsObserved}{}}}
+\subsection{Method \code{checkPredictedVsObserved()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkPredictedVsObserved(
+  addRegression = TRUE,
+  xyScale = unlist(SCALING),
+  nCols = 2,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{addRegression}}{A logical value indicating whether to add regression lines to the plot.}
+
+\item{\code{xyScale}}{A character string specifying the scale type for the x and y axes (default "log").}
+
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{...}}{additional arguments passed on to ospsuite.plots::plotPredVsObs
+Check Predicted vs Time
+
+This method generates plots to compare predicted values against time.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkPredictedVsTime"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkPredictedVsTime}{}}}
+\subsection{Method \code{checkPredictedVsTime()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkPredictedVsTime(
+  dtRes,
+  yScale = unlist(SCALING),
+  nCols = 4,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{dtRes}}{A data frame containing the data to be plotted.}
+
+\item{\code{yScale}}{A character string specifying the scale for the y-axis (default is "log").}
+
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 4)}
+
+\item{\code{...}}{Additional arguments passed to the plot function.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+This function creates ggplot objects to display the current best and start values of the fitted parameter.
+all values a display as relative between min and max value using defined scaling
 }
 }
 \if{html}{\out{<hr>}}
@@ -168,12 +334,7 @@ all values a display as relative between min and max value using defined scaling
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-checkParameterLimits}{}}}
 \subsection{Method \code{checkParameterLimits()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkParameterLimits(
-  nCols = 2,
-  nRows = 3,
-  useInteractivePlots = FALSE,
-  ...
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkParameterLimits(nCols = 2, nRows = 3, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -182,8 +343,6 @@ all values a display as relative between min and max value using defined scaling
 \item{\code{nCols}}{An integer specifying the number of columns for the plot layout.}
 
 \item{\code{nRows}}{An integer specifying the number of rows for the plot layout.}
-
-\item{\code{useInteractivePlots}}{A Boolean, if TRUE plots will be generated with mouse overlay for absolute values.}
 
 \item{\code{...}}{arguments passed on to function plotParameterLimits
 This function creates ggplot objects to display the individual Values vs the fitted distributions.}
@@ -211,12 +370,93 @@ This function creates ggplot objects to display the individual Values vs the fit
 
 \item{\code{nRows}}{An integer specifying the number of rows for the plot layout.}
 
-\item{\code{xScale}}{character 'Linear' or 'Log', scale of x axis}
+\item{\code{xScale}}{character 'linear' or 'log', scale of x axis}
 
-\item{\code{...}}{additionla arguments passed on to plotDistributions
-Logs a message to the specified log file with a timestamp.}
+\item{\code{...}}{additional arguments passed on to plotDistributions
+Check Convergence of Model Parameters
+
+This function checks the convergence of model parameters by reading a CSV file
+containing convergence data and visualizing the results using ggplot2.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkConvergence"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkConvergence}{}}}
+\subsection{Method \code{checkConvergence()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkConvergence(
+  nPoints = 200,
+  selectionMode = c("last", "random", "first"),
+  displayVariablesIndx = seq(1, 5)
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nPoints}}{An integer specifying the number of points to select for plotting.
+Default is 200.}
+
+\item{\code{selectionMode}}{A character string indicating the mode of selection for points.
+Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.}
+
+\item{\code{displayVariablesIndx}}{An integer vector specifying which variables to display.
+default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
+2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
+4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
+Start the Optimization Process
+
+This method initiates the optimization process using the specified method and control parameters.
+Internally, the function \code{optim} is used, so please check the help for more details.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-startOptimization"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-startOptimization}{}}}
+\subsection{Method \code{startOptimization()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$startOptimization(
+  projectConfiguration,
+  method = "BFGS",
+  control = list(),
+  simulationRunOptions = NULL,
+  failValue = 1e+10,
+  lastStatusSavingIntervalInSecs = 60,
+  startInBackground = TRUE,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details.}
+
+\item{\code{method}}{A character string specifying the optimization method to be used (default is "BFGS").}
+
+\item{\code{control}}{A list of control parameters for the optimization process.}
+
+\item{\code{simulationRunOptions}}{Optional additional simulation run options.}
+
+\item{\code{failValue}}{A numeric value to set if evaluation of the objective function fails (default is 1e+10).}
+
+\item{\code{lastStatusSavingIntervalInSecs}}{An integer specifying the interval for saving the last status (default is 60 seconds).}
+
+\item{\code{startInBackground}}{A logical indicating whether to start the optimization in the background (default is TRUE).}
+
+\item{\code{...}}{Additional arguments to be passed to the optimization function \code{optim}.}
+
+\item{\code{withInternalOptimization}}{A logical indicating whether to perform internal optimization (default is TRUE).}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+Logs a message to the specified log file with a timestamp.
 }
 }
 }

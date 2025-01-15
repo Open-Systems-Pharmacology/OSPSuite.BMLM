@@ -10,32 +10,22 @@
 #' @return A numeric value representing the negative log likelihood.
 #' @keywords internal
 getLogLikelihood <-
-  function(params,
-           scenarioList,
-           dtList,
-           simulationRunOptions,
-           optimEnv = NULL) {
-    dtList <- setParameterToTables(
-      dtList = dtList,
-      params = params
-    )
+  function(dtPrior,
+           dtStartValues,
+           dtRes) {
+
     # Likelihood observed data given simulated time profiles
     logTimeProfile <- getLikelihoodTimeProfiles(
-      scenarioList = scenarioList,
-      dtPrior = dtList$prior,
-      dtStartValues = dtList$startValues,
-      dataObservedForMatch = dtList$data,
-      dtMappedPaths = dtList$mappedPaths,
-      simulationRunOptions = simulationRunOptions,
-      optimEnv = optimEnv
+      dtPrior = dtPrior,
+      dtRes = dtRes
     )
     # Likelihood of hyper parameter
     logHyperParameter <- getLikelihoodHyperParameter(
-      dtStartValues = dtList$startValues,
-      dtHyperParameter = getHyperParameter(dtPrior = dtList$prior)
+      dtStartValues = dtStartValues,
+      dtPrior = dtPrior
     )
     # Likelihood of parameter estimates given prior distribution
-    logPrior <- getLikelihoodPriors(dtList$prior)
+    logPrior <- getLikelihoodPriors(dtPrior)
     return(c(logTimeProfile = logTimeProfile, logHyperParameter = logHyperParameter, logPrior = logPrior))
   }
 
@@ -52,46 +42,17 @@ getLogLikelihood <-
 #'
 #' @return A numeric value representing the total log likelihood of the time profiles.
 #' @keywords internal
-getLikelihoodTimeProfiles <- function(scenarioList,
-                                      dtPrior,
-                                      dtStartValues,
-                                      dataObservedForMatch,
-                                      dtMappedPaths,
-                                      simulationRunOptions,
-                                      optimEnv = NULL) {
+getLikelihoodTimeProfiles <- function(dtPrior,
+                                      dtRes) {
   # initialize variables to avoid linter messages
   yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
-  # update parameter values and run result
-  invisible(lapply(names(scenarioList), function(scenarioName) {
-    updateParameterValues(
-      scenarioName = scenarioName,
-      scenario = scenarioList[[scenarioName]],
-      dtPrior = dtPrior,
-      dtStartValues = dtStartValues,
-      dtMappedPaths = dtMappedPaths
-    )
-  }))
-  scenarioResults <- esqlabsR::runScenarios(scenarios = scenarioList, simulationRunOptions = simulationRunOptions)
 
-  dtRes <- getPredictionsForScenarios(
-    scenarioResults,
-    dataObservedForMatch
-  ) %>%
-    merge(
-      dtPrior[valueMode == PARAMETERTYPE$outputError, c("name", "value")] %>%
-        data.table::setnames("value", "sigma"),
-      by.x = "modelErrorId",
-      by.y = "name"
-    )
+  dtRes <- updateModelError(dtPrior,dtRes)
 
   dtRes[, isCensored := !is.na(lloq) & lloq > yValues]
 
   # Apply the function to calculate likelihood
   dtRes[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
-
-  if (!is.null(optimEnv)){
-    optimEnv$Residuals <- dtRes
-  }
 
   # Calculate total log-likelihood
   if (any(!is.finite(dtRes$logLikelihood))) {
@@ -100,155 +61,6 @@ getLikelihoodTimeProfiles <- function(scenarioList,
 
   return(sum(dtRes$logLikelihood))
 }
-
-#' Update Parameter Values
-#'
-#' This function updates parameter values in the scenario based on mapped paths,startValues  and prior definitions.
-#'
-#' @param scenarioName A string representing the name of the scenario.
-#' @param scenario An object representing the scenario.
-#' @param dtPrior A data.table containing prior values.
-#' @param dtStartValues A data.table containing start values.
-#' @param dtMappedPaths A data.table containing mapped paths for parameters.
-#'
-#' @return NULL (invisible).
-#' @keywords internal
-updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues, dtMappedPaths) {
-  # initialize variables to avoid linter messages
-  currentValue <- value <- newValue <- individualId <- valueMode <- NULL
-
-  scenarioName <- names(scenarioList)[1]
-  scenario <- scenarioList[[scenarioName]]
-
-  dtMappedPathsForScenarios <-
-    dtMappedPaths[!is.na(get(scenarioName))] %>%
-    dplyr::select(dplyr::all_of(c(
-      "name", "linkedParameters", "useAsFactor", scenarioName
-    ))) %>%
-    data.table::setnames(scenarioName, "factor")
-
-  # global parameter
-  dtCustomParams <- dtPrior[valueMode == PARAMETERTYPE$global] %>%
-    dplyr::select(c("name", "value")) %>%
-    merge(dtMappedPathsForScenarios, by = "name")
-
-  if (nrow(dtCustomParams) > 0) {
-    for (dp in split(dtCustomParams, by = "linkedParameters")) {
-      scenario$population$setParameterValues(
-        parameterOrPath = dp$linkedParameters,
-        values = rep(
-          dp$value * dp$factor,
-          scenario$population$count
-        )
-      )
-    }
-  }
-
-  individualIds <-
-    scenario$population$getCovariateValues("ObservedIndividualId")
-
-  dtCustomParams <- dtStartValues[individualId %in% individualIds] %>%
-    dplyr::select(c("name", "value", "individualId")) %>%
-    merge(dtMappedPathsForScenarios, by = "name", allow.cartesian = TRUE)
-
-  if (nrow(dtCustomParams) > 0) {
-    for (dp in split(dtCustomParams, by = "linkedParameters")) {
-      pt <- dp$linkedParameters[1]
-      # make sure to use default value for individuals where no fit parameter exist
-      tmp <-
-        data.table(
-          individualId = scenario$population$getCovariateValues("ObservedIndividualId"),
-          currentValue = scenario$population$getParameterValues(pt)
-        ) %>%
-        merge(dp,
-          by = "individualId",
-          all.x = TRUE,
-          sort = FALSE
-        )
-      tmp[, newValue := ifelse(is.na(value), currentValue, value * factor)]
-
-      scenario$population$setParameterValues(
-        parameterOrPath = pt,
-        values = tmp$newValue
-      )
-    }
-  }
-
-  return(invisible())
-}
-
-#' Get Predictions for Scenarios
-#'
-#' This function generates predictions for a set of scenarios based on observed data.
-#'
-#' @param scenarioResults A list of scenario results, each containing population and covariate information.
-#' @param dataObservedForMatch A data.table containing observed data, which must include the required columns:
-#'        'scenario', 'outputPathId', 'yValues', and 'yUnit'.
-#'        The unit factors (`unitFactorX` and `unitFactorY`) are necessary for proper scaling of the predicted values
-#'        and can be generated using the `prepareDataForMatch` function prior to calling this function.
-#' @param aggregationFun A function for aggregation (optional). If provided, it will be used to aggregate the simulated results.
-#' @param identifier A character vector of identifiers for matching, defaults to c("outputPath", "individualId").
-#'
-#' @return A data.table containing the predicted values for each scenario, along with the scenario name and other relevant identifiers.
-#'
-#' @details The function validates the input names, loops through each scenario to generate predictions, and combines all results into a single data.table.
-#' It also handles individual matching if 'ObservedIndividualId' is present in the scenario results.
-#'
-#' @export
-getPredictionsForScenarios <- function(scenarioResults,
-                                       dataObservedForMatch,
-                                       aggregationFun = NULL,
-                                       identifier = c("outputPath", "individualId")) {
-
-  # Validate input names
-  checkmate::assertNames(names(dataObservedForMatch), must.include = c('scenario', 'unitFactorX','unitFactorY',identifier))
-  # Initialize a list to store results for each scenario
-  resultsList <- list()
-
-  # Loop through each scenario
-  for (scenarioName in names(scenarioResults)) {
-    scenarioResult <- scenarioResults[[scenarioName]]
-
-    individualMatch <- NULL
-    if ("ObservedIndividualId" %in% scenarioResult$population$allCovariateNames) {
-      individualMatch <- data.table(
-        individualId = scenarioResult$population$allIndividualIds,
-        observedIndividualId = scenarioResult$population$getCovariateValues('ObservedIndividualId')
-      )
-    }
-
-    # Get simulated time profile
-    dtSimulated <- getSimulatedTimeprofile(
-      simulatedResult = scenarioResult,
-      outputPaths = unique(dataObservedForMatch[scenario == scenarioName,]$outputPath),
-      aggregationFun = aggregationFun,
-      individualMatch = individualMatch
-    ) %>%
-      dplyr::mutate(scenario = scenarioName) %>%
-      data.table::setnames('paths', 'outputPath') %>%
-      merge( dataObservedForMatch[scenario == scenarioName,] %>%
-               dplyr::select(all_of(c(identifier,'unitFactorX','unitFactorY'))) %>%
-               unique(),
-             by = identifier) %>%
-      .[,xValues := xValues*unitFactorX] %>%
-      .[,yValues := yValues*unitFactorY]
-
-    # Add predicted values and store in the results list
-    resultsList[[scenarioName]] <- addPredictedValues(
-      dtObserved = dataObservedForMatch[scenario == scenarioName],
-      dtSimulated = dtSimulated,
-      identifier = identifier
-    ) %>%
-      dplyr::mutate(scenarioName = scenarioName)
-  }
-
-  # Combine all results into a single data.table
-  dtResult <- rbindlist(resultsList, use.names = TRUE, fill = TRUE)
-
-  return(dtResult)
-}
-
-
 
 
 #' Calculate Log Likelihood
@@ -342,7 +154,6 @@ calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, 
                 absolute = dnorm(x = yValue, mean = predicted, sd = sigma, log = TRUE),
                 proportional = dnorm(x = yValue, mean = predicted, sd = sigma * predicted, log = TRUE),
                 log_absolute = dlnorm(x = yValue, meanlog = log(predicted), sdlog = sigma, log = TRUE))
-    return(p)  # Return the log likelihood for uncensored data
   }
 
   # Adjust the log likelihood by subtracting the log probability of being below the lower bound
@@ -380,15 +191,68 @@ getLikelihoodPriors <- function(dtPrior) {
 #' @return A numeric value representing the total log likelihood of hyperparameters.
 #' @keywords internal
 getLikelihoodHyperParameter <-
-  function(dtStartValues, dtHyperParameter) {
-    return(sum(unlist(
+  function(dtStartValues, dtPrior) {
+
+    dtHyperParameter <- setlogTruncationOffset(dtPrior = dtPrior,
+                                               dtStartValues = dtStartValues)
+
+    logLikelihood <- sum(unlist(
       lapply(
         split(dtStartValues, by = c("name", "categoricCovariate")),
         getLikelihoodForIndividualGroup,
         dtHyperParameter = dtHyperParameter
       )
-    )))
+    ))
+    return(logLikelihood)
   }
+
+
+setlogTruncationOffset <- function(dtPrior,dtStartValues) {
+
+  dtHyperParameter <- data.table()
+  # Reduce hyperparameter to match available data
+  dtPriorHyper <- dtPrior[valueMode == PARAMETERTYPE$hyperParameter] %>%
+    merge(unique(dtStartValues[, .(name, categoricCovariate, minValue, maxValue)]),
+          by = c('name', 'categoricCovariate'),
+          suffixes = c('', '.indValues'))
+
+  # Loop through each hyperparameter group
+  for (dtGroup in split(dtPriorHyper, by = c('name', 'categoricCovariate'))) {
+    setDT(dtGroup)
+
+    # Create a named list of parameters
+    paramList <- setNames(dtGroup$value, dtGroup$hyperParameter)
+
+    # Calculate logTruncationOffset
+    dtGroup[, pLB := do.call(paste0("p", dtGroup$hyperDistribution[1]),
+                             c(
+                               list(q = dtGroup$minValue.indValues[1], log = FALSE), paramList
+                             ))]
+    dtGroup[, pUB := do.call(paste0("p", dtGroup$hyperDistribution[1]),
+                             c(
+                               list(q = dtGroup$maxValue.indValues[1], log = FALSE,
+                                    lower.tail = FALSE), paramList
+                             ))]
+
+    dtGroup[, logTruncationOffset := log(1- (pUB + pLB))]
+
+    # Combine results
+    dtHyperParameter <- rbind(dtHyperParameter,
+                        dtGroup    %>%
+                          dplyr::select(any_of(c(
+                            "name",
+                            "hyperParameter",
+                            "categoricCovariate",
+                            "value",
+                            "hyperDistribution",
+                            "scaling",
+                            'logTruncationOffset'
+                          )))
+    )
+  }
+
+  return(dtHyperParameter)
+}
 
 #' Get Likelihood for Individual Group
 #'
@@ -405,7 +269,6 @@ getLikelihoodForIndividualGroup <-
     value <- scaling <- categoricCovariate <- name <- NULL
 
     setDT(indGroup)
-
     # Merge with hyper parameters
     tmp <-
       merge(dtHyperParameter,

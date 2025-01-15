@@ -1,0 +1,109 @@
+---
+title: "Bayesian Multilevel Models"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ospsuite_bmlm: Bayesian Multilevel Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  error = FALSE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ospsuite.bmlm)
+```
+
+# Introduction
+
+The `ospsuite.bmlm` package provides tools for fitting Bayesian multilevel models within the OSPSuite framework. This package leverages the capabilities of the `ospsuite.reportingframework` package for project configuration, allowing users to efficiently set up their modeling environment.
+
+Bayesian multilevel models are particularly useful for analyzing hierarchical data structures, such as repeated measurements or nested data, where variability exists at multiple levels. For example, they can be applied in clinical trials where patients are nested within clinics, allowing for a nuanced understanding of treatment effects across different contexts. This vignette will guide you through the process of configuring your project, initiating an optimization, and monitoring the progress of your model fitting.
+
+# Algorithm and Objective Function
+
+In this section, we explain the algorithm used for fitting Bayesian multilevel models and how the objective function is constructed.
+
+## Algorithm Overview
+
+The fitting process for Bayesian multilevel models in this package is based on maximum likelihood estimation (MLE). The optimization is performed using the R function `optim`, which efficiently estimates parameters by maximizing the likelihood of the observed data.
+
+### Internal Optimization Option
+
+The package provides an option for **internal optimization**, which is particularly beneficial for managing different groups of parameters during the optimization process.
+
+- **Purpose of Internal Optimization**:
+  
+  Internal optimization is designed to handle two distinct groups of parameters:
+  
+  1. **Global and Individual Parameters**: These are critical for model evaluation and are often associated with complex objective functions that may have multiple local minima. Evaluating these parameters can be computationally intensive.
+  
+  2. **Hyperparameters and Model Error**: These parameters pertain to the hierarchical structure of the model and associated errors. They do not directly influence model evaluation and are generally characterized by well-behaved objective functions that are easier to optimize.
+
+- **Benefits of Internal Optimization**:
+  - **Efficiency**: By separating the optimization of global and individual parameters from hyperparameters and model error, internal optimization can significantly speed up the overall process. It is typically much faster than a full model evaluation, allowing for quicker convergence on hyperparameters.
+  - **Focused Optimization**: Since the objective function for hyperparameters is usually well-behaved, internal optimization enables a more straightforward search for optimal values without the complications introduced by the more complex global and individual parameters.
+  - **Improved Convergence**: This approach helps navigate the optimization landscape effectively, especially in scenarios where global and individual parameters present challenges due to multiple minima.
+
+The workflow for the internal optimization of parameters can be summarized in the following steps:
+
+- **Internal Optimization Workflow**:  
+
+   - Retrieve initial parameter values for external optimization.
+   - Call the `optim` function to perform optimization based on specified methods and control parameters.
+   - The objective function encapsulates the optimization logic, which:
+     - Updates parameters in the data tables.
+     - Evaluates time profiles for the scenarios.
+     - Performs internal optimization by:
+        - Retrieving initial values for internal optimization.
+        - Evaluating the log likelihood to determine the best fit using the `optim` function.
+     - Computes log likelihoods and evaluates the objective function value.  
+   - Return the final result of the optimization process as a list containing the optimization results.
+
+This means that internal optimization is a comprehensive process that occurs within a single step of the external optimization.
+
+By understanding the purpose and benefits of internal optimization, users can leverage this feature to enhance the efficiency and effectiveness of their Bayesian multilevel modeling efforts. This capability is particularly useful in complex hierarchical models where parameter estimation can be challenging and time-consuming.
+
+### Summary
+
+In summary, the algorithm for fitting Bayesian multilevel models in the `ospsuite.bmlm` package utilizes maximum likelihood estimation and the `optim` function, with the option for internal optimization to streamline the optimization of different parameter groups. This feature enhances the robustness and speed of the optimization process, providing users with greater control and efficiency in their modeling tasks.
+
+## Objective Function Construction
+
+The objective function used in this optimization framework is defined based on the likelihood of the observed data given the model parameters. For a detailed description of the objective function, including its mathematical formulation and implementation, please refer to the vignette on **Maximum Likelihood Estimation**. A brief overview includes how the function evaluates the fit of the model to the data and guides the optimization process toward the best parameter estimates.
+
+# Workflow 
+
+Before fitting a model, you need to set up your project configuration using the `ospsuite.reportingframework` package. This package allows you to define your project settings, including data sources, model specifications, and other parameters. Refer to the vignettes of this package for more information.
+
+The BMLM workflow can be divided into the following steps:
+
+1. **BMLM Configuration**: For detailed guidance on handling the BMLM configuration and setting up priors, please refer to the vignette titled "BMLM Configuration".
+
+2. **Set up and Start Run**: For detailed guidance on initializing the `BMLMOptimization` object and starting the optimization process, please refer to the vignette titled "Optimizing with BMLM".
+
+3. **Check Optimization Progress**: For detailed guidance on monitoring the optimization process, including residuals and convergence, please refer to the vignette titled "Optimizing with BMLM".
+
+4. **Export Results to Reporting Framework**: For instructions on how to export the results of your optimization into the reporting framework, please refer to the vignette titled "Optimizing with BMLM".
+
+The `ospsuite.bmlm` package includes an add-in called `insertTemplateText` that allows you to easily insert a template for a Bayesian Multilevel Model (BMLM) workflow into your existing reporting framework workflow. This feature can save you time and ensure that your code follows a consistent structure.
+
+The template workflow is displayed below:
+
+```{r, echo=FALSE}
+templatePath <- system.file("templates/codeTemplate.R", package = "ospsuite.bmlm")
+templateCode <- readLines(templatePath)
+
+cat(templateCode, sep = "\n")
+```
+
+# Conclusion
+
+The `ospsuite.bmlm` package provides a streamlined approach to fitting Bayesian multilevel models within the OSPSuite framework. By following the steps outlined in this vignette, you can efficiently configure your project, initiate model fitting, and monitor the optimization process. For further details and advanced usage, please refer to the package documentation. We encourage you to explore the additional functionalities and consider contributing to the development of the package to enhance its capabilities.
+
