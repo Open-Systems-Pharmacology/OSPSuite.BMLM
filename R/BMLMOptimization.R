@@ -402,6 +402,7 @@ BMLMOptimization <-  R6::R6Class(
     #' @param lastStatusSavingIntervalInSecs An integer specifying the interval for saving the last status (default is 60 seconds).
     #' @param startInBackground A logical indicating whether to start the optimization in the background (default is TRUE).
     #' @param withInternalOptimization A logical indicating whether to perform internal optimization (default is TRUE).
+    #' @param withInternalOptimization A logical indicating whether to perform internal optimization (default is FALSE).
     #' @param ... Additional arguments to be passed to the optimization function `optim`.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
@@ -411,6 +412,7 @@ BMLMOptimization <-  R6::R6Class(
                                  simulationRunOptions = NULL,
                                  failValue = 1e+10,
                                  lastStatusSavingIntervalInSecs = 60,
+                                 withInternalOptimization = FALSE,
                                  startInBackground = TRUE,
                                  ...){
 
@@ -487,6 +489,7 @@ BMLMOptimization <-  R6::R6Class(
           outputDir = self$outputDir,
           startTime = startTime,
           lastStatusSavingIntervalInSecs = lastStatusSavingIntervalInSecs,
+          withInternalOptimization = withInternalOptimization,
           failValue = failValue
         ),
         list(...)

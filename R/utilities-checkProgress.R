@@ -215,7 +215,7 @@ plotDistributions <- function(dtList,
                                 best = 'orange'
                               )) {
 
-  xScale <- match.arg(tolower(xScale))
+  xScale <- tolower(match.arg(xScale))
 
   plotData <- preparePlotDataParameterValues(dtList = dtList,
                                              currentStatus = currentStatus,
@@ -323,7 +323,7 @@ plotPredictedVsObserved <- function(
     titeltxt = NULL,
     ...) {
 
-  xyScale <- match.arg(tolower(xyScale))
+  xyScale <- tolower(match.arg(xyScale))
 
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
@@ -372,7 +372,7 @@ plotPredictedVsTime <- function(
     titeltxt = NULL,
     ...) {
 
-  yScale <- match.arg(tolower(yScale))
+  yScale <- tolower(match.arg(yScale))
 
   dtResGroup <- split(dtRes, by = c('outputPathId','scenarioName'))[[1]]
 

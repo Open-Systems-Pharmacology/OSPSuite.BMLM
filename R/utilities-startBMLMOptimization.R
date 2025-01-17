@@ -12,7 +12,7 @@
 #' @param lastStatusSavingIntervalInSecs An integer specifying the interval for saving the last status in seconds.
 #' @param startTime A POSIXct object representing the start time of the optimization process.
 #' @param failValue A numeric value to set if evaluation of the objective function fails.
-#' @param withInternalOptimization A logical indicating whether to perform internal optimization (default is TRUE).
+#' @param withInternalOptimization A logical indicating whether to perform internal optimization.
 #' @param ... Additional arguments passed to the optimization function.
 #'
 #' @return A list containing the result of the optimization process.

@@ -27,7 +27,7 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 dataObserved = dataObserved)
 
 # start the Optimization ( as default this is done as background job)
-optimization$startOptimization(
+myRun$startOptimization(
   method = "BFGS",  # Specify the optimization method
   control = list(maxit = 1000)  # Control parameters for the optimization
 )
