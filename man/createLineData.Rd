@@ -2,21 +2,21 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{createLineData}
 \alias{createLineData}
-\title{Create Line Data for Hyperparameters}
+\title{#' Create Line Data for Hyperparameters}
 \usage{
 createLineData(hyperParameter, dtPrior, xScale)
 }
 \arguments{
-\item{xScale}{A character string specifying the scale of the x-axis.}
+\item{hyperParameter}{A data.table containing hyperparameter information.}
 
-\item{plotData}{A data.table containing the data to be processed.}
+\item{dtPrior}{A data.table containing prior values.}
 
-\item{dtValues}{A data.table with ECDF calculated.}
+\item{xScale}{A character string specifying the scale of the x-axis ('linear' or 'log').}
 }
 \value{
 A data.table containing the line data for hyperparameters.
 }
 \description{
-This function generates the line data for hyperparameters based on their distributions.
+This function generates line data for hyperparameters based on their distributions.
 }
 \keyword{internal}

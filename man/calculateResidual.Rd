@@ -11,8 +11,7 @@ calculateResidual(yValue, predicted, model, sigma, isCensored, lloq)
 
 \item{predicted}{A numeric value representing the predicted value.}
 
-\item{model}{A character string specifying the model to use for calculating the residuals.
-Options are "absolute", "proportional", and "log_absolute".}
+\item{model}{A character string specifying the model to use for calculating the residuals (options are "absolute", "proportional", "log_absolute").}
 
 \item{sigma}{A numeric value representing the standard deviation of the residuals.}
 
@@ -24,7 +23,6 @@ Options are "absolute", "proportional", and "log_absolute".}
 A numeric value representing the calculated residual.
 }
 \description{
-This function calculates the residuals based on the observed and predicted values,
-applying different models for the calculation depending on whether the data is censored.
+This function calculates the residuals based on the observed and predicted values, applying different models for the calculation depending on whether the data is censored.
 }
 \keyword{internal}

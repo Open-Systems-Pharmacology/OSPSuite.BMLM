@@ -8,14 +8,14 @@
 \alias{rlnorm_geomean}
 \title{Log-Normal Functions with Geometric Mean}
 \usage{
-dlnorm_geomean(x, geomean = 1, geosd = 1, log = FALSE)
+dlnorm_geomean(x, geomean = 1, geosd = exp(1), log = FALSE)
 }
 \arguments{
 \item{x}{A numeric vector of quantiles (for \code{dlnorm_geomean}).}
 
 \item{geomean}{A numeric value representing the geometric mean. Default is 1.}
 
-\item{geosd}{A numeric value representing the standard deviation of the logarithm. Default is 1.}
+\item{geosd}{A numeric value representing the standard deviation of the logarithm. Default is exp(1).}
 
 \item{log}{A logical value indicating whether to return the logarithm of the density. Default is FALSE.}
 

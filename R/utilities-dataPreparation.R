@@ -268,6 +268,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     skipDescriptionRow = TRUE,
     alwaysCharacter = c('P1_type','P2_type','P3_type')
   )
+  if (nrow(dtPrior) == 0) stop('empty Prior sheet')
 
   checkmate::assertCharacter(dtPrior$name, any.missing = FALSE)
   checkmate::assertNames(dtPrior$valueMode, subset.of = unlist(PARAMETERTYPE))

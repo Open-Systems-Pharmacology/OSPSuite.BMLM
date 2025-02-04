@@ -28,6 +28,7 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
 
 # start the Optimization ( as default this is done as background job)
 myRun$startOptimization(
+  projectConfiguration = projectConfiguration,
   method = "BFGS",  # Specify the optimization method
   control = list(maxit = 1000)  # Control parameters for the optimization
 )
@@ -41,9 +42,12 @@ myRun$checkPredictedVsObserved()
 myRun$checkResidualsAsHistogram()
 myRun$checkResidualsVsTime()
 myRun$checkResidualsAsQQ()
+dtPrior <- myRun$getCurrentConfigTable(projectConfiguration)
+dtStartValues <- myRun$getCurrentConfigTable(projectConfiguration,sheetName = 'IndividualStartValues')
 
 # export results ----------------
-myRun$exportFinalValuesToBMLConfigTable()
+myRun$exportFinalValuesToBMLConfigTable(projectConfiguration)
 myRun$exportResultAsPopulation()
 myRun$exportIndividualValuesToConfigTable()
 myRun$exportGlobalsParametersToConfigTables()
+myRun$exportIndividualResultsToPkml(projectConfiguration,individualId = dataObserved$individualId[1])

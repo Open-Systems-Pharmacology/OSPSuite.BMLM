@@ -13,7 +13,7 @@ getLogLikelihood <-
   function(dtPrior,
            dtStartValues,
            dtRes) {
-
+browser()
     # Likelihood observed data given simulated time profiles
     logTimeProfile <- getLikelihoodTimeProfiles(
       dtPrior = dtPrior,

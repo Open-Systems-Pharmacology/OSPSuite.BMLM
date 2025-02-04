@@ -342,7 +342,7 @@ plotPredictedVsObserved <- function(
       groupAesthetics = c(),
       ...
     ) +
-      labs(subtitle = outputPathIds,
+      labs(subtitle = id,
            title = titeltxt)
 
     # Add facet wrapping by scenario and group
@@ -374,7 +374,7 @@ plotPredictedVsTime <- function(
 
   yScale <- tolower(match.arg(yScale))
 
-  dtResGroup <- split(dtRes, by = c('outputPathId','scenarioName'))[[1]]
+  for (dtResGroup in split(dtRes, by = c('outputPathId','scenarioName'))){
 
   dtResGroup <- setDT(dtResGroup)
 
@@ -383,9 +383,10 @@ plotPredictedVsTime <- function(
 
   yUnit <- dtResGroup$yUnit[1]
 
-  ospsuite_plotTimeProfile(plotData = plotData,
-                           mapping = aes(groupby = outputPathId),
-                           observedMapping = aes(y = predicted,
+  plotObject <-
+    ospsuite_plotTimeProfile(plotData = plotData,
+                           mapping = aes(y = predicted,groupby = outputPathId),
+                           observedMapping = aes(y = yValues,
                                                  groupby = outputPathId),
                            yscale = tolower(yScale),
                            ...) +
@@ -394,8 +395,8 @@ plotPredictedVsTime <- function(
          subtitle = paste(dtResGroup$scenario[1],dtResGroup$outputPathId)[1]) +
     theme(legend.position = 'none')
 
-
-
+  print(plotObject)
+  }
 
 }
 #' Create and Print Residuals vs Time Plots
@@ -457,7 +458,7 @@ plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
     filteredData <- dtRes[dtRes$outputPathId == id, ]
 
     # Create the base plot for residuals vs observed
-    plotObject <- ospsuite.plots::plotHistogram(dtRes,mapping = aes(x = resNorm, color = 'blue'),
+    plotObject <- ospsuite.plots::plotHistogram(filteredData,mapping = aes(x = resNorm, color = 'blue'),
                                                 distribution = 'normal',plotAsFrequency = TRUE) +
       stat_function(fun = dnorm, args = list(mean = 0, sd = 1),
                     color = "black", linewidth = 1) +
@@ -496,7 +497,7 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
     filteredData <- dtRes[dtRes$outputPathId == id, ]
 
     # Create the base plot for residuals vs observed
-    plotObject <- ospsuite.plots::plotQQ(data = dtRes,mapping = aes(sample = resNorm)) +
+    plotObject <- ospsuite.plots::plotQQ(data = filteredData,mapping = aes(sample = resNorm)) +
       facet_wrap(vars(scenario, group), ncol = nCols) +
       theme(legend.position = 'none') +
       labs(y = 'Residuals',
@@ -507,16 +508,53 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
     print(plotObject)
   }
 }
+#' Get Current Configuration Table
+#'
+#' This function retrieves the current configuration table from the specified sheet in the Excel workbook.
+#'
+#' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths to Excel files.
+#' @param dtList A list of data.tables containing the values.
+#' @param sheetName A character string specifying the name of the sheet to retrieve data from. Options are 'Prior' or 'IndividualStartValues'.
+#'
+#' @return A data.table containing the current configuration values.
+#' @export
+getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Prior','IndividualStartValues')) {
+
+  sheetName <- match.arg(sheetName)
+
+  identifier <- switch(sheetName,
+                       Prior = c("name", "hyperParameter", "categoricCovariate"),
+                       IndividualStartValues = c("name", "individualId", "categoricCovariate")
+                       )
+
+  dtOld <- switch(sheetName,
+                       Prior = dtList$prior,
+                       IndividualStartValues = dtList$startValues
+                  )
+
+
+  wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
+
+  dtNew <- addFinalValue(wb,
+                      sheetName = sheetName,
+                      identifier = identifier,
+                      newTable = dtOld
+  )
+
+  return(dtNew)
+}
+
 
 # auxiliary ------------
 
-#' Create Line Data for Hyperparameters
+#' #' Create Line Data for Hyperparameters
 #'
-#' This function generates the line data for hyperparameters based on their distributions.
+#' This function generates line data for hyperparameters based on their distributions.
 #'
-#' @param plotData A data.table containing the data to be processed.
-#' @param dtValues A data.table with ECDF calculated.
-#' @param xScale A character string specifying the scale of the x-axis.
+#' @param hyperParameter A data.table containing hyperparameter information.
+#' @param dtPrior A data.table containing prior values.
+#' @param xScale A character string specifying the scale of the x-axis ('linear' or 'log').
+#'
 #' @return A data.table containing the line data for hyperparameters.
 #' @keywords internal
 createLineData <- function(hyperParameter, dtPrior, xScale) {
@@ -552,13 +590,13 @@ createLineData <- function(hyperParameter, dtPrior, xScale) {
 
   return(lineData)
 }
-
 #' Customize Legend
 #'
-#' This function customizes the legend for the plot.
+#' This function customizes the legend for ggplot objects.
 #'
-#' @param plotObject The ggplot object to which the legend will be added.
+#' @param plotObject A ggplot object to which the legend will be added.
 #' @param colorScalingVector A named vector of colors for different statuses.
+#'
 #' @return A ggplot object with a customized legend.
 #' @keywords internal
 customizeLegend <- function(plotObject, colorScalingVector) {
@@ -581,16 +619,16 @@ customizeLegend <- function(plotObject, colorScalingVector) {
 }
 
 
-
 #' Prepare Plot Data
 #'
-#' This function prepares the data for plotting by loading the necessary status files and
-#' transforming the data into a suitable format for visualization.
+#' This function prepares the data for plotting by loading the necessary status files and transforming the data into a suitable format for visualization.
 #'
 #' @param dtList A list containing prior and start values data tables.
 #' @param currentStatus A list which contains the current values.
 #' @param bestStatus A list which contains the best values.
+#'
 #' @return A data.table containing the prepared plot data.
+#' @keywords internal
 preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
   # startValue
   plotData <- rbind(
@@ -650,13 +688,15 @@ preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
 
   return(plotData)
 }
-#' Enhance Plot Data
+#' Reshape Plot Data
 #'
-#' This function adds additional columns to the plot data for labeling and categorization.
+#' This function reshapes the data.table and adds additional columns to the plot data for labeling and categorization.
 #'
 #' @param plotData A data.table containing the initial plot data.
 #' @param dtList A list containing prior and start values data tables.
+#'
 #' @return A data.table with enhanced plot data.
+#' @keywords internal
 reshapePlotDataParameterValues <- function(plotData) {
 
   #reshapes the plot data for visualization by melting the data.table.
@@ -677,16 +717,13 @@ reshapePlotDataParameterValues <- function(plotData) {
 
   return(plotData)
 }
-
 #' Calculate Residual
 #'
-#' This function calculates the residuals based on the observed and predicted values,
-#' applying different models for the calculation depending on whether the data is censored.
+#' This function calculates the residuals based on the observed and predicted values, applying different models for the calculation depending on whether the data is censored.
 #'
 #' @param yValue A numeric value representing the observed value.
 #' @param predicted A numeric value representing the predicted value.
-#' @param model A character string specifying the model to use for calculating the residuals.
-#'               Options are "absolute", "proportional", and "log_absolute".
+#' @param model A character string specifying the model to use for calculating the residuals (options are "absolute", "proportional", "log_absolute").
 #' @param sigma A numeric value representing the standard deviation of the residuals.
 #' @param isCensored A logical value indicating whether the data is censored.
 #' @param lloq A numeric value representing the lower limit of quantification.

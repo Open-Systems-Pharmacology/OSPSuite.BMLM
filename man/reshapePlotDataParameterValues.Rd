@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{reshapePlotDataParameterValues}
 \alias{reshapePlotDataParameterValues}
-\title{Enhance Plot Data}
+\title{Reshape Plot Data}
 \usage{
 reshapePlotDataParameterValues(plotData)
 }
@@ -15,5 +15,6 @@ reshapePlotDataParameterValues(plotData)
 A data.table with enhanced plot data.
 }
 \description{
-This function adds additional columns to the plot data for labeling and categorization.
+This function reshapes the data.table and adds additional columns to the plot data for labeling and categorization.
 }
+\keyword{internal}

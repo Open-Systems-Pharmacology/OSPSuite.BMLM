@@ -33,7 +33,7 @@ optimizeParameters(
 
 \item{lastStatusSavingIntervalInSecs}{An integer specifying the interval for saving the last status in seconds.}
 
-\item{withInternalOptimization}{A logical indicating whether to perform internal optimization (default is TRUE).}
+\item{withInternalOptimization}{A logical indicating whether to perform internal optimization.}
 
 \item{startTime}{A POSIXct object representing the start time of the optimization process.}
 

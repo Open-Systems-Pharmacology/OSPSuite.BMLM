@@ -1,7 +1,7 @@
 Package: ospsuite.bmlm
 Type: Package
 Title: Library for multi level parameter identification
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
     c(person(given = "Open-Systems-Pharmacology Community",
              role = "cph"),

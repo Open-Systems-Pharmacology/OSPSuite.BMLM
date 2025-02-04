@@ -1,3 +1,6 @@
+
+
+
 #' Save Final Values to Tables
 #'
 #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
@@ -10,45 +13,24 @@
 saveFinalValuesToTables <- function(projectConfiguration, dtList) {
   wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
 
-  addFinalValue <- function(wb, sheetName, identifier, newTable) {
-    dt <- xlsxReadData(wb, sheetName = sheetName)
-
-    headers <- names(dt)
-    dtHeaders <- dt[1]
-    dt <- dt[-1]
-
-    dt <- dt %>%
-      dplyr::select(-dplyr::any_of(c("startValue", "finalValue"))) %>%
-      merge(
-        newTable %>%
-          dplyr::select(dplyr::all_of(c(identifier, "startValue", "value"))) %>%
-          data.table::setnames("value", "finalValue"),
-        by = identifier,
-        sort = FALSE
-      )
-
-    dt = rbind(dtHeaders,dt,fill = TRUE) %>%
-      setcolorder(c(headers[seq(1, which(headers == "startValue"))], "finalValue"))
-
-    xlsxWriteData(wb, sheetName = sheetName, dt)
-
-    return(wb)
-  }
-
-  wb <- addFinalValue(wb,
+  dtNew <- addFinalValue(wb,
                       sheetName = "Prior",
                       identifier = c("name", "hyperParameter", "categoricCovariate"),
                       newTable = dtList$prior
   )
-  wb <- addFinalValue(wb,
+  xlsxWriteData(wb, sheetName = "Prior", dtNew)
+
+  dtNew <- addFinalValue(wb,
                       sheetName = "IndividualStartValues",
                       identifier = c("name", "individualId", "categoricCovariate"),
                       newTable = dtList$startValues
   )
+  xlsxWriteData(wb, sheetName = "IndividualStartValues", dtNew)
 
 
   openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$addOns$bMLMConfigurationFile, overwrite = TRUE)
 }
+
 #' Export Optimized Population
 #'
 #' This function exports optimized population data to CSV files for each scenario in the scenario list.
@@ -170,7 +152,6 @@ exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList,r
 #' @export
 exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioList, dtList) {
   wb <- openxlsx::loadWorkbook(projectConfiguration$individualsFile)
-
   individualIds <- unique(dtList$startValues$individualId)
 
   # Use lapply to process each individual
@@ -195,6 +176,59 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
 
   return(invisible())
 }
+#' Export Individual Results to PKML
+#'
+#' This function exports individual results to a PKML file for a specified individual ID across scenarios.
+#'
+#' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths for saving PKML files.
+#' @param scenarioList A list of scenarios, each containing simulation parameters.
+#' @param dtList A list of data.tables containing prior, start values, and mapped paths.
+#' @param outputDir A string representing the directory where the PKML files will be saved.
+#' @param individualId A string representing the ID of the individual whose results will be exported.
+#'
+#' @return NULL
+#' @export
+exportIndividualResultsToPkml <- function(projectConfiguration,
+                              scenarioList,
+                              dtList,
+                              outputDir,
+                              individualId){
+  invisible(lapply(names(scenarioList), function(scenarioName) {
+    updateParameterValues(
+      scenarioName = scenarioName,
+      scenario = scenarioList[[scenarioName]],
+      dtPrior = dtList$prior,
+      dtStartValues = dtList$startValues,
+      dtMappedPaths = dtList$mappedPaths
+    )
+  }))
+
+  for (scenarioName in names(scenarioList)) {
+    if (individualId %in% scenarioList[[scenarioName]]$population$getCovariateValues("ObservedIndividualId")){
+      population <-
+        ospsuite::populationToDataFrame(scenarioList[[scenarioName]]$population) %>%
+        setDT()
+      individual <-
+        population[ObservedIndividualId == individualId] %>%  dplyr::select(!any_of(
+          c('IndividualId', scenarioList[[scenarioName]]$population$allCovariateNames)
+        ))
+      sourceFile <-
+        scenarioList[[scenarioName]]$simulation$sourceFile
+      simNew <- ospsuite::loadSimulation(sourceFile)
+      ospsuite::setParameterValuesByPath(
+        parameterPaths = names(individual),
+        values = unname(unlist(individual[1,])),
+        simulation = simNew,
+        stopIfNotFound = FALSE
+      )
+      ospsuite::saveSimulation(simulation = simNew,
+                               filePath = file.path(outputDir,
+                                                    gsub('\\.pkml',paste0('_',individualId,'.pkml'),basename(sourceFile))))
+    }
+  }
+
+}
+
 
 #' Extract Parameter Values
 #'
@@ -246,6 +280,31 @@ extractParameterValues <- function(dtNew, dtList, scenarioList) {
 
   # Return the relevant columns for further processing
   return(dtAdd[, c("container Path", "parameter Name", "value", "units")])
+}
+addFinalValue <- function(wb, sheetName, identifier, newTable) {
+  dt <- xlsxReadData(wb, sheetName = sheetName)
+  headers <- names(dt)
+  dtHeaders <- dt[1]
+  dt <- dt[-1]
+
+  dt[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), '', x)), .SDcols = identifier]
+  newTable[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), '', x)), .SDcols = identifier]
+
+
+  dt <- dt %>%
+    dplyr::select(-dplyr::any_of(c("startValue", "finalValue"))) %>%
+    merge(
+      newTable %>%
+        dplyr::select(dplyr::all_of(c(identifier, "startValue", "value"))) %>%
+        data.table::setnames("value", "finalValue"),
+      by = identifier,
+      sort = FALSE
+    )
+
+  dt = rbind(dtHeaders,dt,fill = TRUE) %>%
+    setcolorder(c(headers[seq(1, which(headers == "startValue"))], "finalValue"))
+
+  return(dt)
 }
 #' Load or Create Sheet Data
 #'

@@ -116,7 +116,7 @@ calculateProbability <- function(row, log = FALSE) {
 #' @param p A numeric vector of probabilities (for `qlnorm_geomean`).
 #' @param n A numeric value indicating the number of random values to generate (for `rlnorm_geomean`).
 #' @param geomean A numeric value representing the geometric mean. Default is 1.
-#' @param geosd A numeric value representing the standard deviation of the logarithm. Default is 1.
+#' @param geosd A numeric value representing the standard deviation of the logarithm. Default is exp(1).
 #' @param lower.tail A logical value indicating whether to return the lower tail probability. Default is TRUE.
 #' @param log A logical value indicating whether to return the logarithm of the density. Default is FALSE.
 #' @param log.p A logical value indicating whether to return the logarithm of the probability. Default is FALSE.
@@ -127,18 +127,18 @@ calculateProbability <- function(row, log = FALSE) {
 #'   \item{qlnorm_geomean}{Quantiles corresponding to the specified probabilities.}
 #'   \item{rlnorm_geomean}{Random values generated from the log-normal distribution.}
 #' }
-dlnorm_geomean <- function(x, geomean = 1, geosd = 1, log = FALSE) {
+dlnorm_geomean <- function(x, geomean = 1, geosd = exp(1), log = FALSE) {
   dlnorm(x = x, meanlog = log(geomean), sdlog = log(geosd), log = log)
 }
 
-plnorm_geomean <- function(q, geomean = 1, lower.tail = TRUE, geosd = 1, log.p = FALSE) {
+plnorm_geomean <- function(q, geomean = 1, geosd = exp(1),lower.tail = TRUE, log.p = FALSE) {
   plnorm(q = q, meanlog = log(geomean), sdlog = log(geosd), lower.tail = lower.tail, log.p = log.p)
 }
 
-qlnorm_geomean <- function(p, geomean = 1, lower.tail = TRUE, geosd = 1, log.p = FALSE) {
+qlnorm_geomean <- function(p, geomean = 1, lower.tail = TRUE, geosd = exp(1), log.p = FALSE) {
   qlnorm(p = p, meanlog = log(geomean), sdlog = log(geosd), lower.tail = lower.tail, log.p = log.p)
 }
 
-rlnorm_geomean <- function(n, geomean = 1, geosd = 1) {
+rlnorm_geomean <- function(n, geomean = 1, geosd = exp(1)) {
   rlnorm(n = n, meanlog = log(geomean), sdlog = log(geosd))
 }

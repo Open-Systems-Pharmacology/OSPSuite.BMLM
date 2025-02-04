@@ -31,10 +31,12 @@ run name, scenario list, observed data, and random seed.}
 \item \href{#method-BMLMOptimization-new}{\code{BMLMOptimization$new()}}
 \item \href{#method-BMLMOptimization-cleanUpStatus}{\code{BMLMOptimization$cleanUpStatus()}}
 \item \href{#method-BMLMOptimization-print}{\code{BMLMOptimization$print()}}
+\item \href{#method-BMLMOptimization-exportIndividualResultsToPkml}{\code{BMLMOptimization$exportIndividualResultsToPkml()}}
 \item \href{#method-BMLMOptimization-exportResultAsPopulation}{\code{BMLMOptimization$exportResultAsPopulation()}}
 \item \href{#method-BMLMOptimization-exportIndividualValuesToConfigTable}{\code{BMLMOptimization$exportIndividualValuesToConfigTable()}}
 \item \href{#method-BMLMOptimization-exportGlobalsParametersToConfigTables}{\code{BMLMOptimization$exportGlobalsParametersToConfigTables()}}
 \item \href{#method-BMLMOptimization-exportFinalValuesToBMLConfigTable}{\code{BMLMOptimization$exportFinalValuesToBMLConfigTable()}}
+\item \href{#method-BMLMOptimization-getCurrentConfigTable}{\code{BMLMOptimization$getCurrentConfigTable()}}
 \item \href{#method-BMLMOptimization-checkResidualsAsQQ}{\code{BMLMOptimization$checkResidualsAsQQ()}}
 \item \href{#method-BMLMOptimization-checkResidualsVsTime}{\code{BMLMOptimization$checkResidualsVsTime()}}
 \item \href{#method-BMLMOptimization-checkResidualsAsHistogram}{\code{BMLMOptimization$checkResidualsAsHistogram()}}
@@ -100,11 +102,33 @@ Print properties and status of the BMLMOptimization object
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-print}{}}}
 \subsection{Method \code{print()}}{
 This method prints the current properties and status of the BMLMOptimization object to the console.
-This function exports optimized population data to CSV files for each scenario in the scenario list.
+This function exports individual results to a PKML file for a specified individual ID across scenarios.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$print()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-exportIndividualResultsToPkml"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportIndividualResultsToPkml}{}}}
+\subsection{Method \code{exportIndividualResultsToPkml()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportIndividualResultsToPkml(
+  projectConfiguration,
+  individualId
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including paths for saving PKML files.}
+
+\item{\code{individualId}}{A string representing the ID of the individual whose results will be exported.
+This function exports optimized population data to CSV files for each scenario in the scenario list.}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-BMLMOptimization-exportResultAsPopulation"></a>}}
@@ -187,6 +211,28 @@ This function saves final values from a provided data table to specified sheets 
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including paths to Excel files.
+This function retrieves the configuration table from the specified sheet in the Excel workbook and add the finalValues}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-getCurrentConfigTable"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-getCurrentConfigTable}{}}}
+\subsection{Method \code{getCurrentConfigTable()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$getCurrentConfigTable(
+  projectConfiguration,
+  sheetName = c("Prior", "IndividualStartValues")
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including paths to Excel files.}
+
+\item{\code{sheetName}}{A character string specifying the name of the sheet to retrieve data from. Options are 'Prior' or 'IndividualStartValues'.
 Check Residuals as QQ Plot
 
 This method generates a QQ plot to assess the normality of the residuals.}
@@ -406,8 +452,6 @@ Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'
 default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
 4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
-Start the Optimization Process
-
 This method initiates the optimization process using the specified method and control parameters.
 Internally, the function \code{optim} is used, so please check the help for more details.}
 }
@@ -426,6 +470,7 @@ Internally, the function \code{optim} is used, so please check the help for more
   simulationRunOptions = NULL,
   failValue = 1e+10,
   lastStatusSavingIntervalInSecs = 60,
+  withInternalOptimization = FALSE,
   startInBackground = TRUE,
   ...
 )}\if{html}{\out{</div>}}
@@ -446,11 +491,11 @@ Internally, the function \code{optim} is used, so please check the help for more
 
 \item{\code{lastStatusSavingIntervalInSecs}}{An integer specifying the interval for saving the last status (default is 60 seconds).}
 
+\item{\code{withInternalOptimization}}{A logical indicating whether to perform internal optimization (default is FALSE).}
+
 \item{\code{startInBackground}}{A logical indicating whether to start the optimization in the background (default is TRUE).}
 
 \item{\code{...}}{Additional arguments to be passed to the optimization function \code{optim}.}
-
-\item{\code{withInternalOptimization}}{A logical indicating whether to perform internal optimization (default is TRUE).}
 }
 \if{html}{\out{</div>}}
 }

@@ -7,7 +7,7 @@
 customizeLegend(plotObject, colorScalingVector)
 }
 \arguments{
-\item{plotObject}{The ggplot object to which the legend will be added.}
+\item{plotObject}{A ggplot object to which the legend will be added.}
 
 \item{colorScalingVector}{A named vector of colors for different statuses.}
 }
@@ -15,6 +15,6 @@ customizeLegend(plotObject, colorScalingVector)
 A ggplot object with a customized legend.
 }
 \description{
-This function customizes the legend for the plot.
+This function customizes the legend for ggplot objects.
 }
 \keyword{internal}

@@ -15,7 +15,7 @@ test_that("dlnorm_geomean matches dlnorm", {
 test_that("plnorm_geomean matches plnorm", {
   q <- 0.5
 
-  cumulative_new <- plnorm_geomean(q, geomean, geosd)
+  cumulative_new <- plnorm_geomean(q, geomean = geomean, geosd = geosd)
   cumulative_old <- plnorm(q, meanlog = log(geomean), sdlog = log(geosd))
 
   expect_equal(cumulative_new, cumulative_old, tolerance = 1e-8)

@@ -17,6 +17,6 @@ preparePlotDataParameterValues(dtList, currentStatus, bestStatus)
 A data.table containing the prepared plot data.
 }
 \description{
-This function prepares the data for plotting by loading the necessary status files and
-transforming the data into a suitable format for visualization.
+This function prepares the data for plotting by loading the necessary status files and transforming the data into a suitable format for visualization.
 }
+\keyword{internal}

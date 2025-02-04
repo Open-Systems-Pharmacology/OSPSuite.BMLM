@@ -144,6 +144,28 @@ BMLMOptimization <-  R6::R6Class(
         private$printLine("status", self$status)
         invisible(self)
     },
+    #' This function exports individual results to a PKML file for a specified individual ID across scenarios.
+    #'
+    #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths for saving PKML files.
+    #' @param individualId A string representing the ID of the individual whose results will be exported.
+    exportIndividualResultsToPkml = function(projectConfiguration,individualId){
+
+      individualId <- as.character(individualId)
+      checkmate::assertCharacter(individualId,len = 1)
+      checkmate::assertNames(individualId,subset.of = unique(private$dtList$data$individualId))
+
+      statusList <- private$loadOptimStatusList(statusTypes = 'best')
+      if (is.null(statusList)) return(invisible())
+
+      private$dtList <- setParameterToTables(dtList = private$dtList,
+                                             params = statusList$best$params)
+
+      exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
+                                    scenarioList = private$scenarioList,
+                                    dtList = private$dtList,
+                                    outputDir = self$outputDir,
+                                    individualId = individualId)
+    },
     #' This function exports optimized population data to CSV files for each scenario in the scenario list.
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths for saving population files.
@@ -210,6 +232,26 @@ BMLMOptimization <-  R6::R6Class(
 
       saveFinalValuesToTables(projectConfiguration = projectConfiguration,
                                           dtList = private$dtList)
+    },
+    #' This function retrieves the configuration table from the specified sheet in the Excel workbook and add the finalValues
+    #'
+    #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths to Excel files.
+    #' @param sheetName A character string specifying the name of the sheet to retrieve data from. Options are 'Prior' or 'IndividualStartValues'.
+    getCurrentConfigTable = function(projectConfiguration,sheetName = c('Prior','IndividualStartValues')){
+      sheetName <- match.arg(sheetName)
+
+      statusList <- private$loadOptimStatusList(statusTypes = 'best')
+      if (is.null(statusList)) return(invisible())
+
+      private$dtList <- setParameterToTables(dtList = private$dtList,
+                                             params = statusList$best$params)
+
+      dt <- getCurrentConfigTable(projectConfiguration = projectConfiguration,
+                                          dtList = private$dtList,
+                                  sheetName = sheetName)
+
+      return(dt)
+
     },
     #' Check Residuals as QQ Plot
     #'
@@ -389,8 +431,6 @@ BMLMOptimization <-  R6::R6Class(
       )
 
     },
-    #' Start the Optimization Process
-    #'
     #' This method initiates the optimization process using the specified method and control parameters.
     #' Internally, the function `optim` is used, so please check the help for more details.
     #'
@@ -401,7 +441,6 @@ BMLMOptimization <-  R6::R6Class(
     #' @param failValue A numeric value to set if evaluation of the objective function fails (default is 1e+10).
     #' @param lastStatusSavingIntervalInSecs An integer specifying the interval for saving the last status (default is 60 seconds).
     #' @param startInBackground A logical indicating whether to start the optimization in the background (default is TRUE).
-    #' @param withInternalOptimization A logical indicating whether to perform internal optimization (default is TRUE).
     #' @param withInternalOptimization A logical indicating whether to perform internal optimization (default is FALSE).
     #' @param ... Additional arguments to be passed to the optimization function `optim`.
     #'

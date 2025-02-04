@@ -20,11 +20,11 @@ library(ospsuite.bmlm)
 
 # Introduction
 
-In this vignette, we will explore how to do optimization runs using the `BMLMOptimization` class from the `ospsuite.bmlm` package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress and  various methods to transfer the results back to the reportingframework structure
+In this vignette, we will explore how to perform optimization runs using the `BMLMOptimization` class from the `ospsuite.bmlm` package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress, and how to transfer the results back to the reporting framework structure.
 
 # What is the BMLMOptimization Object?
 
-The `BMLMOptimization` object encapsulates the functionality for performing Bayesian Multi-Level Modeling (BMLM) optimization. It manages the configuration, output directories, logging, and optimization processes. This object allows users to define scenarios, load observed data, and execute optimization routines efficiently.
+The `BMLMOptimization` object encapsulates the functionality for performing Bayesian Multi-Level Modeling (BMLM) optimization. It manages configuration, output directories, logging, and optimization processes. This object allows users to define scenarios, load observed data, and execute optimization routines efficiently.
 
 ### Key Components of BMLMOptimization
 
@@ -41,7 +41,7 @@ To begin, we need to create an instance of the BMLMOptimization class. This invo
 # Create the BMLMOptimization object
 myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 runName = 'myRun',
-                                scenarioList =  scenarioList,
+                                scenarioList = scenarioList,
                                 dataObserved = dataObserved)
 ```
 
@@ -53,9 +53,9 @@ Once the `BMLMOptimization` object is initialized, you can start the optimizatio
 
 To initiate the optimization, you can call the `startOptimization` method as follows:
 
-```{r  echo=TRUE, eval=FALSE}
+```{r echo=TRUE, eval=FALSE}
 # Start the optimization process
-optimization$startOptimization(
+myRun$startOptimization(
   method = "BFGS",  # Specify the optimization method
   control = list(maxit = 1000)  # Control parameters for the optimization
 )
@@ -77,10 +77,10 @@ optimization$startOptimization(
 
 If an optimization run is interrupted or if you wish to continue from a previous state, the `BMLMOptimization` object allows for restarting the optimization process. This can be particularly useful in scenarios where:
 
-- The optimization was stopped due to a manual intervention or an error.
+- The optimization was stopped due to manual intervention or an error.
 - You want to refine the results based on previous iterations, for example with another method, or with other optimization control parameters.
 
-!Attention, the configuration or data are not changed.
+**Note**: The configuration or data are not changed.
 
 To restart an optimization, you simply need to call the `startOptimization` method again after ensuring that the necessary previous results are available. The method will check for existing results and can load them to continue the optimization from the last saved state.
 
@@ -88,7 +88,7 @@ Here’s how to restart the optimization:
 
 ```{r echo=TRUE, eval=FALSE}
 # Restart the optimization process
-optimization$startOptimization(
+myRun$startOptimization(
   method = "BFGS",  # Specify the optimization method
   control = list(maxit = 1000)  # Control parameters for the optimization
 )
@@ -137,7 +137,7 @@ You can access the output directory by referencing the `outputDir` property of t
 
 ```{r echo=TRUE, eval=FALSE}
 # Accessing the output directory
-outputDirectory <- optimization$outputDir
+outputDirectory <- myRun$outputDir
 print(outputDirectory)
 ```
 
@@ -164,7 +164,7 @@ Convergence refers to the process of approaching a final set of parameter estima
   This function reads a CSV file containing convergence data and visualizes the results using ggplot2. The plot typically displays the log-likelihood values or other relevant metrics over iterations. Monitoring convergence helps identify whether the optimization has reached a stable solution or if further iterations are needed.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkConvergence()
+myRun$checkConvergence()
 ```
 
 ## 2. Check Residuals
@@ -176,7 +176,7 @@ Residuals are the differences between the observed values and the predicted valu
   This function generates a QQ (quantile-quantile) plot to assess the normality of the residuals. A QQ plot compares the quantiles of the residuals to the quantiles of a normal distribution. If the residuals follow a normal distribution, the points will lie approximately along a straight line.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkResidualsAsQQ()
+myRun$checkResidualsAsQQ()
 ```
 
 - **Check Residuals as Histogram**
@@ -184,7 +184,7 @@ optimization$checkResidualsAsQQ()
   This function creates a histogram of the residuals to visualize their distribution. A well-fitted model should have residuals that are symmetrically distributed around zero. The histogram can help identify skewness or kurtosis in the residuals.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkResidualsAsHistogram()
+myRun$checkResidualsAsHistogram()
 ```
 
 - **Check Residuals vs Time**
@@ -192,7 +192,7 @@ optimization$checkResidualsAsHistogram()
   This function generates plots of residuals against time or the independent variable. This visualization helps identify any trends or patterns in the residuals over time. Ideally, the residuals should be randomly scattered around zero without showing any systematic patterns.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkResidualsVsTime()
+myRun$checkResidualsVsTime()
 ```
 
 ## 3. Predicted vs Observed
@@ -204,7 +204,7 @@ Evaluating how well the model fits the observed data is crucial for understandin
   This function generates plots that compare predicted values against observed values. The plots can include regression lines to help visualize the relationship between the predicted and observed data. A good model fit will show points clustered around the line of equality (where predicted values equal observed values).
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkPredictedVsObserved()
+myRun$checkPredictedVsObserved()
 ```
 
 - **Check Predicted vs Time**
@@ -212,7 +212,7 @@ optimization$checkPredictedVsObserved()
   This function generates plots to compare predicted values against time. This visualization helps assess how well the model predicts outcomes over time and allows users to identify any discrepancies between predicted and observed trends.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkPredictedVsTime()
+myRun$checkPredictedVsTime()
 ```
 
 ## 4. Checking Parameter Limits
@@ -222,7 +222,7 @@ optimization$checkPredictedVsTime()
   This function creates and prints plots that display current best and starting values of the fitted parameters. The plots visualize the relative parameter values between their minimum and maximum values using defined scaling. This helps users understand the range and behavior of the parameters being optimized.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkParameterLimits()
+myRun$checkParameterLimits()
 ```
 
 ## 5. Checking Distributions
@@ -232,55 +232,76 @@ optimization$checkParameterLimits()
   This function creates ggplot objects to display the individual values versus the fitted distributions. The plots help visualize how well the model's predicted distributions align with the observed data distributions. This is critical for assessing the model's performance and understanding the parameter distributions.
 
 ```{r echo=TRUE, eval=FALSE}
-optimization$checkDistributions(nCols = 2, nRows = 3, xScale = "log")
+myRun$checkDistributions(nCols = 2, nRows = 3, xScale = "log")
 ```
+
+## 6. Get Current Configuration Table
+
+The `getCurrentConfigTable` function retrieves the current configuration table from the specified sheet in the Excel workbook. This can be useful for examining the current settings after an optimization run.
+
+```{r echo=TRUE, eval=FALSE}
+# Get current configuration table
+currentConfig <- myRun$getCurrentConfigTable(projectConfiguration = projectConfiguration, sheetName = 'Prior')
+print(currentConfig)
+```
+
 
 # Exporting Results
 
 After completing the optimization process, you may want to export the results, individual values, global parameters, and final values to various formats for further analysis or reporting. The `BMLMOptimization` class provides several methods to facilitate these exports.
 
-## 1. Exporting Optimized Population
+## 1. Exporting Individual Results to PKML
 
-The `exportResultAsPopulation` method allows you to export the optimized population data to CSV files for each scenario in the scenario list. The function exposrts for each population referenced in the scenarioList a new population containg the final values of the optimization.The new name is the old name with the run name as suffix.
-If input parameter `addAsNewScenarios = TRUE` all relevant scenarios are duplicated in the scenario configuration table with a reference to the new population.  
+The `exportIndividualResultsToPkml` function allows you to export individual results to a PKML file for a specified individual ID across scenarios.
+
+```{r echo=TRUE, eval=FALSE}
+# Export individual results to PKML
+myRun$exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
+                                     scenarioList = scenarioList,
+                                     dtList = dtList,
+                                     outputDir = outputDirectory,
+                                     individualId = 'individual_1')
+```
+
+## 2. Exporting Optimized Population
+
+The `exportResultAsPopulation` method allows you to export the optimized population data to CSV files for each scenario in the scenario list. The function exports for each population referenced in the scenario list a new population containing the final values of the optimization. The new name is the old name with the run name as a suffix. If the input parameter `addAsNewScenarios = TRUE`, all relevant scenarios are duplicated in the scenario configuration table with a reference to the new population.  
 
 ```{r echo=TRUE, eval=FALSE}
 # Export optimized population data
-optimization$exportResultAsPopulation(projectConfiguration = projectConfiguration,
-                                       addAsNewScenarios = TRUE,
-                                       overwrite = FALSE)
+myRun$exportResultAsPopulation(projectConfiguration = projectConfiguration,
+                                 addAsNewScenarios = TRUE,
+                                 overwrite = FALSE)
 ```
 
-## 2. Exporting Individual Values to Configuration Table
+## 3. Exporting Individual Values to Configuration Table
 
 You can export individual values from the optimization to the Individuals configuration table in an Excel workbook using the `exportIndividualValuesToConfigTable` method.
 
-
 ```{r echo=TRUE, eval=FALSE}
 # Export individual values to configuration table
-optimization$exportIndividualValuesToConfigTable(projectConfiguration = projectConfiguration)
+myRun$exportIndividualValuesToConfigTable(projectConfiguration = projectConfiguration)
 ```
 
-
-## 3. Exporting Global Parameters to Configuration Tables
+## 4. Exporting Global Parameters to Configuration Tables
 
 The `exportGlobalsParametersToConfigTables` method allows you to export global parameters from the optimization to a new sheet in the model parameters configuration file.
 
 ```{r echo=TRUE, eval=FALSE}
 # Export global parameters to configuration tables
-optimization$exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
-                                                  overwrite = FALSE)
+myRun$exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
+                                            overwrite = FALSE)
 ```
 
-
-## 4. Exporting Final Values to BML Configuration Table
+## 5. Exporting Final Values to BML Configuration Table
 
 You can save the final values from the optimization to specified sheets in the BMLM configuration table workbook using the `exportFinalValuesToBMLConfigTable` method.
 
 ```{r echo=TRUE, eval=FALSE}
 # Export final values to BML configuration table
-optimization$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration)
+myRun$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration)
 ```
+
 
 
 # Summary
