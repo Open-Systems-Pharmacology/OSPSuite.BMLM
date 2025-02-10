@@ -121,6 +121,7 @@ createObjectiveFunction <-
            lastStatusSavingIntervalInSecs,
            withInternalOptimization) {
     return(function(params) {
+
     optimEnv$iteration <- optimEnv$iteration + 1
     tryCatch({
       dtList <- setParameterToTables(dtList = dtList, params = params)
@@ -261,7 +262,7 @@ evaluateLogLikelihood <- function(loglikelihoods, optimEnv) {
     optimEnv$NAcounter <- optimEnv$NAcounter + 1
     return(optimEnv$failValue)
   } else {
-    return(-1 * sum(loglikelihoods))
+    return(min(-1 * sum(loglikelihoods),optimEnv$failValue))
   }
 }
 
@@ -294,7 +295,7 @@ saveOptimStatusIfNeeded <- function(optimStatus, optimEnv, outputDir, interval) 
 #' @param loglikelihoods A vector of log likelihood values.
 #' @keywords internal
 updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outputDir, loglikelihoods) {
-  if (currentValue < optimEnv$bestValue) {
+  if (currentValue < optimEnv$bestValue & is.finite(currentValue)) {
     optimEnv$bestValue <- currentValue
     fwrite(
       as.data.table(as.list(
@@ -464,7 +465,6 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
   # initialize variables to avoid linter messages
   currentValue <- value <- newValue <- individualId <- valueMode <- NULL
 
-  scenarioName <- names(scenarioList)[1]
   scenario <- scenarioList[[scenarioName]]
 
   dtMappedPathsForScenarios <-
@@ -502,10 +502,14 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
     for (dp in split(dtCustomParams, by = "linkedParameters")) {
       pt <- dp$linkedParameters[1]
       # make sure to use default value for individuals where no fit parameter exist
+      currentValue = scenario$population$getParameterValues(pt)
+      if (is.null(currentValue))
+        currentValue <- getParameter(path = pt,container = scenario$simulation)$value
+
       tmp <-
         data.table(
           individualId = scenario$population$getCovariateValues("ObservedIndividualId"),
-          currentValue = scenario$population$getParameterValues(pt)
+          currentValue = currentValue
         ) %>%
         merge(dp,
               by = "individualId",

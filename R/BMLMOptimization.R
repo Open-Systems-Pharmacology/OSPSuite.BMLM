@@ -454,7 +454,6 @@ BMLMOptimization <-  R6::R6Class(
                                  withInternalOptimization = FALSE,
                                  startInBackground = TRUE,
                                  ...){
-
       if (private$status == RUNSTATUS$running)
         stop("Status is running!
              Please check if a background job is still running, otherwise reset status with 'cleanUpStatus()'")
@@ -576,6 +575,19 @@ BMLMOptimization <-  R6::R6Class(
       self$outputDir <- file.path(projectConfiguration$outputFolder, 'BMLM',self$runName)
 
       if (dir.exists( self$outputDir)) {
+
+        if (!file.exists(file.path(self$outputDir, 'status.RDS'))) {
+          # Prompt the user for confirmation to reset the run directory
+          response <- readline(prompt = "Output directory exists but seems to be corrupt. Do you want to reset everything in the run directory? (Yes/No): ")
+          if (tolower(response) == "yes") {
+            private$logMessage(paste('Reset Run', self$runName))
+            asReload <- FALSE
+            return(asReload)
+          } else {
+            stop('Execution stopped by user.')
+          }
+        }
+
         private$loadStatus()
 
         message("Alert: The output folder for ", self$runName, " already exists! Status: ",private$status)

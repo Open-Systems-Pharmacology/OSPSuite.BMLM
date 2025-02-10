@@ -613,7 +613,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
   newRows <- list()
 
   # Process each parameter row
-  for (iRow in which(dtDefinition$valueMode == "individual")) {
+  for (iRow in which(dtDefinition$valueMode == "individual" & 'distribution' != 'flat')) {
     par <- dtDefinition[iRow, ]
 
     # Determine subgroups

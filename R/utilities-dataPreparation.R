@@ -279,15 +279,38 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     sheetName = "Prior"
   )
 
+  dtDefinition <- xlsxReadData(
+    projectConfiguration$addOns$bMLMConfigurationFile,
+    sheetName = "ParameterDefinition",
+    skipDescriptionRow = TRUE
+  )
 
-  checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$individual]$hyperDistribution,
-                         subset.of = c(getAllDistributions()))
+  # check consistency with definitions
+  checkConsistencyWithDefinition(
+    dtDefinition[valueMode == PARAMETERTYPE$individual],
+      colNamesDefiniton = c('distribution','unit','useAsFactor'),
+    dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
+    colNamesTable =  c('distribution of Individual Values','unit','useAsFactor'),
+    tableName = 'Prior')
+  checkConsistencyWithDefinition(
+    dtDefinition[valueMode == PARAMETERTYPE$global],
+    colNamesDefiniton = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
+    dtPrior[valueMode == PARAMETERTYPE$global],
+    colNamesTable = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
+    tableName = 'Prior')
 
-  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$individual],
+  setnames(dtPrior,
+           old = c('distribution of Individual Values','prior Distribution'),
+           new = c('hyperDistribution','distribution'))
+
+  checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][['hyperDistribution']],
+                         subset.of = c('flat', getAllDistributions()))
+
+  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
                            valueColumns = c('hyperDistribution'),
                            groupingColumns = c('name','categoricCovariate'))
 
-  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$individual],
+  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
                            valueColumns = c('unit'),
                            groupingColumns = c('name'))
 
@@ -414,8 +437,7 @@ validateAndLoadIndividualStartValues <-
       skipDescriptionRow = TRUE
     )
 
-
-    # use only values avialable in oberved data
+    # use only values available in observed data
     dtStartValues <- dtStartValues[individualId %in% unique(dataObserved$individualId)]
 
     # validate
@@ -425,6 +447,22 @@ validateAndLoadIndividualStartValues <-
     validateGroupConsistency(dt = dtStartValues,
                              valueColumns = c('minValue', 'maxValue','scaling','useAsFactor'),
                              groupingColumns = c('name','categoricCovariate'))
+
+
+    dtDefinition <- xlsxReadData(
+      projectConfiguration$addOns$bMLMConfigurationFile,
+      sheetName = "ParameterDefinition",
+      skipDescriptionRow = TRUE
+    )
+
+    # check consistency with definitions
+    checkConsistencyWithDefinition(
+      dtDefinition[valueMode == PARAMETERTYPE$individual],
+      colNamesDefiniton = c('minValue', 'maxValue','scaling','useAsFactor'),
+      dtStartValues,
+      colNamesTable =  c('minValue', 'maxValue','scaling','useAsFactor'),
+      tableName = 'Prior')
+
 
     checkDuplicates(
       dt = dtStartValues,
@@ -468,8 +506,6 @@ randomizeIndividualStartValues <-
   function(indGroup, dtHyperParameter) {
     # initialize variable to avoid linter message
     name <- categoricCovariate <- scaling <- value <- minValue <- maxValue <- NULL
-    setDT(indGroup)
-    nNew <- sum(is.na(indGroup$value))
 
     # Merge with hyperparameters
     tmp <-
@@ -478,14 +514,24 @@ randomizeIndividualStartValues <-
             by = c("name", "categoricCovariate")
       )
 
-    # Create a list of parameters for the distribution function
-    paramList <- stats::setNames(tmp$value, tmp$hyperParameter)
+    if (nrow(tmp) > 0){
+      hyperDistribution <- tmp$hyperDistribution[1]
+      # Create a list of parameters for the distribution function
+      paramList <- stats::setNames(tmp$value, tmp$hyperParameter)
+    } else {
+      hyperDistribution <- 'unif'
+      paramList <- list(min = indGroup$minValue[1],
+                        max = indGroup$maxValue[1])
+    }
+
 
     # Generate new values based on the distribution
     trials <- 0
+    nNew <- sum(is.na(indGroup$value))
+
     while (nNew > 0 & trials < 10) {
       values <-
-        do.call(paste0("r", tmp$hyperDistribution[1]), c(list(n = nNew), paramList))
+        do.call(paste0("r", hyperDistribution), c(list(n = nNew), paramList))
       indGroup[is.na(indGroup$value), value := values]
 
       # set Values outside limits to limits
@@ -496,12 +542,12 @@ randomizeIndividualStartValues <-
       trials <- trials + 1
     }
     if (nNew > 0) {
-      stop(paste("Not possible to generate random startValues in boundarys for",tmp$name[1]))
+      stop(paste("Not possible to generate random startValues in boundarys for",indGroup$name[1]))
     }
 
     # Check if all values are within the distribution range
     probs <-
-      do.call(paste0("d", tmp$hyperDistribution[1]), c(list(x = indGroup$value), paramList))
+      do.call(paste0("d", hyperDistribution), c(list(x = indGroup$value), paramList))
 
     if (any(is.na(probs)) | any(probs <= 0)) {
       writeTableToLog(indGroup[which(is.na(probs) | probs <= 0)])
@@ -724,6 +770,43 @@ inverseTransformParams <- function(param, minValue, maxValue, scaling) {
 
 
 # auxiliaries --------------
+
+
+checkConsistencyWithDefinition <- function(dtDefinition,
+                                           colNamesDefiniton,
+                               dt,colNamesTable,
+                               tableName){
+
+  tmp <- merge(dtDefinition %>%
+                 dplyr::select(any_of(c('name', colNamesDefiniton))) %>%
+                 unique(),
+               dt %>%
+                 dplyr::select(any_of(c('name', colNamesTable))) %>%
+                 unique() %>%
+                 setnames(old = colNamesTable, new = colNamesDefiniton),
+               by = 'name',
+               all.y = TRUE,
+               suffixes = c('',paste0('.',tableName))
+  )
+
+  if (nrow(tmp) > 1){
+    for (col in colNamesDefiniton){
+      tmpInconsistent <- tmp[get(col) != get(paste0(col,'.',tableName))]
+      if (nrow(tmpInconsistent) > 0){
+        print(tmpInconsistent)
+        warning(paste0("Sheet '",tableName, "' is not consistent with sheet 'ParameterDefinition' for column '",
+                      col, "' for parameter(s): '",paste(tmpInconsistent$name,collapse = "', '"),".",
+                      " Settings defined in 'ParameterDefinition' are ignored!"))
+      }
+    }
+
+  }
+  return(invisible())
+
+}
+
+
+
 
 #' Add Min and Max Values
 #'

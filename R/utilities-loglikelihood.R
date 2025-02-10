@@ -13,7 +13,6 @@ getLogLikelihood <-
   function(dtPrior,
            dtStartValues,
            dtRes) {
-browser()
     # Likelihood observed data given simulated time profiles
     logTimeProfile <- getLikelihoodTimeProfiles(
       dtPrior = dtPrior,
@@ -44,6 +43,7 @@ browser()
 #' @keywords internal
 getLikelihoodTimeProfiles <- function(dtPrior,
                                       dtRes) {
+
   # initialize variables to avoid linter messages
   yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
 
@@ -218,7 +218,6 @@ setlogTruncationOffset <- function(dtPrior,dtStartValues) {
 
   # Loop through each hyperparameter group
   for (dtGroup in split(dtPriorHyper, by = c('name', 'categoricCovariate'))) {
-    setDT(dtGroup)
 
     # Create a named list of parameters
     paramList <- setNames(dtGroup$value, dtGroup$hyperParameter)
@@ -268,13 +267,15 @@ getLikelihoodForIndividualGroup <-
     # initialize variable to avoid linter message
     value <- scaling <- categoricCovariate <- name <- NULL
 
-    setDT(indGroup)
     # Merge with hyper parameters
     tmp <-
       merge(dtHyperParameter,
         unique(indGroup[, .(name, categoricCovariate)]),
         by = c("name", "categoricCovariate")
       )
+
+    # if no Hyperparameter exist for group return probability 1
+    if (nrow(tmp) == 0) return(0)
 
     # Get parameters for distributions
     paramList <- stats::setNames(tmp$value, tmp$hyperParameter)

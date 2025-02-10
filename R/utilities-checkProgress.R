@@ -187,6 +187,7 @@ plotParameterLimits <-
 
     return(invisible())
   }
+
 #' Plot Distributions
 #'
 #' This function creates a series of plots to visualize the cumulative distribution of individual values and hyperparameters.
