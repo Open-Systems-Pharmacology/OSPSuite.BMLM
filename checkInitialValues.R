@@ -12,6 +12,12 @@ checkInitialValues(projectConfiguration,
     optimizationGroup = 'both'
   )
 
+  # bestStatus <- readRDS(file.path(myRun$outputDir, 'bestOptimStatus.RDS'))
+  #
+  # dtList <- setParameterToTables(dtList, bestStatus$params)
+
+
+
   dtList <- setParameterToTables(dtList = dtList, params = initialValues)
 
   evaluateTimeprofiles(optimEnv = optimEnv,
@@ -20,11 +26,11 @@ checkInitialValues(projectConfiguration,
                        dtStartValues = dtList$startValues,
                        dtMappedPaths = dtList$mappedPaths,
                        simulationRunOptions = SimulationRunOptions$new(showProgress = TRUE),
-                       dataObservedForMatch = dtList$data,
-                       withProtocol = TRUE)
+                       dataObservedForMatch = dtList$data)
 
   dtRes_NA <- optimEnv$dtRes[is.na(predicted),c("scenario","individualId")] %>%
     unique()
+
 
   loglikelihoods <- getLogLikelihood(
     dtPrior = dtList$prior,

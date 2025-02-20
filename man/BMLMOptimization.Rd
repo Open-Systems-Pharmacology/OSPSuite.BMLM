@@ -42,6 +42,7 @@ run name, scenario list, observed data, and random seed.}
 \item \href{#method-BMLMOptimization-checkResidualsAsHistogram}{\code{BMLMOptimization$checkResidualsAsHistogram()}}
 \item \href{#method-BMLMOptimization-checkPredictedVsObserved}{\code{BMLMOptimization$checkPredictedVsObserved()}}
 \item \href{#method-BMLMOptimization-checkPredictedVsTime}{\code{BMLMOptimization$checkPredictedVsTime()}}
+\item \href{#method-BMLMOptimization-checkCorrelations}{\code{BMLMOptimization$checkCorrelations()}}
 \item \href{#method-BMLMOptimization-checkParameterLimits}{\code{BMLMOptimization$checkParameterLimits()}}
 \item \href{#method-BMLMOptimization-checkDistributions}{\code{BMLMOptimization$checkDistributions()}}
 \item \href{#method-BMLMOptimization-checkConvergence}{\code{BMLMOptimization$checkConvergence()}}
@@ -371,8 +372,46 @@ This method generates plots to compare predicted values against time.}
 }
 \subsection{Returns}{
 An invisible reference to the BMLMOptimization object.
+Plot Correlations
+This function generates a correlation matrix plot for the specified status and checks
+for relevant columns in the population data.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkCorrelations"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkCorrelations}{}}}
+\subsection{Method \code{checkCorrelations()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkCorrelations(
+  method = "spearman",
+  statusToShow = c("best", "current", "start"),
+  corCut = 0.5,
+  chiSquaredCut = 0.1
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{method}}{A character string specifying the correlation method to use (default is 'spearman').}
+
+\item{\code{statusToShow}}{A character string indicating which status to show. Options are 'best', 'current', and 'start'.}
+
+\item{\code{corCut}}{A numeric value for the correlation cutoff threshold. Default is 0.5.}
+
+\item{\code{chiSquaredCut}}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
 This function creates ggplot objects to display the current best and start values of the fitted parameter.
-all values a display as relative between min and max value using defined scaling
+all values a display as relative between min and max value using defined scaling}
+
+\item{\code{dtList}}{A list containing prior and start values data tables.}
+
+\item{\code{statusList}}{A list containing the current and best parameter values.}
+
+\item{\code{titeltxt}}{A string to include in the plot title.}
+
+\item{\code{scenarioList}}{A list of scenarios to analyze.}
+}
+\if{html}{\out{</div>}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -433,27 +472,27 @@ containing convergence data and visualizing the results using ggplot2.}
 \subsection{Method \code{checkConvergence()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkConvergence(
+  displayVariablesIndx = seq(1, 5),
   nPoints = 200,
-  selectionMode = c("last", "random", "first"),
-  displayVariablesIndx = seq(1, 5)
+  selectionMode = c("last", "random", "first")
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{nPoints}}{An integer specifying the number of points to select for plotting.
-Default is 200.}
-
-\item{\code{selectionMode}}{A character string indicating the mode of selection for points.
-Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.}
-
 \item{\code{displayVariablesIndx}}{An integer vector specifying which variables to display.
 default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
 4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
 This method initiates the optimization process using the specified method and control parameters.
 Internally, the function \code{optim} is used, so please check the help for more details.}
+
+\item{\code{nPoints}}{An integer specifying the number of points to select for plotting.
+Default is 200.}
+
+\item{\code{selectionMode}}{A character string indicating the mode of selection for points.
+Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.}
 }
 \if{html}{\out{</div>}}
 }

@@ -346,7 +346,36 @@ BMLMOptimization <-  R6::R6Class(
       )
 
     },
+    #' Plot Correlations
+    #' This function generates a correlation matrix plot for the specified status and checks
+    #' for relevant columns in the population data.
+    #'
+    #' @param dtList A list containing prior and start values data tables.
+    #' @param statusList A list containing the current and best parameter values.
+    #' @param titeltxt A string to include in the plot title.
+    #' @param method A character string specifying the correlation method to use (default is 'spearman').
+    #' @param statusToShow A character string indicating which status to show. Options are 'best', 'current', and 'start'.
+    #' @param scenarioList A list of scenarios to analyze.
+    #' @param corCut A numeric value for the correlation cutoff threshold. Default is 0.5.
+    #' @param chiSquaredCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
+    checkCorrelations = function(method = 'spearman',
+                                 statusToShow = c('best', 'current', 'start'),
+                                 corCut = 0.5,
+                                 chiSquaredCut = 0.1) {
 
+      statusList <- private$loadOptimStatusList()
+      if (is.null(statusList)) return(invisible())
+
+      plotCorrelations(
+        dtList = private$dtList,
+        statusList = statusList,
+        titeltxt = self$runName,
+        statusToShow = statusToShow,
+        scenarioList = private$scenarioList,
+        corCut = corCut,
+        chiSquaredCut = chiSquaredCut)
+
+    },
     #' This function creates ggplot objects to display the current best and start values of the fitted parameter.
     #' all values a display as relative between min and max value using defined scaling
     #'
@@ -402,9 +431,9 @@ BMLMOptimization <-  R6::R6Class(
     #' default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
     #' 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
     #' 4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
-    checkConvergence = function(nPoints = 200,
-                                selectionMode = c('last','random','first'),
-                                displayVariablesIndx = seq(1,5)){
+    checkConvergence = function(displayVariablesIndx = seq(1,5),
+                                nPoints = 200,
+                                selectionMode = c('last','random','first')){
 
       # Check if the convergence CSV file exists
       if (!file.exists(file.path(self$outputDir,'convergence.csv'))) {

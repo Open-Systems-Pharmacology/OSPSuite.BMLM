@@ -21,7 +21,7 @@ plotPredictedVsTime(
 
 \item{titeltxt}{A string to include in the plot title.}
 
-\item{...}{Additional arguments passed on to \code{ospsuite.plots::plotTimeProfile}}
+\item{...}{Additional arguments passed on to ospsuite.plots::plotTimeProfile.}
 }
 \value{
 NULL This function does not return a value; it prints the plots directly.

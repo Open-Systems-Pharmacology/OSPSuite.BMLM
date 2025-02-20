@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{customizeLegend}
 \alias{customizeLegend}
-\title{Customize Legend}
+\title{Customize Legend for ggplot Objects}
 \usage{
 customizeLegend(plotObject, colorScalingVector)
 }
@@ -15,6 +15,6 @@ customizeLegend(plotObject, colorScalingVector)
 A ggplot object with a customized legend.
 }
 \description{
-This function customizes the legend for ggplot objects.
+This function customizes the legend for ggplot objects by setting specific colors and shapes for different statuses.
 }
 \keyword{internal}

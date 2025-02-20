@@ -21,12 +21,13 @@ plotConvergence(
 
 \item{nPoints}{An integer specifying the number of points to select for plotting. Default is 200.}
 
-\item{selectionMode}{A character string indicating the mode of selection for points. Options are 'last', 'random', and 'first'. Default is 'last'.}
+\item{selectionMode}{A character string indicating the mode of selection for points.
+Options are 'last', 'random', and 'first'. Default is 'last'.}
 }
 \value{
 A ggplot object visualizing the convergence of model parameters.
 }
 \description{
-This function checks the convergence of model parameters by reading a CSV file
+This function checks the convergence of model parameters by reading a data.table
 containing convergence data and visualizing the results using ggplot2.
 }

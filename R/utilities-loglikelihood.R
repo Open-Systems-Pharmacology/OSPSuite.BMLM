@@ -206,8 +206,31 @@ getLikelihoodHyperParameter <-
     return(logLikelihood)
   }
 
-
-setlogTruncationOffset <- function(dtPrior,dtStartValues) {
+#' Calculate Log Truncation Offset for Hyperparameters
+#'
+#' This function computes the log truncation offset for hyperparameters based on the provided prior distribution and start values.
+#' It reduces the hyperparameter data to match the available data and calculates the lower and upper probabilities for the given
+#' minimum and maximum values. The log truncation offset is then derived from these probabilities.
+#'
+#' @param dtPrior A data.table containing prior hyperparameter distributions. It should include columns for hyperparameters,
+#'                their values, and the distribution type.
+#' @param dtStartValues A data.table containing the starting values for hyperparameters, including identifiers and their
+#'                      respective minimum and maximum values.
+#' @param identifier A character vector indicating the columns to be used as identifiers for grouping the hyperparameters.
+#'                   Default is c('name', 'categoricCovariate').
+#' @param colsToKeep A character vector indicating the columns to retain in the resulting data.table. Default includes
+#'                   "hyperParameter", "value", "hyperDistribution", "scaling", and "logTruncationOffset".
+#'
+#' @return A data.table containing the hyperparameters, their values, and the computed log truncation offsets.
+#'
+#' @keywords internal
+setlogTruncationOffset <- function(dtPrior,dtStartValues,
+                                   identifier =  c('name', 'categoricCovariate'),
+                                   colsToKeep = c("hyperParameter",
+                                   "value",
+                                   "hyperDistribution",
+                                   "scaling",
+                                   'logTruncationOffset')) {
 
   dtHyperParameter <- data.table()
   # Reduce hyperparameter to match available data
@@ -217,7 +240,7 @@ setlogTruncationOffset <- function(dtPrior,dtStartValues) {
           suffixes = c('', '.indValues'))
 
   # Loop through each hyperparameter group
-  for (dtGroup in split(dtPriorHyper, by = c('name', 'categoricCovariate'))) {
+  for (dtGroup in split(dtPriorHyper, by = identifier)) {
 
     # Create a named list of parameters
     paramList <- setNames(dtGroup$value, dtGroup$hyperParameter)
@@ -239,13 +262,8 @@ setlogTruncationOffset <- function(dtPrior,dtStartValues) {
     dtHyperParameter <- rbind(dtHyperParameter,
                         dtGroup    %>%
                           dplyr::select(any_of(c(
-                            "name",
-                            "hyperParameter",
-                            "categoricCovariate",
-                            "value",
-                            "hyperDistribution",
-                            "scaling",
-                            'logTruncationOffset'
+                            identifier,
+                            colsToKeep
                           )))
     )
   }

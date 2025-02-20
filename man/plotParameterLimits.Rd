@@ -24,11 +24,13 @@ plotParameterLimits(
 
 \item{nRows}{An integer specifying the number of rows for the plot layout.}
 
-\item{colorScalingVector}{A named vector of colors for different statuses. Default includes dark green, light blue, and orange.}
+\item{colorScalingVector}{A named vector of colors for different statuses.
+Default includes dark green, light blue, and orange.}
 }
 \value{
 NULL This function does not return a value; it prints the plots directly.
 }
 \description{
-This function creates ggplot objects to display the current best and start values of the fitted parameters.
+This function creates ggplot objects to display the current best and start values
+of the fitted parameters.
 }

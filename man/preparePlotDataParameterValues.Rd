@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{preparePlotDataParameterValues}
 \alias{preparePlotDataParameterValues}
-\title{Prepare Plot Data}
+\title{Prepare Plot Data for Parameter Values}
 \usage{
 preparePlotDataParameterValues(dtList, currentStatus, bestStatus)
 }
@@ -17,6 +17,7 @@ preparePlotDataParameterValues(dtList, currentStatus, bestStatus)
 A data.table containing the prepared plot data.
 }
 \description{
-This function prepares the data for plotting by loading the necessary status files and transforming the data into a suitable format for visualization.
+This function prepares the data for plotting by loading the necessary status files
+and transforming the data into a suitable format for visualization.
 }
 \keyword{internal}

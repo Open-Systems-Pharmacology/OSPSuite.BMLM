@@ -2,19 +2,18 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{reshapePlotDataParameterValues}
 \alias{reshapePlotDataParameterValues}
-\title{Reshape Plot Data}
+\title{Reshape Plot Data for Visualization}
 \usage{
 reshapePlotDataParameterValues(plotData)
 }
 \arguments{
 \item{plotData}{A data.table containing the initial plot data.}
-
-\item{dtList}{A list containing prior and start values data tables.}
 }
 \value{
-A data.table with enhanced plot data.
+A data.table with enhanced plot data suitable for visualization.
 }
 \description{
-This function reshapes the data.table and adds additional columns to the plot data for labeling and categorization.
+This function reshapes the data.table and adds additional columns to the plot data
+for labeling and categorization.
 }
 \keyword{internal}

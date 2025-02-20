@@ -2,14 +2,12 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{createLineData}
 \alias{createLineData}
-\title{#' Create Line Data for Hyperparameters}
+\title{Create Line Data for Hyperparameters}
 \usage{
-createLineData(hyperParameter, dtPrior, xScale)
+createLineData(hyperParameter, xScale)
 }
 \arguments{
 \item{hyperParameter}{A data.table containing hyperparameter information.}
-
-\item{dtPrior}{A data.table containing prior values.}
 
 \item{xScale}{A character string specifying the scale of the x-axis ('linear' or 'log').}
 }

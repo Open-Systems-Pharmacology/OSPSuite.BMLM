@@ -2,7 +2,7 @@
 % Please edit documentation in R/utilities-checkProgress.R
 \name{calculateResidual}
 \alias{calculateResidual}
-\title{Calculate Residual}
+\title{Calculate Residuals from Observed and Predicted Values}
 \usage{
 calculateResidual(yValue, predicted, model, sigma, isCensored, lloq)
 }
@@ -11,7 +11,8 @@ calculateResidual(yValue, predicted, model, sigma, isCensored, lloq)
 
 \item{predicted}{A numeric value representing the predicted value.}
 
-\item{model}{A character string specifying the model to use for calculating the residuals (options are "absolute", "proportional", "log_absolute").}
+\item{model}{A character string specifying the model to use for calculating the residuals
+(options are "absolute", "proportional", "log_absolute").}
 
 \item{sigma}{A numeric value representing the standard deviation of the residuals.}
 
@@ -23,6 +24,7 @@ calculateResidual(yValue, predicted, model, sigma, isCensored, lloq)
 A numeric value representing the calculated residual.
 }
 \description{
-This function calculates the residuals based on the observed and predicted values, applying different models for the calculation depending on whether the data is censored.
+This function calculates the residuals based on the observed and predicted values,
+applying different models for the calculation depending on whether the data is censored.
 }
 \keyword{internal}
