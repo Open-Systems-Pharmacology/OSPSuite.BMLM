@@ -299,18 +299,17 @@ plotDistributions <- function(dtList,
     print(plotObject)
   }
 
-
   for (dtHyper in split(hyperParameter, by = 'label')){
     dtHyper[,truncationOffset := 1-exp(logTruncationOffset) ]
     tmp <- rbind(dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue')],
-                       ... ~ status , value.var = 'value') %>%
-                   setnames('hyperParameter','.'),
+                       ... ~ status , value.var = 'value') ,
                  dcast(dtHyper[,c('truncationOffset','status','minValue.indValues','maxValue.indValues')] %>% unique(),
                        +       ... ~ status , value.var = 'truncationOffset') %>%
                    setnames(c('minValue.indValues','maxValue.indValues'),
-                            c('minValue','maxValue')),
-                 fill = TRUE)
-    tmp[['.']][3] <- 'likelihood outside range'
+                            c('minValue','maxValue')) %>%
+                   dplyr::mutate(hyperParameter = 'likelihood outside range'),
+                 fill = TRUE) %>%
+      setnames('hyperParameter','.')
     print(knitr::kable(tmp,caption = dtHyper$label[1]))
   }
 
@@ -329,7 +328,7 @@ plotDistributions <- function(dtList,
 #' @param statusToShow A character string indicating which status to show. Options are 'best', 'current', and 'start'.
 #' @param scenarioList A list of scenarios to analyze.
 #' @param corCut A numeric value for the correlation cutoff threshold. Default is 0.5.
-#' @param chiSquaredCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
+#' @param pValueCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
 #'
 #' @return NULL This function does not return a value; it prints the correlation plot directly.
 #' @export
@@ -340,7 +339,8 @@ plotCorrelations <- function(dtList,
                              statusToShow = c('best', 'current', 'start'),
                              scenarioList,
                              corCut = 0.5,
-                             chiSquaredCut = 0.1){
+                             pValueCut = 0.1,
+                             nPlotsPopulation = 12){
 
   statusToShow = match.arg(statusToShow)
 
@@ -349,17 +349,17 @@ plotCorrelations <- function(dtList,
                                              bestStatus = statusList$best)
   plotData <- reshapePlotDataParameterValues(plotData[valueMode == PARAMETERTYPE$individual])
   plotData <- plotData[status == statusToShow]
-  plotData <- addLabel(plotData = plotData,dtPrior =  dtList$prior,unitSep = '\n')
+  plotData <- addLabel(plotData = plotData,dtPrior =  dtList$prior,unitSep = '\n',identifier = 'name')
 
   labels <- unique(plotData$label)
 
   plotData <- dcast(plotData[,c('statusValue','label','individualId')], ... ~ label, value.var = 'statusValue')
-
   pm <- GGally::ggpairs(plotData,
                         columns = labels,
                         switch = 'y',
-                        diag = list(continuous = GGally::wrap("barDiag",bins = 20)),
-                        upper = list(continuous = GGally::wrap("cor", method = method)),
+                        diag = list(continuous = GGally::wrap("barDiag",bins = 20,na.rm = TRUE)),
+                        upper = list(continuous = GGally::wrap("cor", method = method,use = "complete.obs")),
+                        lower = list(continuous = GGally::wrap("points", na.rm = TRUE)),
                         title = titeltxt,
                         mapping = aes(shape = 'circle')) +
     theme(strip.placement = 'outside')
@@ -370,8 +370,10 @@ plotCorrelations <- function(dtList,
                                       labels = labels,
                                       scenarioList = scenarioList,
                                       corCut = corCut,
-                                      chiSquaredCut = chiSquaredCut,
-                                      method = method)
+                                      pValueCut = pValueCut,
+                                      method = method,
+                                      nPlotsPopulation = nPlotsPopulation,
+                                      dtMappedPaths = dtList$mappedPaths)
 
 
 
@@ -456,8 +458,14 @@ plotPredictedVsTime <- function(
 
     dtResGroup <- setDT(dtResGroup)
 
+    # for inidividuals with only one measurement plot predcition as stright line
+    dtIndCount <- dtResGroup[,.N,by = individualId]
+
     plotData = rbind(dtResGroup,
-                     copy(dtResGroup)[,dataType := 'simulated'])
+                     dtResGroup[individualId %in% dtIndCount[N>1]$individualId] %>%
+                       .[,dataType := 'simulated'])
+
+    plotDataSingleValue <- dtResGroup[individualId %in% dtIndCount[N==1]$individualId]
 
     yUnit <- dtResGroup$yUnit[1]
 
@@ -474,6 +482,12 @@ plotPredictedVsTime <- function(
            subtitle = dtResGroup$scenario[1],
            y = dtResGroup$outputPathId[1]) +
       theme(legend.position = 'none')
+
+    if (nrow(plotDataSingleValue) > 1) {
+      plotObject <- plotObject +
+        geom_point(mapping = aes(x = xValues, y = predicted),
+                   data = plotDataSingleValue, shape = 'plus')
+    }
 
     print(plotObject)
   }
@@ -623,7 +637,6 @@ getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Pr
   return(dtNew)
 }
 
-
 # auxiliary ------------
 #' Check for Relevant Columns in Population Data
 #'
@@ -634,7 +647,7 @@ getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Pr
 #' @param labels A character vector of labels to analyze for correlation.
 #' @param scenarioList A list of scenarios to analyze for potential correlations.
 #' @param corCut A numeric value for the correlation cutoff threshold. Default is 0.5.
-#' @param chiSquaredCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
+#' @param pValueCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
 #' @param method A character string specifying the correlation method to use (default is 'spearman').
 #'
 #' @return NULL This function does not return a value; it prints correlation plots directly if relevant columns are found.
@@ -643,58 +656,32 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
                                            labels,
                                        scenarioList,
                                        corCut,
-                                       chiSquaredCut,
-                                       method){
-  dtPop <- rbindlist(lapply(scenarioList, function(scenario){
-    ospsuite::populationToDataFrame(scenario$population) %>%
-      setDT() }),
-    fill = TRUE) %>%
-    unique()
+                                       pValueCut,
+                                       method,
+                                       nPlotsPopulation,
+                                       dtMappedPaths){
 
-  # delete simulated individual ID to not confuse with individualId of observedData
-  dtPop[,IndividualId := NULL]
-
-  # Exclude  unique columns
-  uniqueColumns <- sapply(dtPop, function(col) length(unique(col)) == 1)
-  dtPop <- dtPop[, !uniqueColumns, with = FALSE]
-  numericColumns <- names(dtPop)[sapply(dtPop, function(col) is.numeric(col))]
-  for (col in setdiff(names(dtPop),c('ObservedIndividualId',numericColumns))){
-    dtPop[[col]] <- factor(dtPop[[col]])
-  }
+  dtPop <- preparePopulationForCorrelationCheck(scenarioList,dtMappedPaths)
 
   mergedData <- merge(plotData,
                      dtPop,
                      by.x = 'individualId',
                      by.y = 'ObservedIndividualId')
 
-
-  #Check for identical factors
-  excludedFactors = c()
-  factorColumns <- names(mergedData)[sapply(mergedData, is.factor)]
-  for (i in seq_along(factorColumns)) {
-    if (!(factorColumns[i] %in% excludedFactors)){
-      nGroupedData = nrow(mergedData[,.N,by = c(factorColumns[i])])
-
-      for (j in seq(i + 1, length(factorColumns))) {
-        nGroupedData2 = nrow(mergedData[,.N,by = c(factorColumns[i],
-                                                    factorColumns[j])])
-
-        if (nGroupedData == nGroupedData2) {
-          message(paste("Factors", factorColumns[i], "and", factorColumns[j], "leads to the same patient groups.
-                      Ignore", factorColumns[j], " for analysis."))
-          excludedFactors =  factorColumns[j]
-        }
-      }
-    }
-  }
-
-
   # Loop through each label to find correlation
   plotList = list()
   maxCorrelation = 0
   minPvalue = 1
-  for (label in setdiff(labels,excludedFactors)) {
-    for (popCol in setdiff(names(dtPop), c('ObservedIndividualId',excludedFactors))) {
+  for (label in labels) {
+    for (popCol in setdiff(names(dtPop), c('ObservedIndividualId'))) {
+      iNonNans = which(!is.na(mergedData[[popCol]]) &
+                         !is.na(mergedData[[label]]))
+      if (length(iNonNans) > 3){
+        plotData <- copy(mergedData) %>%
+          setnames(old = c(label,popCol),
+                   new = c('label','popCol')) %>%
+          dplyr::select(c('label','popCol'))
+
       if (is.numeric(mergedData[[popCol]])) {
         # Calculate correlation for numeric columns
         correlationValue <-
@@ -705,43 +692,116 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
         maxCorrelation <- max(maxCorrelation,abs(correlationValue))
         if (abs(correlationValue) > corCut){
           plotList[[paste(label,popCol)]] <-
-            ggplot(mergedData) +
-            geom_point(aes(y = get(label),x = get(popCol))) +
+            ggplot(data = plotData,
+                   mapping = aes(y = label,x = popCol)) +
+            geom_point(fill = 'black',na.rm = TRUE) +
+            geom_smooth(method = 'lm',formula = y ~ x,na.rm = TRUE) +
             labs(y = label,
                  x = popCol,
                  title = paste('Cor:',round(correlationValue,2)))
         }
       } else if (is.factor(mergedData[[popCol]])) {
-        # Perform Chi-Squared Test
-        chiSquaredResult <-
-          suppressWarnings(chisq.test(table(mergedData[[popCol]], mergedData[[label]])))
-        minPvalue <- min(minPvalue,chiSquaredResult$p.value)
-        if (chiSquaredResult$p.value < chiSquaredCut)
-          plotList[[paste(label,popCol)]] <-
-          ospsuite.plots::plotBoxWhisker(data = copy(mergedData) %>%
-                                           setnames(old = c(label,popCol),
-                                                    new = c('y','x')),
-                                         mapping = aes(y = y,x = x)) +
-          labs(y = label,
-               x = popCol,
-               title = paste('pValue:',signif(chiSquaredResult$p.value,2)))
+        kruskalTestResult <- kruskal.test(label ~ popCol, data = plotData)
+        if (!is.na(kruskalTestResult$p.value)){
+          minPvalue <- min(minPvalue,kruskalTestResult$p.value)
+          if (kruskalTestResult$p.value < pValueCut)
+            plotList[[paste(label,popCol)]] <-
+              ospsuite.plots::plotBoxWhisker(data = plotData,
+                                             mapping = aes(y =label,x = popCol)) +
+              geom_jitter(fill = 'black',na.rm = TRUE) +
+              labs(y = label,
+                   x = popCol,
+                   title = paste('pValue:',signif(kruskalTestResult$p.value,2))) +
+              theme(axis.text.x = element_text(angle = 45,hjust = 1))
 
+        }
+      }
       }
     }
   }
 
   if (length(plotList) > 0){
-    print(cowplot::plot_grid(plotlist = plotList))
+    iPlot <- 1
+    while(iPlot <= length(plotList)){
+      maxPlot <- min(length(plotList),iPlot + nPlotsPopulation -1)
+      print(cowplot::plot_grid(plotlist = plotList[seq(iPlot,maxPlot)]))
+      iPlot <- iPlot + nPlotsPopulation
+    }
 
   } else{
     message(paste0('no correlated columns found in population.\n',
                   'maximal Correlation: ',round(maxCorrelation,2), '(cut: ',corCut,')\n',
-                  'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',chiSquaredCut,')'))
+                  'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',pValueCut,')'))
   }
 
   return(invisible())
 
 }
+#' Prepare Population Data for Correlation Check
+#'
+#' This function processes a list of scenarios and a data.table of mapped paths
+#' to prepare a population dataset for correlation analysis. It combines populations
+#' from multiple scenarios, removes unnecessary columns, converts character columns
+#' to factors, and excludes identical factor columns that lead to the same patient groups.
+#'
+#' @param scenarioList A list of scenarios, where each scenario contains a population
+#'                     that can be converted to a data.frame.
+#' @param dtMappedPaths A data.table containing mapped paths, which includes linked
+#'                      parameters to be excluded from the final dataset.
+#'
+#' @return A data.table containing the processed population data, with unique individuals
+#'         and factors prepared for correlation analysis.
+#'
+#' @export
+preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
+
+  dtPop <- rbindlist(lapply(scenarioList, function(scenario){
+    ospsuite::populationToDataFrame(scenario$population) %>%
+      setDT() }),
+    fill = TRUE) %>%
+    unique()
+
+  # delete simulated individual ID to not confuse with individualId of observedData
+  dtPop[, IndividualId := NULL]
+
+  # Exclude unique columns
+  uniqueColumns <- sapply(dtPop, function(col) length(unique(col[!is.na(col)])) == 1)
+  dtPop <- dtPop[, !uniqueColumns, with = FALSE]
+
+  # Exclude columns mapped with fit parameters
+  dtPop <- dtPop %>% dplyr::select(!any_of(dtMappedPaths$linkedParameters))
+
+  # convert characters to factor
+  numericColumns <- names(dtPop)[sapply(dtPop, function(col) is.numeric(col))]
+  for (col in setdiff(names(dtPop), c('ObservedIndividualId', numericColumns))) {
+    dtPop[[col]] <- factor(dtPop[[col]])
+  }
+
+  # Check for identical factors
+  excludedFactors = c()
+  factorColumns <- names(dtPop)[sapply(dtPop, is.factor)]
+  for (i in seq_len(length(factorColumns) - 1)) {
+    if (!(factorColumns[i] %in% excludedFactors)) {
+      nGroupedData = nrow(dtPop[,.N, by = c(factorColumns[i])])
+
+      for (j in seq(i + 1, length(factorColumns))) {
+        nGroupedData2 = nrow(dtPop[,.N, by = c(factorColumns[i], factorColumns[j])])
+
+        if (nGroupedData == nGroupedData2) {
+          message(paste("Factors", factorColumns[i], "and", factorColumns[j], "leads to the same patient groups.
+                      Ignore", factorColumns[j], "for analysis."))
+          excludedFactors = factorColumns[j]
+        }
+      }
+    }
+  }
+
+  if (length(excludedFactors) > 1)
+  dtPop <- dplyr::select(!any_of(excludedFactors))
+
+  return(dtPop)
+}
+
 #' Create Line Data for Hyperparameters
 #'
 #' This function generates line data for hyperparameters based on their distributions.
@@ -967,16 +1027,19 @@ calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq)
 #'
 #' @return A data.table with labels added for each parameter.
 #' @keywords internal
-addLabel <- function(plotData,dtPrior,unitSep = ' '){
+addLabel <- function(plotData,dtPrior,unitSep = ' ',identifier = c('name', 'categoricCovariate')){
+
   plotData <- merge(plotData,
-                    dtPrior[,c('name', 'categoricCovariate','unit')] %>%
+                    dtPrior[,c(..identifier,'unit')] %>%
                       unique(),
-                    by = c('name', 'categoricCovariate'))
+                    by = identifier)
 
   plotData[,label := ifelse(is.na(unit),name,paste0(name,unitSep,'[',unit,']'))]
-  plotData[,label := ifelse(is.na(categoricCovariate) | categoricCovariate == '',
-                            label,
-                            paste0(label,' (',categoricCovariate,')'))]
+  if ('categoricCovariate' %in% identifier){
+    plotData[,label := ifelse(is.na(categoricCovariate) | categoricCovariate == '',
+                              label,
+                              paste0(label,' (',categoricCovariate,')'))]
+  }
 
   return(plotData)
 

@@ -46,7 +46,6 @@ getLikelihoodTimeProfiles <- function(dtPrior,
 
   # initialize variables to avoid linter messages
   yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
-
   dtRes <- updateModelError(dtPrior,dtRes)
 
   dtRes[, isCensored := !is.na(lloq) & lloq > yValues]

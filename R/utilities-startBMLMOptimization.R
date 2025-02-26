@@ -31,7 +31,11 @@ optimizeParameters <-
            ...) {
 
     # Create the optim environment
-    optimEnv <- initializeOptimEnv(dtList, failValue)
+    optimEnv <- initializeOptimEnv(dtList = dtList,
+                                   failValue = failValue,
+                                   bestValue = dtList$bestValue,
+                                   NAcounter = dtList$NAcounter,
+                                   iteration = dtList$iteration)
 
     initialValues <- getParams(
       dtPrior = dtList$prior,
@@ -63,6 +67,118 @@ optimizeParameters <-
     return(result)  # Return result instead of invisible
   }
 
+
+#' Evaluate Model at Initial Values
+#'
+#' This function evaluates initial values for a given project configuration by running simulations for specified scenarios.
+#' It logs the progress and results to both the console and a designated log file.
+#'
+#' @param dtList A data table containing the necessary data for the evaluation, including prior and start values.
+#' @param outputDir The directory where the log file will be saved.
+#'
+#' @return NULL This function does not return any value but logs information to the console and a log file.
+#'
+#' @export
+evaluateInitialValues <- function(dtList,
+                                  outputDir,
+                                  scenarioList){
+
+  logAndPrintOptimization('Start modelevaluation at initial values:',outputDir = outputDir)
+
+  optimEnv <- initializeOptimEnv(dtList)
+
+  initialValues <- getParams(
+    dtPrior = dtList$prior,
+    dtStartValues = dtList$startValues,
+    optimizationGroup = 'both'
+  )
+
+  dtList <- setParameterToTables(dtList = dtList, params = initialValues)
+
+  evaluateTimeprofiles(optimEnv = optimEnv,
+                       scenarioList = scenarioList,
+                       dtList = dtList,
+                       simulationRunOptions = SimulationRunOptions$new(showProgress = TRUE),
+                       withProtocol = TRUE,
+                       outputDir = outputDir)
+
+
+  loglikelihoods <- getLogLikelihood(
+    dtPrior = dtList$prior,
+    dtStartValues = dtList$startValues,
+    dtRes = rbindlist(optimEnv$dtResList)
+  )
+
+  logAndPrintOptimization(c('\n','Initial loglikelihood:'),outputDir = outputDir,quiet = FALSE,asNew = FALSE)
+  logAndPrintOptimization(paste(paste0(names(loglikelihoods),': ',signif(loglikelihoods,3)),collapse = ', '),
+              outputDir = outputDir,quiet = FALSE,asNew = FALSE)
+
+  analyseInitalSimulationFailures(dtList, optimEnv, loglikelihoods, outputDir)
+
+  if (!file.exists(file = file.path(outputDir, "optimStatus.RDS"))){
+
+    optimStatus <- updateOptimStatus(dtPrior = dtList$prior,
+                                     dtStartValues = dtList$startValues,
+                                     optimEnv)
+    currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv)
+
+    if (is.finite(currentValue)){
+      optimStatus[["loglikelihoods"]] <- loglikelihoods
+
+      saveRDS(optimStatus, file = file.path(outputDir, "optimStatus.RDS"))
+      # Check if objective function value has improved
+      updateBestValueIfImproved(currentValue, optimEnv, optimStatus, outputDir, loglikelihoods)
+    }
+  }
+
+  return(invisible())
+
+}
+#' Analyze Initial Simulation Failures
+#'
+#' This function analyzes the results of initial simulations to identify any failures
+#' based on the log-likelihood values. It checks for individuals with missing predicted
+#' values and infinite log-likelihoods, updating the model error as necessary.
+#'
+#' @param dtList A list containing data tables relevant to the prior model and results.
+#' @param optimEnv An environment object that contains optimization results.
+#' @param loglikelihoods A named vector containing log-likelihood values
+#' @param outputDir A character string specifying the directory where logs and outputs
+#'   should be saved.
+#'
+#' @return Returns nothing (invisible NULL). The function performs logging and updates
+#'   the model error in the provided data tables.
+#'
+#' @keywords internal
+analyseInitalSimulationFailures <- function(dtList, optimEnv, loglikelihoods, outputDir) {
+  if (is.na(loglikelihoods['logTimeProfile'])) {
+    dtRes <- rbindlist(optimEnv$dtResList)
+    dtResNA <- dtRes[is.na(predicted), c("scenario", "individualId")] %>% unique()
+
+    if (nrow(dtResNA) == 0) {
+      logAndPrintOptimization('No simulation failures.', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+    } else {
+      logAndPrintOptimization('Individuals with simulation failures:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndPrintOptimization(utils::capture.output(print(dtResNA)), outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+    }
+
+    dtResUpdated <- updateModelError(dtPrior = dtList$prior, dtRes = dtRes)
+    dtResUpdated[, isCensored := !is.na(lloq) & lloq > yValues]
+
+    dtResUpdated[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
+    dtResUpdated <- dtResUpdated[!is.na(predicted) & is.infinite(logLikelihood), c("scenario", "individualId", 'outputPathId', 'errorModel', 'yValues', 'predicted', 'lloq', 'lowerBound', 'sigma', 'logLikelihood')]
+
+    if (nrow(dtResUpdated) == 0) {
+      logAndPrint('No infinite loglikelihoods.', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+    } else {
+      logAndPrintOptimization('Rows with infinite loglikelihood:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndPrintOptimization(utils::capture.output(print(dtResUpdated)), outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+    }
+  }
+
+  return(invisible())
+}
+
 #' Initialize Optimization Environment
 #'
 #' Initializes the optimization environment by extracting relevant values from
@@ -76,15 +192,19 @@ optimizeParameters <-
 #'
 #' @return A new environment containing initialized optimization variables.
 #' @keywords internal
-initializeOptimEnv <- function(dtList, failValue) {
+initializeOptimEnv <- function(dtList,
+                               failValue = Inf,
+                               bestValue = Inf,
+                               NAcounter = 0,
+                               iteration = 0) {
   optimEnv <- new.env()
 
-  optimEnv$iteration <- dtList$iteration
-  optimEnv$bestValue <- dtList$bestValue
+  optimEnv$iteration <- iteration
+  optimEnv$bestValue <- bestValue
   optimEnv$lastSaveTime <- Sys.time()
   optimEnv$failValue <- failValue
-  optimEnv$NAcounter <- dtList$NAcounter
-  optimEnv$dtRes <- data.table()
+  optimEnv$NAcounter <- NAcounter
+  optimEnv$dtResList <- list()
   optimEnv$scenarioResults <- list()
 
   return(optimEnv)
@@ -131,16 +251,12 @@ createObjectiveFunction <-
           dtStartValues = dtList$startValues,
           optimEnv = optimEnv
         )
-
       # Evaluate time profiles
       evaluateTimeprofiles(
         optimEnv = optimEnv,
         scenarioList = scenarioList,
-        dtPrior = dtList$prior,
-        dtStartValues = dtList$startValues,
-        dtMappedPaths = dtList$mappedPaths,
-        simulationRunOptions = simulationRunOptions,
-        dataObservedForMatch = dtList$data
+        dtList = dtList,
+        simulationRunOptions = simulationRunOptions
       )
 
       # Internal optimization
@@ -161,7 +277,7 @@ createObjectiveFunction <-
       loglikelihoods <- getLogLikelihood(
         dtPrior = dtList$prior,
         dtStartValues = dtList$startValues,
-        dtRes = optimEnv$dtRes
+        dtRes = rbindlist(optimEnv$dtResList)
       )
       optimStatus[["loglikelihoods"]] <- loglikelihoods
 
@@ -214,7 +330,12 @@ runInternalOptimization <- function(dtList, optimEnv) {
     fn = function(params) {
       dtList <- setParameterToTables(dtList = dtList, params = params)
 
-      loglikelihoods <- getLogLikelihood(dtPrior = dtList$prior, dtStartValues = dtList$startValues, dtRes = optimEnv$dtRes)
+      loglikelihoods <-
+        getLogLikelihood(
+          dtPrior = dtList$prior,
+          dtStartValues = dtList$startValues,
+          dtRes = rbindlist(optimEnv$dtResList)
+        )
       return(evaluateLogLikelihood(loglikelihoods, optimEnv))
     },
     method = "Nelder-Mead"
@@ -310,7 +431,7 @@ updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outpu
       append = TRUE
     )
     saveRDS(optimStatus, file = file.path(outputDir, "bestOptimStatus.RDS"))
-    saveRDS(optimEnv$dtRes, file = file.path(outputDir, "bestPrediction.RDS"))
+    saveRDS(optimEnv$dtResList, file = file.path(outputDir, "bestPrediction.RDS"))
   }
 }
 
@@ -330,38 +451,102 @@ updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outpu
 #' @keywords internal
 evaluateTimeprofiles <-  function(optimEnv,
                                   scenarioList,
-                                  dtPrior,
-                                  dtStartValues,
-                                  dtMappedPaths,
+                                  dtList,
                                   simulationRunOptions,
-                                  dataObservedForMatch) {
+                                  withProtocol = FALSE,
+                                  outputDir = NULL) {
 
-  # update parameter values and run result
-  invisible(lapply(names(scenarioList), function(scenarioName) {
-    updateParameterValues(
+
+  results <- lapply(scenarioList, function(scenario) {
+    scenarioName <- scenario$scenarioConfiguration$scenarioName
+    if (withProtocol){
+      logAndPrintOptimization(message = paste('scenario:', scenarioName),
+                              outputDir = outputDir,
+                              quiet = FALSE,asNew = FALSE)
+      logAndPrintOptimization(
+        message = paste('Individual count:', scenarioList[[scenarioName]]$population$count),
+        outputDir = outputDir,
+        quiet = FALSE,asNew = FALSE
+      )
+      logAndPrintOptimization(message = 'Simulate:',
+                              outputDir = outputDir,
+                              quiet = FALSE,asNew = FALSE)
+      tictoc::tic()
+    }
+
+    results <- processScenario(
       scenarioName = scenarioName,
-      scenario = scenarioList[[scenarioName]],
-      dtPrior = dtPrior,
-      dtStartValues = dtStartValues,
-      dtMappedPaths = dtMappedPaths
+      scenario = scenario,
+      dtList = dtList,
+      simulationRunOptions = simulationRunOptions
     )
-  }))
-  optimEnv$scenarioResults <-
-    esqlabsR::runScenarios(scenarios = scenarioList, simulationRunOptions = simulationRunOptions)
 
+    if (withProtocol){
+      logAndPrintOptimization(message = utils::capture.output(tictoc::toc()),
+                              outputDir = outputDir,
+                              quiet = FALSE,asNew = FALSE)
+    }
 
-  optimEnv$dtRes <- getPredictionsForScenarios(optimEnv$scenarioResults,
-                                               dataObservedForMatch)
+    return(results)
+  })
+
+  # Store results in optimEnv
+  for (r in results) {
+    scenarioName <- r$scenarioName
+    optimEnv$scenarioResults[[scenarioName]] <- r$scenarioResult
+    optimEnv$dtResList[[scenarioName]] <- r$predictions
+  }
 
   return(invisible())
 
 }
 
+#' Process a Scenario
+#'
+#' This function updates parameter values for a given scenario, runs the scenario using the specified simulation options,
+#' and retrieves predictions based on the scenario results.
+#'
+#' @param scenarioName A character string representing the name of the scenario to be processed.
+#' @param scenario A list containing the parameters and settings specific to the scenario.
+#' @param dtList A list containing data tables:
+#'   \itemize{
+#'     \item \code{prior}: Data table for prior parameters.
+#'     \item \code{startValues}: Data table for starting values.
+#'     \item \code{mappedPaths}: Data table for mapped paths.
+#'     \item \code{data}: Data table used for predictions.
+#'   }
+#' @param simulationRunOptions A list containing options for running the simulation, which may include settings such as the number of iterations, random seed, etc.
+#'
+#' @return A list containing:
+#'   \item{result}{A list with the results of the scenario run.}
+#'   \item{predictions}{A data frame or list of predictions generated from the scenario results.}
+#'
+#' @export
+processScenario <- function(scenarioName, scenario, dtList,  simulationRunOptions) {
+  # Update parameter values and run result
+  updateParameterValues(
+    scenarioName = scenarioName,
+    scenario = scenario,
+    dtPrior = dtList$prior,
+    dtStartValues = dtList$startValues,
+    dtMappedPaths = dtList$mappedPaths
+  )
+
+  scenarioResult <- esqlabsR::runScenarios(scenarios = list(scenarioName = scenario),
+                                            simulationRunOptions = simulationRunOptions)[[1]]
+
+  predictions <- getPredictionsForScenario(scenarioResult, scenarioName, dtList$data)
+
+  return(list(scenarioResult = scenarioResult, predictions = predictions,scenarioName = scenarioName))
+}
+
+
+
 #' Get Predictions for Scenarios
 #'
 #' This function generates predictions for a set of scenarios based on observed data.
 #'
-#' @param scenarioResults A list of scenario results, each containing population and covariate information.
+#' @param scenarioResult An ScenarioResult object  containingsimulated results.
 #' @param dataObservedForMatch A data.table containing observed data, which must include the required columns:
 #'        'scenario', 'outputPathId', 'yValues', and 'yUnit'.
 #' @param aggregationFun A function for aggregation (optional). If provided, it will be used to aggregate the simulated results.
@@ -373,7 +558,8 @@ evaluateTimeprofiles <-  function(optimEnv,
 #' It also handles individual matching if 'ObservedIndividualId' is present in the scenario results.
 #'
 #' @export
-getPredictionsForScenarios <- function(scenarioResults,
+getPredictionsForScenario <- function(scenarioResult,
+                                      scenarioName,
                                        dataObservedForMatch,
                                        aggregationFun = NULL,
                                        identifier = c("outputPath", "individualId")) {
@@ -384,44 +570,38 @@ getPredictionsForScenarios <- function(scenarioResults,
   resultsList <- list()
 
   # Loop through each scenario
-  for (scenarioName in names(scenarioResults)) {
-    scenarioResult <- scenarioResults[[scenarioName]]
+  individualMatch <- NULL
+  if ("ObservedIndividualId" %in% scenarioResult$population$allCovariateNames) {
+    individualMatch <- data.table(
+      individualId = scenarioResult$population$allIndividualIds,
+      observedIndividualId = scenarioResult$population$getCovariateValues('ObservedIndividualId')
+    )
+  }
 
-    individualMatch <- NULL
-    if ("ObservedIndividualId" %in% scenarioResult$population$allCovariateNames) {
-      individualMatch <- data.table(
-        individualId = scenarioResult$population$allIndividualIds,
-        observedIndividualId = scenarioResult$population$getCovariateValues('ObservedIndividualId')
-      )
-    }
-
-    # Get simulated time profile
-    dtSimulated <- getSimulatedTimeprofile(
-      simulatedResult = scenarioResult,
-      outputPaths = unique(dataObservedForMatch[scenario == scenarioName,]$outputPath),
-      aggregationFun = aggregationFun,
-      individualMatch = individualMatch
-    ) %>%
-      dplyr::mutate(scenario = scenarioName) %>%
-      data.table::setnames('paths', 'outputPath') %>%
-      merge( dataObservedForMatch[scenario == scenarioName,] %>%
-               dplyr::select(all_of(c(identifier,'unitFactorX','unitFactorY'))) %>%
-               unique(),
-             by = identifier) %>%
-      .[,xValues := xValues*unitFactorX] %>%
-      .[,yValues := yValues*unitFactorY]
+  # Get simulated time profile
+  dtSimulated <- getSimulatedTimeprofile(
+    simulatedResult = scenarioResult,
+    outputPaths = unique(dataObservedForMatch[scenario == scenarioName,]$outputPath),
+    aggregationFun = aggregationFun,
+    individualMatch = individualMatch
+  ) %>%
+    dplyr::mutate(scenario = scenarioName) %>%
+    data.table::setnames('paths', 'outputPath') %>%
+    merge( dataObservedForMatch[scenario == scenarioName,] %>%
+             dplyr::select(all_of(c(identifier,'unitFactorX','unitFactorY'))) %>%
+             unique(),
+           by = identifier) %>%
+    .[,xValues := xValues*unitFactorX] %>%
+    .[,yValues := yValues*unitFactorY]
 
     # Add predicted values and store in the results list
-    resultsList[[scenarioName]] <- addPredictedValues(
+  dtResult <- addPredictedValues(
       dtObserved = dataObservedForMatch[scenario == scenarioName],
       dtSimulated = dtSimulated,
       identifier = identifier
     ) %>%
       dplyr::mutate(scenarioName = scenarioName)
-  }
 
-  # Combine all results into a single data.table
-  dtResult <- rbindlist(resultsList, use.names = TRUE, fill = TRUE)
 
   return(dtResult)
 }
@@ -436,6 +616,7 @@ getPredictionsForScenarios <- function(scenarioResults,
 #' @return A data.table containing updated results.
 #' @keywords internal
 updateModelError <- function(dtPrior,dtRes){
+
 dtRes <- dtRes %>%
   dplyr::select(!any_of('sigma'))  %>%
   merge(
@@ -527,3 +708,22 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
 
   return(invisible())
 }
+
+
+logAndPrintOptimization <- function(message,outputDir,quiet = TRUE,asNew = TRUE) {
+
+  cat(
+    ifelse(asNew,format(Sys.time(), "%Y-%m-%d %H:%M:%S"),"     "),
+    message,
+    "\n",
+    file = file.path(outputDir, "optimization_log.txt"),
+    append = TRUE
+  )
+
+  # Print to console
+  if (!quiet)  cat(message, "\n")
+
+  return(invisible())
+
+}
+

@@ -12,7 +12,8 @@ plotCorrelations(
   statusToShow = c("best", "current", "start"),
   scenarioList,
   corCut = 0.5,
-  chiSquaredCut = 0.1
+  pValueCut = 0.1,
+  nPlotsPopulation = 12
 )
 }
 \arguments{
@@ -30,7 +31,7 @@ plotCorrelations(
 
 \item{corCut}{A numeric value for the correlation cutoff threshold. Default is 0.5.}
 
-\item{chiSquaredCut}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.}
+\item{pValueCut}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.}
 }
 \value{
 NULL This function does not return a value; it prints the correlation plot directly.

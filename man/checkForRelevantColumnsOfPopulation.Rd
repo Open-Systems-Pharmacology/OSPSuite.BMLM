@@ -9,8 +9,10 @@ checkForRelevantColumnsOfPopulation(
   labels,
   scenarioList,
   corCut,
-  chiSquaredCut,
-  method
+  pValueCut,
+  method,
+  nPlotsPopulation,
+  dtMappedPaths
 )
 }
 \arguments{
@@ -22,7 +24,7 @@ checkForRelevantColumnsOfPopulation(
 
 \item{corCut}{A numeric value for the correlation cutoff threshold. Default is 0.5.}
 
-\item{chiSquaredCut}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.}
+\item{pValueCut}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.}
 
 \item{method}{A character string specifying the correlation method to use (default is 'spearman').}
 }

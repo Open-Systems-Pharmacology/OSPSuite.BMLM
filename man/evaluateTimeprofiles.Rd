@@ -7,11 +7,10 @@
 evaluateTimeprofiles(
   optimEnv,
   scenarioList,
-  dtPrior,
-  dtStartValues,
-  dtMappedPaths,
+  dtList,
   simulationRunOptions,
-  dataObservedForMatch
+  withProtocol = FALSE,
+  outputDir = NULL
 )
 }
 \arguments{
@@ -19,13 +18,13 @@ evaluateTimeprofiles(
 
 \item{scenarioList}{A list of scenarios to be evaluated.}
 
+\item{simulationRunOptions}{An obkect of class SimulationRunOptions.}
+
 \item{dtPrior}{A data.table containing prior values.}
 
 \item{dtStartValues}{A data.table containing start values.}
 
 \item{dtMappedPaths}{A data.table containing mapped paths for parameters.}
-
-\item{simulationRunOptions}{An obkect of class SimulationRunOptions.}
 
 \item{dataObservedForMatch}{A data.table containing observed data for matching.}
 }

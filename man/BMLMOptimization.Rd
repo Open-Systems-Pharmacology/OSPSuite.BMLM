@@ -46,7 +46,9 @@ run name, scenario list, observed data, and random seed.}
 \item \href{#method-BMLMOptimization-checkParameterLimits}{\code{BMLMOptimization$checkParameterLimits()}}
 \item \href{#method-BMLMOptimization-checkDistributions}{\code{BMLMOptimization$checkDistributions()}}
 \item \href{#method-BMLMOptimization-checkConvergence}{\code{BMLMOptimization$checkConvergence()}}
+\item \href{#method-BMLMOptimization-evaluateInitialValues}{\code{BMLMOptimization$evaluateInitialValues()}}
 \item \href{#method-BMLMOptimization-startOptimization}{\code{BMLMOptimization$startOptimization()}}
+\item \href{#method-BMLMOptimization-openLogFile}{\code{BMLMOptimization$openLogFile()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -246,13 +248,22 @@ This method generates a QQ plot to assess the normality of the residuals.}
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsAsQQ}{}}}
 \subsection{Method \code{checkResidualsAsQQ()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsQQ(nCols = 2, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsQQ(
+  nCols = 2,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
 
 \item{\code{...}}{Additional arguments passed to the plot function.}
 }
@@ -270,13 +281,22 @@ This method generates residuals vs time plots to visualize the residuals over ti
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsVsTime}{}}}
 \subsection{Method \code{checkResidualsVsTime()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsVsTime(nCols = 2, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsVsTime(
+  nCols = 2,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
 
 \item{\code{...}}{Additional arguments passed to the plot function.}
 }
@@ -294,13 +314,22 @@ This method generates histogram plots of the residuals to visualize their distri
 \if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualsAsHistogram}{}}}
 \subsection{Method \code{checkResidualsAsHistogram()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsHistogram(nCols = 2, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsHistogram(
+  nCols = 2,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
+  ...
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
 
 \item{\code{...}}{Additional arguments passed to the plot function.}
 }
@@ -323,6 +352,8 @@ Each plot displays predicted vs observed values and includes facets for scenario
   addRegression = TRUE,
   xyScale = unlist(SCALING),
   nCols = 2,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -335,6 +366,10 @@ Each plot displays predicted vs observed values and includes facets for scenario
 \item{\code{xyScale}}{A character string specifying the scale type for the x and y axes (default "log").}
 
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
 
 \item{\code{...}}{additional arguments passed on to ospsuite.plots::plotPredVsObs
 Check Predicted vs Time
@@ -350,9 +385,10 @@ This method generates plots to compare predicted values against time.}
 \subsection{Method \code{checkPredictedVsTime()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkPredictedVsTime(
-  dtRes,
   yScale = unlist(SCALING),
   nCols = 4,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -360,13 +396,17 @@ This method generates plots to compare predicted values against time.}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{dtRes}}{A data frame containing the data to be plotted.}
-
 \item{\code{yScale}}{A character string specifying the scale for the y-axis (default is "log").}
 
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 4)}
 
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
+
 \item{\code{...}}{Additional arguments passed to the plot function.}
+
+\item{\code{dtRes}}{A data frame containing the data to be plotted.}
 }
 \if{html}{\out{</div>}}
 }
@@ -386,7 +426,8 @@ for relevant columns in the population data.
   method = "spearman",
   statusToShow = c("best", "current", "start"),
   corCut = 0.5,
-  chiSquaredCut = 0.1
+  pValueCut = 0.1,
+  nPlotsPopulation = 12
 )}\if{html}{\out{</div>}}
 }
 
@@ -399,7 +440,9 @@ for relevant columns in the population data.
 
 \item{\code{corCut}}{A numeric value for the correlation cutoff threshold. Default is 0.5.}
 
-\item{\code{chiSquaredCut}}{A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
+\item{\code{pValueCut}}{A numeric value for the Kruskal-Wallis test cutoff threshold. Default is 0.1.}
+
+\item{\code{nPlotsPopulation}}{Number of plots in one figure for correlations with population
 This function creates ggplot objects to display the current best and start values of the fitted parameter.
 all values a display as relative between min and max value using defined scaling}
 
@@ -485,8 +528,10 @@ containing convergence data and visualizing the results using ggplot2.}
 default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
 4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
-This method initiates the optimization process using the specified method and control parameters.
-Internally, the function \code{optim} is used, so please check the help for more details.}
+Check Initial Values for Project Configuration
+
+This function evaluates initial values for a given project configuration by running simulations for specified scenarios.
+It logs the progress and results to both the console and a designated log file.}
 
 \item{\code{nPoints}}{An integer specifying the number of points to select for plotting.
 Default is 200.}
@@ -495,6 +540,27 @@ Default is 200.}
 Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-evaluateInitialValues"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-evaluateInitialValues}{}}}
+\subsection{Method \code{evaluateInitialValues()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$evaluateInitialValues()}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{failValue}}{A numeric value to set if evaluation of the objective function fails.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+NULL This function does not return any value but logs information to the console and a log file.
+This method initiates the optimization process using the specified method and control parameters.
+Internally, the function \code{optim} is used, so please check the help for more details.
 }
 }
 \if{html}{\out{<hr>}}
@@ -540,7 +606,17 @@ Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'
 }
 \subsection{Returns}{
 An invisible reference to the BMLMOptimization object.
-Logs a message to the specified log file with a timestamp.
+Oepns logfile of the BMLMOptimization object
 }
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-openLogFile"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-openLogFile}{}}}
+\subsection{Method \code{openLogFile()}}{
+This method opens the current logfile
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$openLogFile()}\if{html}{\out{</div>}}
+}
+
 }
 }

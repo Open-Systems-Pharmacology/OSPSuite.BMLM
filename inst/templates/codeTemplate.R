@@ -26,6 +26,10 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 scenarioList =  scenarioList,
                                 dataObserved = dataObserved)
 
+# runs the model at the iitial Values and prints information on simulation time
+# and initial loglikelihood at the console and to the logfile
+myRun$evaluateInitialValues()
+
 # start the Optimization ( as default this is done as background job)
 myRun$startOptimization(
   projectConfiguration = projectConfiguration,

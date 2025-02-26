@@ -4,7 +4,13 @@
 \alias{initializeOptimEnv}
 \title{Initialize Optimization Environment}
 \usage{
-initializeOptimEnv(dtList, failValue)
+initializeOptimEnv(
+  dtList,
+  failValue = Inf,
+  bestValue = Inf,
+  NAcounter = 0,
+  iteration = 0
+)
 }
 \arguments{
 \item{dtList}{A list containing data tables for optimization.}

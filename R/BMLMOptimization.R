@@ -72,7 +72,7 @@ BMLMOptimization <-  R6::R6Class(
                              "      seed: ", seed, "\n",
                              sep = ""
         )
-        private$logMessage(callDetails)
+        logAndPrintOptimization(message = callDetails,outputDir = self$outputDir)
 
         dtList <- createDtList(projectConfiguration, scenarioList, dataObserved, seed)
         saveDataTablesAsCSV(dtList = dtList,outputDir = self$outputDir)
@@ -154,17 +154,30 @@ BMLMOptimization <-  R6::R6Class(
       checkmate::assertCharacter(individualId,len = 1)
       checkmate::assertNames(individualId,subset.of = unique(private$dtList$data$individualId))
 
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
 
+      statusList <- private$loadOptimStatusList(statusTypes = 'best')
+      if (is.null(statusList)){
+        message('Export is doen with initial values.')
+        params <- getParams(
+          dtPrior = private$dtList$prior,
+          dtStartValues = private$dtList$startValues,
+          optimizationGroup = 'both'
+        )
+
+      } else {
+        params <- statusList$best$params
+      }
       private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+                                             params = params)
+
 
       exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
                                     scenarioList = private$scenarioList,
                                     dtList = private$dtList,
                                     outputDir = self$outputDir,
                                     individualId = individualId)
+
+      return(invisible())
     },
     #' This function exports optimized population data to CSV files for each scenario in the scenario list.
     #'
@@ -258,14 +271,21 @@ BMLMOptimization <-  R6::R6Class(
     #' This method generates a QQ plot to assess the normality of the residuals.
     #'
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
+    #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
+    #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
-    checkResidualsAsQQ = function( nCols = 2,...){
-      dtRes <- private$updatePredictedValues()
+    checkResidualsAsQQ = function(nCols = 2,
+                                  filteroutputPathId = NULL,
+                                  filterScenarioName = NULL,
+                                  ...) {
+      dtRes <-
+        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
+                                      filterScenarioName = filterScenarioName)
       if (is.null(dtRes)) return(invisible())
 
-      plotResidualsAsQQ(dtRes, nCols = 2,titeltxt = self$runName,...)
+      plotResidualsAsQQ(dtRes, nCols = nCols,titeltxt = self$runName,...)
 
     },
     #' Check Residuals vs Time
@@ -273,14 +293,21 @@ BMLMOptimization <-  R6::R6Class(
     #' This method generates residuals vs time plots to visualize the residuals over time.
     #'
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
+    #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
+    #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
-    checkResidualsVsTime = function( nCols = 2,...){
-      dtRes <- private$updatePredictedValues()
+    checkResidualsVsTime = function(nCols = 2,
+                                    filteroutputPathId = NULL,
+                                    filterScenarioName = NULL,
+                                    ...) {
+      dtRes <-
+        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
+                                      filterScenarioName = filterScenarioName)
       if (is.null(dtRes)) return(invisible())
 
-      plotResidualsVsTime(dtRes, nCols = 2, titeltxt = self$runName, ...)
+      plotResidualsVsTime(dtRes, nCols = nCols, titeltxt = self$runName, ...)
 
     },
     #' Check Residuals as Histogram
@@ -288,14 +315,21 @@ BMLMOptimization <-  R6::R6Class(
     #' This method generates histogram plots of the residuals to visualize their distribution.
     #'
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
+    #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
+    #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
-    checkResidualsAsHistogram = function( nCols = 2,...){
-      dtRes <- private$updatePredictedValues()
+    checkResidualsAsHistogram = function(nCols = 2,
+                                         filteroutputPathId = NULL,
+                                         filterScenarioName = NULL,
+                                         ...) {
+      dtRes <-
+        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
+                                      filterScenarioName = filterScenarioName)
       if (is.null(dtRes)) return(invisible())
 
-      plotResidualsAsHistogram(dtRes, nCols = 2,titeltxt = self$runName,...)
+      plotResidualsAsHistogram(dtRes, nCols = nCols,titeltxt = self$runName,...)
 
     },
     #' Create and Print Predicted vs Observed of best result
@@ -306,17 +340,24 @@ BMLMOptimization <-  R6::R6Class(
     #' @param addRegression A logical value indicating whether to add regression lines to the plot.
     #' @param xyScale A character string specifying the scale type for the x and y axes (default "log").
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
+    #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
+    #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
     #' @param ... additional arguments passed on to ospsuite.plots::plotPredVsObs
-    checkPredictedVsObserved = function(addRegression = TRUE, xyScale = unlist(SCALING), nCols = 2,...){
-      dtRes <- private$updatePredictedValues()
+    checkPredictedVsObserved = function(addRegression = TRUE, xyScale = unlist(SCALING), nCols = 2,
+                                        filteroutputPathId = NULL,
+                                        filterScenarioName = NULL,
+                                        ...){
+      dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
+                                             filterScenarioName = filterScenarioName)
       if (is.null(dtRes)) return(invisible())
 
       plotPredictedVsObserved(
         dtRes = dtRes,
         addRegression = addRegression,
         xyScale = xyScale,
-        nCols = 2,
+        nCols = nCols,
         titeltxt = self$runName,
+        ...
       )
 
     },
@@ -327,14 +368,18 @@ BMLMOptimization <-  R6::R6Class(
     #' @param dtRes A data frame containing the data to be plotted.
     #' @param yScale A character string specifying the scale for the y-axis (default is "log").
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 4)
+    #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
+    #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
-    checkPredictedVsTime = function(dtRes,
-                                    yScale = unlist(SCALING),
+    checkPredictedVsTime = function(yScale = unlist(SCALING),
                                     nCols = 4,
+                                    filteroutputPathId = NULL,
+                                    filterScenarioName = NULL,
                                     ...){
-      dtRes <- private$updatePredictedValues()
+      dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
+                                             filterScenarioName = filterScenarioName)
       if (is.null(dtRes)) return(invisible())
 
       plotPredictedVsTime(
@@ -357,11 +402,13 @@ BMLMOptimization <-  R6::R6Class(
     #' @param statusToShow A character string indicating which status to show. Options are 'best', 'current', and 'start'.
     #' @param scenarioList A list of scenarios to analyze.
     #' @param corCut A numeric value for the correlation cutoff threshold. Default is 0.5.
-    #' @param chiSquaredCut A numeric value for the Chi-squared cutoff threshold. Default is 0.1.
+    #' @param pValueCut A numeric value for the Kruskal-Wallis test cutoff threshold. Default is 0.1.
+    #' @param nPlotsPopulation Number of plots in one figure for correlations with population
     checkCorrelations = function(method = 'spearman',
                                  statusToShow = c('best', 'current', 'start'),
                                  corCut = 0.5,
-                                 chiSquaredCut = 0.1) {
+                                 pValueCut = 0.1,
+                                 nPlotsPopulation = 12) {
 
       statusList <- private$loadOptimStatusList()
       if (is.null(statusList)) return(invisible())
@@ -373,7 +420,8 @@ BMLMOptimization <-  R6::R6Class(
         statusToShow = statusToShow,
         scenarioList = private$scenarioList,
         corCut = corCut,
-        chiSquaredCut = chiSquaredCut)
+        pValueCut = pValueCut,
+        nPlotsPopulation = nPlotsPopulation)
 
     },
     #' This function creates ggplot objects to display the current best and start values of the fitted parameter.
@@ -460,6 +508,21 @@ BMLMOptimization <-  R6::R6Class(
       )
 
     },
+    #' Check Initial Values for Project Configuration
+    #'
+    #' This function evaluates initial values for a given project configuration by running simulations for specified scenarios.
+    #' It logs the progress and results to both the console and a designated log file.
+    #'
+    #' @param failValue A numeric value to set if evaluation of the objective function fails.
+    #'
+    #' @return NULL This function does not return any value but logs information to the console and a log file.
+    evaluateInitialValues = function(){
+
+      evaluateInitialValues(dtList = private$dtList,
+                         outputDir = self$outputDir,
+                         scenarioList = private$scenarioList)
+
+    },
     #' This method initiates the optimization process using the specified method and control parameters.
     #' Internally, the function `optim` is used, so please check the help for more details.
     #'
@@ -489,7 +552,7 @@ BMLMOptimization <-  R6::R6Class(
 
       # Log start time
       startTime <- Sys.time()
-      private$logMessage("Optimization started.")
+      logAndPrintOptimization("Optimization started.",outputDir = self$outputDir)
 
       private$dtList[["iteration"]] <- 0
       private$dtList[["bestValue"]] <- Inf
@@ -519,8 +582,9 @@ BMLMOptimization <-  R6::R6Class(
           file = file.path(self$outputDir, "convergence.csv"),
           append = TRUE
         )
+        logAndPrintOptimization(paste("Restart at best Result at iteration",optimStatus$iteration),
+                                outputDir = self$outputDir)
 
-        private$logMessage(paste("Restart at best Result at iteration",optimStatus$iteration))
       }
       private$setStatus(RUNSTATUS$running)
 
@@ -542,7 +606,8 @@ BMLMOptimization <-  R6::R6Class(
                            "      Additional arguments: ", paste(additionalArgsExpr, collapse = ", "), "\n",
                            sep = ""
       )
-      private$logMessage(callDetails)
+      logAndPrintOptimization(callDetails,
+                              outputDir = self$outputDir)
 
 
       # Perform optimization
@@ -589,6 +654,17 @@ BMLMOptimization <-  R6::R6Class(
       }
 
       return(invisible(self))
+    },
+    #' Oepns logfile of the BMLMOptimization object
+    #'
+    #' @description  This method opens the current logfile
+    openLogFile = function(){
+      logfile = file.path(self$outputDir, "optimization_log.txt")
+      if (file.exists(logfile)){
+        file.edit(logfile)
+      } else {
+        message('no Log file exists')
+      }
     }
   ),
   #private-----------------
@@ -609,7 +685,8 @@ BMLMOptimization <-  R6::R6Class(
           # Prompt the user for confirmation to reset the run directory
           response <- readline(prompt = "Output directory exists but seems to be corrupt. Do you want to reset everything in the run directory? (Yes/No): ")
           if (tolower(response) == "yes") {
-            private$logMessage(paste('Reset Run', self$runName))
+            logAndPrintOptimization(paste('Reset Run', self$runName),
+                                    outputDir = self$outputDir)
             asReload <- FALSE
             return(asReload)
           } else {
@@ -629,20 +706,10 @@ BMLMOptimization <-  R6::R6Class(
         dir.create( self$outputDir, recursive = TRUE)
         message("Output directory created: ",  self$outputDir)
         asReload = FALSE
-        private$logMessage(paste('Initialize Run',self$runName))
+        logAndPrintOptimization(message = paste('Initialize Run',self$runName),outputDir = self$outputDir)
       }
 
       return(asReload)
-    },
-    #' Logs a message to the specified log file with a timestamp.
-    logMessage = function(message) {
-      cat(
-        format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
-        message,
-        "\n",
-        file = file.path(self$outputDir, "optimization_log.txt"),
-        append = TRUE
-      )
     },
     setStatus = function(status){
       private$status = status
@@ -691,7 +758,8 @@ BMLMOptimization <-  R6::R6Class(
       return(statusList)
 
     },
-    updatePredictedValues = function(){
+    updatePredictedValues = function(filteroutputPathId = NULL,
+                                     filterScenarioName = NULL){
 
       if (!file.exists(file.path(self$outputDir, c('bestPrediction.RDS')))){
         message('No results yet.')
@@ -701,14 +769,27 @@ BMLMOptimization <-  R6::R6Class(
       private$printStatus(bestStatus,'best')
 
       private$dtList <- setParameterToTables(private$dtList, bestStatus$params)
-
       dtRes <- readRDS(file.path(self$outputDir, 'bestPrediction.RDS'))
+      if (!is.data.frame(dtRes)){
+        dtRes <- rbindlist(dtRes)
+      }
       dtRes <- updateModelError(dtPrior = private$dtList$prior,dtRes = dtRes)
 
       dtRes[, isCensored := !is.na(lloq) & lloq > yValues]
 
       # Apply the function to calculate likelihood
       dtRes[, resNorm := mapply(calculateResidual, yValues, predicted, errorModel, sigma, isCensored, lloq)]
+
+      if (!is.null(filteroutputPathId)){
+        checkmate::assertNames(filteroutputPathId, subset.of = dtRes$outputPathId)
+      }
+      if (!is.null(filterScenarioName)){
+        checkmate::assertNames(filterScenarioName, subset.of = dtRes$scenarioName)
+        dtRes <- dtRes[scenarioName %in%   filterScenarioName]
+      }
+      if (!is.null(filteroutputPathId)){
+        dtRes <- dtRes[outputPathId %in%   filteroutputPathId]
+      }
 
       return(dtRes)
 

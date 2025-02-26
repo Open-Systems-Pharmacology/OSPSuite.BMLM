@@ -45,6 +45,19 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 dataObserved = dataObserved)
 ```
 
+
+# Evaluating Initial Values
+  
+  The `evaluateInitialValues` function allows you to assess the initial values for a given project configuration by running simulations for specified scenarios. This function logs the progress and results to both the console and a designated log file.
+
+Evaluating initial values is crucial for ensuring that the optimization process starts from a reasonable set of parameters. This function helps identify any issues with the initial configuration and provides insights into the model's behavior before the optimization begins.
+
+```{r echo=TRUE, eval=FALSE}
+# Evaluate initial values
+myRun$evaluateInitialValues()
+```
+
+
 # Starting the Optimization
 
 Once the `BMLMOptimization` object is initialized, you can start the optimization process using the `startOptimization` method. This method allows you to specify various parameters, including the optimization method, control settings, and whether to run the optimization in the background.
@@ -234,6 +247,23 @@ myRun$checkParameterLimits()
 ```{r echo=TRUE, eval=FALSE}
 myRun$checkDistributions(nCols = 2, nRows = 3, xScale = "log")
 ```
+
+## 6. Checking Correlations
+  
+The `checkCorrelations` function generates a correlation matrix plot for the specified status and checks for relevant columns in the population data. This function is particularly useful for exploring relationships between different parameters and assessing their interdependencies.
+
+Analyzing correlations helps identify relationships between parameters, which can inform model adjustments and improve optimization outcomes. This function provides a visual representation of these correlations, allowing for easier interpretation and decision-making.
+
+
+```{r echo=TRUE, eval=FALSE}
+# Check correlations among parameters
+myRun$checkCorrelations(method = 'spearman', 
+                        statusToShow = 'best', 
+                        corCut = 0.5, 
+                        chiSquaredCut = 0.1)
+```
+
+
 
 ## 6. Get Current Configuration Table
 

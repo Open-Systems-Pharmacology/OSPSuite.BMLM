@@ -4,7 +4,12 @@
 \alias{addLabel}
 \title{Add Labels to Plot Data}
 \usage{
-addLabel(plotData, dtPrior, unitSep = " ")
+addLabel(
+  plotData,
+  dtPrior,
+  unitSep = " ",
+  identifier = c("name", "categoricCovariate")
+)
 }
 \arguments{
 \item{plotData}{A data.table containing the initial plot data.}
