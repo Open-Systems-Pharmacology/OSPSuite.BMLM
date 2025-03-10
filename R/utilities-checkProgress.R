@@ -300,15 +300,28 @@ plotDistributions <- function(dtList,
   }
 
   for (dtHyper in split(hyperParameter, by = 'label')){
+    tmpHyper <- dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue')],
+                       ... ~ status , value.var = 'value')
+
+    tmpLog <- rbind(stats::setNames(lapply(unique(dtHyper$status), function(testStatus) {
+      getLikelihoodForIndividualGroup(copy(dtValues)[label == dtHyper$label[1] &
+                                                       status == testStatus] %>%
+                                        setnames('statusValue', 'value'),
+                                      dtHyper[status == testStatus])
+    }), unique(dtHyper$status))) %>%  as.data.table()
+    tmpLog[, hyperParameter := 'loglikelihood']
+
     dtHyper[,truncationOffset := 1-exp(logTruncationOffset) ]
-    tmp <- rbind(dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue')],
-                       ... ~ status , value.var = 'value') ,
-                 dcast(dtHyper[,c('truncationOffset','status','minValue.indValues','maxValue.indValues')] %>% unique(),
-                       +       ... ~ status , value.var = 'truncationOffset') %>%
-                   setnames(c('minValue.indValues','maxValue.indValues'),
-                            c('minValue','maxValue')) %>%
-                   dplyr::mutate(hyperParameter = 'likelihood outside range'),
-                 fill = TRUE) %>%
+    tmpTrunc <-  dcast(dtHyper[,c('truncationOffset','status','minValue.indValues','maxValue.indValues')] %>% unique(),
+                              ... ~ status , value.var = 'truncationOffset')
+    tmpTrunc[,hyperParameter := paste0('likelihood outside range (',minValue.indValues,'-',maxValue.indValues,')')]
+    tmpTrunc[,minValue.indValues := NULL]
+    tmpTrunc[,maxValue.indValues := NULL]
+
+    tmp = rbind(tmpHyper,
+                tmpLog,
+                tmpTrunc,
+                fill = TRUE) %>%
       setnames('hyperParameter','.')
     print(knitr::kable(tmp,caption = dtHyper$label[1]))
   }
