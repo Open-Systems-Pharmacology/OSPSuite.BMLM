@@ -38,14 +38,15 @@ myRun$startOptimization(
 )
 
 # check Progress of optimization ----------------
-myRun$checkParameterLimits()
-myRun$checkDistributions()
-myRun$checkConvergence()
-myRun$checkPredictedVsTime()
-myRun$checkPredictedVsObserved()
-myRun$checkResidualsAsHistogram()
-myRun$checkResidualsVsTime()
-myRun$checkResidualsAsQQ()
+plotList <- myRun$checkParameterLimits()
+plotList <- myRun$checkDistributions()
+plotList <- myRun$checkConvergence()
+plotList <- myRun$checkPredictedVsTime()
+plotList <- myRun$checkPredictedVsObserved()
+plotList <- myRun$checkResidualsAsHistogram()
+plotList <- myRun$checkResidualsVsTime()
+plotList <- myRun$checkResidualsAsQQ()
+
 dtPrior <- myRun$getCurrentConfigTable(projectConfiguration)
 dtStartValues <- myRun$getCurrentConfigTable(projectConfiguration,sheetName = 'IndividualStartValues')
 

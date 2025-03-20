@@ -85,10 +85,7 @@ plotConvergence <- function(dtConvergence,
       labs(caption = 'vertical lines indicate restart of algorithm')
   }
 
-  # Print the plot to the console
-  print(plotObject)
-
-  return(invisible(plotObject))
+  return(invisible(list(convergence = plotObject)))
 }
 #' Create and Print Parameter Limits Plots
 #'
@@ -144,6 +141,8 @@ plotParameterLimits <-
 
     mapping <- aes(y = statusParam, color = status, shape = status)
 
+    plotList <- list()
+
     for (iPlot in seq(0,totalPlots)) {
       if (iPlot == 0) {
         plotObject <- ggplot(plotDataNonInd) +
@@ -160,7 +159,6 @@ plotParameterLimits <-
         plotObject <- ggplot( plotDataInd[label %in% facetsToPlot]) +
           suppressWarnings(geom_point(utils::modifyList(mapping,aes(x = xlabel)))) +
           facet_wrap(vars(label), ncol = nCols, scales = 'free_y')
-
       }
 
       plotObject <-
@@ -184,11 +182,12 @@ plotParameterLimits <-
         layerWatermark() +
         theme(legend.direction = 'horizontal')
 
-      print(plotObject)
+      plotName <- paste0('parameterLimits_',ifelse(iPlot == 0,'global',paste('individual',iPlot,sep = '_')))
+      plotList[[plotName]] <- plotObject
 
     }
 
-    return(invisible())
+    return(invisible(plotList))
   }
 
 #' Plot Distributions
@@ -260,6 +259,8 @@ plotDistributions <- function(dtList,
   # Calculate how many plots are needed
   totalPlots <- ceiling(totalFacets / (nCols * nRows))
 
+  plotList = list()
+
   for (iPlot in seq_len(totalPlots)) {
 
     # Determine the facets for the current plot
@@ -290,13 +291,14 @@ plotDistributions <- function(dtList,
 
     plotObject <- customizeLegend(plotObject, colorScalingVector)
 
-    # Add facetting to the plot
+    # Add faceting to the plot
     plotObject <- plotObject +
       facet_wrap(vars(label), scales = 'free_x', ncol = nCols) +
       layerWatermark()
 
     # Store the plot in the list
-    print(plotObject)
+    plotName <- paste0('distributions_',iPlot)
+    plotList[[plotName]] <- plotObject
   }
 
   for (dtHyper in split(hyperParameter, by = 'label')){
@@ -324,10 +326,12 @@ plotDistributions <- function(dtList,
                 fill = TRUE) %>%
       setnames('hyperParameter','.')
     print(knitr::kable(tmp,caption = dtHyper$label[1]))
+
+    plotList[[dtHyper$label[1]]] <- tmp
   }
 
 
-  return(invisible())
+  return(invisible(plotList))
 }
 #' Plot Correlations
 #'
@@ -352,8 +356,7 @@ plotCorrelations <- function(dtList,
                              statusToShow = c('best', 'current', 'start'),
                              scenarioList,
                              corCut = 0.5,
-                             pValueCut = 0.1,
-                             nPlotsPopulation = 12){
+                             pValueCut = 0.1){
 
   statusToShow = match.arg(statusToShow)
 
@@ -377,21 +380,19 @@ plotCorrelations <- function(dtList,
                         mapping = aes(shape = 'circle')) +
     theme(strip.placement = 'outside')
 
-  print(pm)
 
-  checkForRelevantColumnsOfPopulation(plotData = plotData,
-                                      labels = labels,
-                                      scenarioList = scenarioList,
-                                      corCut = corCut,
-                                      pValueCut = pValueCut,
-                                      method = method,
-                                      nPlotsPopulation = nPlotsPopulation,
-                                      dtMappedPaths = dtList$mappedPaths)
+  plotList <- checkForRelevantColumnsOfPopulation(plotData = plotData,
+                                                    labels = labels,
+                                                    scenarioList = scenarioList,
+                                                    corCut = corCut,
+                                                    pValueCut = pValueCut,
+                                                    method = method,
+                                                    dtMappedPaths = dtList$mappedPaths)
 
+  plotList <- c(list('correlation_fitparameter' = pm),
+              plotList)
 
-
-
-  return(invisible())
+  return(invisible(plotList))
 }
 #' Create and Print Predicted vs Observed Plots
 #'
@@ -421,13 +422,14 @@ plotPredictedVsObserved <- function(
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
 
+  plotList <- list()
   # Loop through each outputPathId and create a plot
   for (id in outputPathIds) {
     # Filter data for the current outputPathId
     filteredData <- dtRes[dtRes$outputPathId == id, ]
 
     # Create the base plot
-    basePlot <- ospsuite_plotPredictedVsObserved(
+    plotObject <- ospsuite_plotPredictedVsObserved(
       plotData = filteredData,
       addRegression = addRegression,
       comparisonLineVector = getFoldDistanceList(folds = c()),
@@ -439,12 +441,14 @@ plotPredictedVsObserved <- function(
            title = titeltxt)
 
     # Add facet wrapping by scenario and group
-    finalPlot <- basePlot +
+    plotObject <- plotObject +
       facet_wrap(vars(scenario, group), ncol = nCols)
 
-    # Print the plot
-    print(finalPlot)
+    plotList[[id]] <- plotObject
+
   }
+
+  return(invisible(plotList))
 }
 #' Create and Print Predicted vs Time Plots
 #'
@@ -467,9 +471,9 @@ plotPredictedVsTime <- function(
 
   yScale <- tolower(match.arg(yScale))
 
-  for (dtResGroup in split(dtRes, by = c('outputPathId','scenarioName'))){
+  plotList <- list()
 
-    dtResGroup <- setDT(dtResGroup)
+  for (dtResGroup in split(dtRes, by = c('outputPathId','scenarioName'))){
 
     # for inidividuals with only one measurement plot predcition as stright line
     dtIndCount <- dtResGroup[,.N,by = individualId]
@@ -502,8 +506,11 @@ plotPredictedVsTime <- function(
                    data = plotDataSingleValue, shape = 'plus')
     }
 
-    print(plotObject)
+    plotName <- paste(dtResGroup$outputPathId[1],dtResGroup$scenarioName[1],sep = '_')
+    plotList[[plotName]] <- plotObject
   }
+
+  return(invisible(plotList))
 
 }
 #' Create and Print Residuals vs Time Plots
@@ -525,6 +532,8 @@ plotResidualsVsTime <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
   outputPathIds <- unique(dtRes$outputPathId)
 
   # Loop through each outputPathId and create a plot
+  plotList <- list()
+
   for (id in outputPathIds) {
     # Filter data for the current outputPathId
     filteredData <- dtRes[dtRes$outputPathId == id, ]
@@ -538,9 +547,10 @@ plotResidualsVsTime <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
            subtitle = id,
            title = titeltxt)
 
-    # Print the plot
-    print(plotObject)
+    plotList[[id]] <- plotObject
   }
+
+  return(invisible(plotList))
 }
 #' Create and Print Residuals as Histogram Plots
 #'
@@ -560,6 +570,7 @@ plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
   outputPathIds <- unique(dtRes$outputPathId)
 
   # Loop through each outputPathId and create a plot
+  plotList <- list()
   for (id in outputPathIds) {
     # Filter data for the current outputPathId
     filteredData <- dtRes[dtRes$outputPathId == id, ]
@@ -577,8 +588,10 @@ plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
            title = titeltxt)
 
     # Print the plot
-    print(plotObject)
+    plotList[[id]] <- plotObject
   }
+
+  return(invisible(plotList))
 }
 #' Create and Print Residuals as QQ Plot
 #'
@@ -598,6 +611,7 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
   outputPathIds <- unique(dtRes$outputPathId)
 
   # Loop through each outputPathId and create a plot
+  plotList <- list()
   for (id in outputPathIds) {
     # Filter data for the current outputPathId
     filteredData <- dtRes[dtRes$outputPathId == id, ]
@@ -611,8 +625,11 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
            title = titeltxt)
 
     # Print the plot
-    print(plotObject)
+    plotList[[id]] <-plotObject
   }
+
+  return(invisible(plotList))
+
 }
 #' Get Current Configuration Table
 #'
@@ -671,7 +688,6 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
                                        corCut,
                                        pValueCut,
                                        method,
-                                       nPlotsPopulation,
                                        dtMappedPaths){
 
   dtPop <- preparePopulationForCorrelationCheck(scenarioList,dtMappedPaths)
@@ -704,7 +720,7 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
               method = method)
         maxCorrelation <- max(maxCorrelation,abs(correlationValue))
         if (abs(correlationValue) > corCut){
-          plotList[[paste(label,popCol)]] <-
+          plotList[[paste('cor',label,popCol,sep = '_')]] <-
             ggplot(data = plotData,
                    mapping = aes(y = label,x = popCol)) +
             geom_point(fill = 'black',na.rm = TRUE) +
@@ -718,7 +734,7 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
         if (!is.na(kruskalTestResult$p.value)){
           minPvalue <- min(minPvalue,kruskalTestResult$p.value)
           if (kruskalTestResult$p.value < pValueCut)
-            plotList[[paste(label,popCol)]] <-
+            plotList[[paste('cor',label,popCol,sep = '_')]] <-
               ospsuite.plots::plotBoxWhisker(data = plotData,
                                              mapping = aes(y =label,x = popCol)) +
               geom_jitter(fill = 'black',na.rm = TRUE) +
@@ -733,21 +749,13 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
     }
   }
 
-  if (length(plotList) > 0){
-    iPlot <- 1
-    while(iPlot <= length(plotList)){
-      maxPlot <- min(length(plotList),iPlot + nPlotsPopulation -1)
-      print(cowplot::plot_grid(plotlist = plotList[seq(iPlot,maxPlot)]))
-      iPlot <- iPlot + nPlotsPopulation
-    }
-
-  } else{
+  if (length(plotList) == 0){
     message(paste0('no correlated columns found in population.\n',
                   'maximal Correlation: ',round(maxCorrelation,2), '(cut: ',corCut,')\n',
                   'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',pValueCut,')'))
   }
 
-  return(invisible())
+  return(invisible(plotList))
 
 }
 #' Prepare Population Data for Correlation Check

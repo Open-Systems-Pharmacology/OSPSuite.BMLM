@@ -283,9 +283,12 @@ BMLMOptimization <-  R6::R6Class(
       dtRes <-
         private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
                                       filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible())
+      if (is.null(dtRes)) return(invisible(list()))
 
-      plotResidualsAsQQ(dtRes, nCols = nCols,titeltxt = self$runName,...)
+      plotList <- plotResidualsAsQQ(dtRes, nCols = nCols,titeltxt = self$runName,...)
+
+      print(plotList)
+      return(invisible(plotList))
 
     },
     #' Check Residuals vs Time
@@ -305,9 +308,12 @@ BMLMOptimization <-  R6::R6Class(
       dtRes <-
         private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
                                       filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible())
+      if (is.null(dtRes)) return(invisible(list()))
 
-      plotResidualsVsTime(dtRes, nCols = nCols, titeltxt = self$runName, ...)
+      plotList <- plotResidualsVsTime(dtRes, nCols = nCols, titeltxt = self$runName, ...)
+
+      print(plotList)
+      return(invisible(plotList))
 
     },
     #' Check Residuals as Histogram
@@ -327,9 +333,12 @@ BMLMOptimization <-  R6::R6Class(
       dtRes <-
         private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
                                       filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible())
+      if (is.null(dtRes)) return(invisible(list()))
 
-      plotResidualsAsHistogram(dtRes, nCols = nCols,titeltxt = self$runName,...)
+      plotList <- plotResidualsAsHistogram(dtRes, nCols = nCols,titeltxt = self$runName,...)
+
+      print(plotList)
+      return(invisible(plotList))
 
     },
     #' Create and Print Predicted vs Observed of best result
@@ -349,9 +358,9 @@ BMLMOptimization <-  R6::R6Class(
                                         ...){
       dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
                                              filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible())
+      if (is.null(dtRes)) return(invisible(list()))
 
-      plotPredictedVsObserved(
+      plotList <- plotPredictedVsObserved(
         dtRes = dtRes,
         addRegression = addRegression,
         xyScale = xyScale,
@@ -360,6 +369,8 @@ BMLMOptimization <-  R6::R6Class(
         ...
       )
 
+      print(plotList)
+      return(invisible(plotList))
     },
     #' Check Predicted vs Time
     #'
@@ -380,9 +391,8 @@ BMLMOptimization <-  R6::R6Class(
                                     ...){
       dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
                                              filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible())
-
-      plotPredictedVsTime(
+      if (is.null(dtRes)) return(invisible(list()))
+      plotList <- plotPredictedVsTime(
         dtRes = dtRes,
         yScale = yScale,
         nCols = nCols,
@@ -390,6 +400,9 @@ BMLMOptimization <-  R6::R6Class(
         ...
       )
 
+      print(plotList)
+
+      return(invisible(plotList))
     },
     #' Plot Correlations
     #' This function generates a correlation matrix plot for the specified status and checks
@@ -411,17 +424,27 @@ BMLMOptimization <-  R6::R6Class(
                                  nPlotsPopulation = 12) {
 
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible())
+      if (is.null(statusList)) return(invisible(list()))
 
-      plotCorrelations(
+      plotList <- plotCorrelations(
         dtList = private$dtList,
         statusList = statusList,
         titeltxt = self$runName,
         statusToShow = statusToShow,
         scenarioList = private$scenarioList,
         corCut = corCut,
-        pValueCut = pValueCut,
-        nPlotsPopulation = nPlotsPopulation)
+        pValueCut = pValueCut)
+
+      if (is.null(sys.call(-1))) {
+        print(plotList[[1]])
+        iPlot <- 2
+        while(iPlot <= length(plotList)){
+          maxPlot <- min(length(plotList),iPlot + nPlotsPopulation -1)
+          print(cowplot::plot_grid(plotlist = plotList[seq(iPlot,maxPlot)]))
+          iPlot <- iPlot + nPlotsPopulation
+        }
+      }
+      return(invisible(plotList))
 
     },
     #' This function creates ggplot objects to display the current best and start values of the fitted parameter.
@@ -432,14 +455,17 @@ BMLMOptimization <-  R6::R6Class(
     #' @param ...  arguments passed on to function plotParameterLimits
     checkParameterLimits = function(nCols = 2, nRows = 3,...){
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible())
+      if (is.null(statusList)) return(invisible(list()))
 
-      plotParameterLimits(dtList = private$dtList,
+      plotList <- plotParameterLimits(dtList = private$dtList,
                           statusList = statusList,
                           titeltxt = self$runName,
                           nCols = nCols,
                           nRows = nRows,
                           ...)
+
+      print(plotList)
+      return(invisible(plotList))
     },
     #' This function creates ggplot objects to display the individual Values vs the fitted distributions.
     #'
@@ -452,9 +478,9 @@ BMLMOptimization <-  R6::R6Class(
       xScale <- match.arg(xScale)
 
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible())
+      if (is.null(statusList)) return(invisible(list()))
 
-      plotDistributions(
+      plotList <- plotDistributions(
         dtList = private$dtList,
         currentStatus = statusList$current,
         bestStatus = statusList$best,
@@ -464,6 +490,9 @@ BMLMOptimization <-  R6::R6Class(
         titeltxt = self$runName,
         ...
       )
+
+      print(plotList)
+      return(invisible(plotList))
 
     },
     #' Check Convergence of Model Parameters
@@ -486,7 +515,7 @@ BMLMOptimization <-  R6::R6Class(
       # Check if the convergence CSV file exists
       if (!file.exists(file.path(self$outputDir,'convergence.csv'))) {
         message(paste('convergence.csv does not exist yet, please wait'))
-        return(NULL)
+        return(invisible(list()))
       }
 
       # Read the convergence data from the CSV file
@@ -499,7 +528,7 @@ BMLMOptimization <-  R6::R6Class(
       print(head(dtConvergence[event == 'best'] %>%
                    dplyr::select(!any_of('event')), 5))
 
-      plotConvergence(
+      plotList <- plotConvergence(
         dtConvergence,
         titletxt = self$runName,
         nPoints = nPoints,
@@ -507,6 +536,8 @@ BMLMOptimization <-  R6::R6Class(
         displayVariablesIndx = displayVariablesIndx
       )
 
+      print(plotList)
+      return(invisible(plotList))
     },
     #' Check Initial Values for Project Configuration
     #'
