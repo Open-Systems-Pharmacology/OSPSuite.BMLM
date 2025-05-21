@@ -41,6 +41,62 @@ getDistributionRow <-
                                    parameter == distributionParameter])
   }
 
+
+#' Compute Statistical Function Values
+#'
+#' This function evaluates statistical functions (probability, density, quantile,
+#' and random generation) based on the specified distribution and parameters.
+#'
+#' @param values A numeric vector of parameter values for the specified distribution.
+#' @param parameters A character vector of parameter names corresponding to the values.
+#' @param distribution A character string specifying the distribution (e.g., "norm", "lnorm").
+#' @param v A numeric value or vector for which the function should compute the result,
+#' depending on the specified type.
+#' @param type A character string indicating the type of statistical function to compute.
+#' It can be one of "P" (probability), "D" (density), "Q" (quantile), or "R" (random generation).
+#' @param log A logical value indicating whether to return the logarithm of the probability
+#' or density (if applicable). Default is FALSE.
+#' @param normalisationFactor A numeric value used to adjust the computed densities for
+#' truncated distributions. Default is 1 (no adjustment).
+#'
+#' @return The result of the statistical function call, which varies based on the type:
+#' \describe{
+#'   \item{P}{Probability value for the given quantile.}
+#'   \item{D}{Density value for the given input.}
+#'   \item{Q}{Quantile value for the given probability.}
+#'   \item{R}{Random samples generated from the specified distribution.}
+#' }
+#'
+#' @examples
+#' # Example usage:
+#' computeStatFunction(values = c(0, 1), parameters = c("mean", "sd"),
+#'                      distribution = "norm", v = 0.5, type = "P")
+#'
+#' @export
+computeStatFunction <- function(values,parameters,distribution,v,type = c('D','P','Q','R'),log = FALSE,
+                                normalisationFactor = 1){
+
+  type <- match.arg(type)
+
+  paramList <- setNames(as.numeric(values), parameters)
+  paramList <- paramList[!is.na(paramList)]
+
+  funcName <- paste0(tolower(type), distribution)
+
+  if (type == 'P') {
+    args <- c(list(q = v, log.p = log), paramList)
+  } else if (type == 'D') {
+    args <- c(list(x = v, log = log), paramList)
+  } else if (type == 'Q') {
+    args <- c(list(p = v, log.p = log), paramList)
+  } else if (type == 'R') {
+    args <- c(list(n = v), paramList)
+  }
+
+  return(do.call(funcName, args)/normalisationFactor)
+}
+
+
 #' Calculate Probability Based on Distribution
 #'
 #' This function calculates the probability for a given distribution using specified parameters.
@@ -55,12 +111,11 @@ getDistributionRow <-
 #'
 #' @return A numeric value representing the calculated probability. Returns NA in case of an error.
 calculateProbability <- function(row, log = FALSE) {
-  dist <- paste0("d", row["distribution"])
+  distribution <- row["distribution"]
 
-  if (dist == 'dflat'){
+  if (distribution == 'flat'){
     return(ifelse(log,0,1))
   }
-
   value <- as.numeric(row["value"])
 
   # Extract parameters
@@ -69,17 +124,14 @@ calculateProbability <- function(row, log = FALSE) {
   paramValues <-
     row[grepl("_value$", names(row))] # Get all value columns
 
-  paramList <-
-    stats::setNames(as.numeric(paramValues), as.character(paramTypes))
-  # Remove NA values
-  paramList <- paramList[!is.na(paramList)]
-  paramList[["log"]] <- log
-
-  # Calculate probability based on the distribution
-  args <- c(list(value), paramList)
   prob <- tryCatch(
     {
-      do.call(dist, args)
+      computeStatFunction(values = paramValues,
+                          parameters = paramTypes,
+                          distribution = distribution,
+                          v = value,
+                          type = 'D',
+                          log = log)
     },
     error = function(e) {
       return(NA) # Return NA in case of error

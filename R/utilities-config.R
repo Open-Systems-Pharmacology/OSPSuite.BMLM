@@ -29,17 +29,15 @@ addBMLMPConfiguration <- function(projectConfiguration,
   checkmate::assertString(nameOfParameterIdentfication)
   checkmate::assertString(snapshotFile, null.ok = TRUE)
   checkmate::assertFlag(overwrite)
-
   bMLMConfigurationFile <- paste0("BMLMConfiguration_", nameOfParameterIdentfication, ".xlsx")
 
-  projectConfiguration$addAddOnfileToConfiguration(
+  projectConfiguration$addAddOnFileToConfiguration(
     property = "bMLMConfigurationFile",
     value = bMLMConfigurationFile,
     description = "Configuration file for Baysian Multi Level Parameteridentification",
     templatePath = system.file("templates", "BMLMConfiguration.xlsx", package = "ospsuite.bmlm")
   )
 
-  # Update DataGroups and Outputs in Plot configuration sheet
   if (!is.null(snapshotFile) && !is.null(nameOfParameterIdentfication)) {
     readIdentificationParameterFromSnapshot(
       snapshotFile = snapshotFile,
@@ -445,9 +443,6 @@ loadPriorData <- function(wb, overwrite) {
   if (overwrite & nrow(dtPrior) > 1) {
     dtPrior <- dtPrior[1]
   }
-  setnames(dtPrior,
-           old = c("distribution of Individual Values","prior Distribution"),
-           new = c('hyperDistribution','distribution'))
   return(dtPrior)
 }
 

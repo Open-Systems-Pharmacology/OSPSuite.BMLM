@@ -4,7 +4,12 @@
 \alias{customizeLegend}
 \title{Customize Legend for ggplot Objects}
 \usage{
-customizeLegend(plotObject, colorScalingVector)
+customizeLegend(
+  plotObject,
+  colorScalingVector,
+  showLegends = TRUE,
+  aesthetics = c("color", "fill", "shape", "linetype")
+)
 }
 \arguments{
 \item{plotObject}{A ggplot object to which the legend will be added.}

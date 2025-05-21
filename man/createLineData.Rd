@@ -4,7 +4,7 @@
 \alias{createLineData}
 \title{Create Line Data for Hyperparameters}
 \usage{
-createLineData(hyperParameter, xScale)
+createLineData(hyperParameter, xScale, dtValues = NULL)
 }
 \arguments{
 \item{hyperParameter}{A data.table containing hyperparameter information.}

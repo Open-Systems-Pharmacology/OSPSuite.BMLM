@@ -251,11 +251,10 @@ setlogTruncationOffset <- function(dtPrior,dtStartValues,
                              ))]
     dtGroup[, pUB := do.call(paste0("p", dtGroup$hyperDistribution[1]),
                              c(
-                               list(q = dtGroup$maxValue.indValues[1], log = FALSE,
-                                    lower.tail = FALSE), paramList
+                               list(q = dtGroup$maxValue.indValues[1], log = FALSE), paramList
                              ))]
 
-    dtGroup[, logTruncationOffset := log(1- (pUB + pLB))]
+    dtGroup[, logTruncationOffset := log(pUB - pLB)]
 
     # Combine results
     dtHyperParameter <- rbind(dtHyperParameter,
@@ -300,7 +299,7 @@ getLikelihoodForIndividualGroup <-
     # get Loglikelihood of distribution
     logLikelihood <-
       do.call(paste0("d", tmp$hyperDistribution[1]), c(list(x = indGroup$value, log = TRUE), paramList)) -
-      tmp$logTruncationOffset[1]
+      length(indGroup$value)*tmp$logTruncationOffset[1]
 
     return(sum(logLikelihood))
   }

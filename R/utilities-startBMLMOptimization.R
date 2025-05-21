@@ -30,18 +30,19 @@ optimizeParameters <-
            failValue,
            ...) {
 
-    # Create the optim environment
-    optimEnv <- initializeOptimEnv(dtList = dtList,
-                                   failValue = failValue,
-                                   bestValue = dtList$bestValue,
-                                   NAcounter = dtList$NAcounter,
-                                   iteration = dtList$iteration)
-
     initialValues <- getParams(
       dtPrior = dtList$prior,
       dtStartValues = dtList$startValues,
       optimizationGroup = ifelse (withInternalOptimization, 'external', 'both')
     )
+
+    # Create the optim environment
+    optimEnv <- initializeOptimEnv(dtList = dtList,
+                                   failValue = failValue,
+                                   bestValue = dtList$bestValue,
+                                   NAcounter = dtList$NAcounter,
+                                   iteration = dtList$iteration,
+                                   params = initialValues)
 
     # Run optimization
     result <- optim(
@@ -108,19 +109,28 @@ evaluateInitialValues <- function(dtList,
     dtStartValues = dtList$startValues,
     dtRes = rbindlist(optimEnv$dtResList)
   )
-
   logAndPrintOptimization(c('\n','Initial loglikelihood:'),outputDir = outputDir,quiet = FALSE,asNew = FALSE)
   logAndPrintOptimization(paste(paste0(names(loglikelihoods),': ',signif(loglikelihoods,3)),collapse = ', '),
               outputDir = outputDir,quiet = FALSE,asNew = FALSE)
 
   analyseInitalSimulationFailures(dtList, optimEnv, loglikelihoods, outputDir)
 
+  if (any(!is.finite(dtList$prior$logLikelihood))){
+    logAndPrintOptimization('Priors with likelihood 0:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+    logAndPrintOptimization(utils::capture.output(print(dtList$prior[!is.finite(logLikelihood),
+                                                                     c('name','hyperParameter','categoricCovariate')])),
+                            outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+
+
+  }
+
+
   if (!file.exists(file = file.path(outputDir, "optimStatus.RDS"))){
 
     optimStatus <- updateOptimStatus(dtPrior = dtList$prior,
                                      dtStartValues = dtList$startValues,
                                      optimEnv)
-    currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv)
+    currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
 
     if (is.finite(currentValue)){
       optimStatus[["loglikelihoods"]] <- loglikelihoods
@@ -175,7 +185,6 @@ analyseInitalSimulationFailures <- function(dtList, optimEnv, loglikelihoods, ou
       logAndPrintOptimization(utils::capture.output(print(dtResUpdated)), outputDir = outputDir, quiet = FALSE, asNew = FALSE)
     }
   }
-
   return(invisible())
 }
 
@@ -196,7 +205,8 @@ initializeOptimEnv <- function(dtList,
                                failValue = Inf,
                                bestValue = Inf,
                                NAcounter = 0,
-                               iteration = 0) {
+                               iteration = 0,
+                               params = c()) {
   optimEnv <- new.env()
 
   optimEnv$iteration <- iteration
@@ -206,6 +216,7 @@ initializeOptimEnv <- function(dtList,
   optimEnv$NAcounter <- NAcounter
   optimEnv$dtResList <- list()
   optimEnv$scenarioResults <- list()
+  optimEnv$currentParams <- params
 
   return(optimEnv)
 }
@@ -243,6 +254,8 @@ createObjectiveFunction <-
     return(function(params) {
 
     optimEnv$iteration <- optimEnv$iteration + 1
+    optimEnv$currentParams <- params
+
     tryCatch({
       dtList <- setParameterToTables(dtList = dtList, params = params)
       optimStatus <-
@@ -258,10 +271,9 @@ createObjectiveFunction <-
         dtList = dtList,
         simulationRunOptions = simulationRunOptions
       )
-
       # Internal optimization
       if (withInternalOptimization){
-        resultInternal <- runInternalOptimization(dtList, optimEnv)
+        resultInternal <- runInternalOptimization(dtList, optimEnv,outputDir)
 
         #Update status and log likelihoods
         dtList <- setParameterToTables(
@@ -281,7 +293,7 @@ createObjectiveFunction <-
       )
       optimStatus[["loglikelihoods"]] <- loglikelihoods
 
-      currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv)
+      currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
 
       # Save status if enough time has passed
       saveOptimStatusIfNeeded(optimStatus, optimEnv, outputDir, lastStatusSavingIntervalInSecs)
@@ -317,7 +329,7 @@ createObjectiveFunction <-
 #'          evaluates the log likelihood to determine the best fit.
 #'
 #' @keywords internal
-runInternalOptimization <- function(dtList, optimEnv) {
+runInternalOptimization <- function(dtList, optimEnv,outputDir) {
   initialValuesInternal <-
     getParams(
       dtPrior = dtList$prior,
@@ -336,7 +348,7 @@ runInternalOptimization <- function(dtList, optimEnv) {
           dtStartValues = dtList$startValues,
           dtRes = rbindlist(optimEnv$dtResList)
         )
-      return(evaluateLogLikelihood(loglikelihoods, optimEnv))
+      return(evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir))
     },
     method = "Nelder-Mead"
   )
@@ -370,17 +382,29 @@ updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
 #'
 #' @param loglikelihoods A vector of log likelihood values.
 #' @param optimEnv The optimization environment containing current state variables.
+#' @param outputDir A character string representing the path to the output directory.
 #'
 #' @return A numeric value representing the current evaluation of the objective function.
 #' @keywords internal
-evaluateLogLikelihood <- function(loglikelihoods, optimEnv) {
+evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
   if (is.null(loglikelihoods) || length(loglikelihoods) < 3) {
     stop('strange loglikelihood')
   }
-
   if (any(is.na(loglikelihoods))) {
-    if (optimEnv$iteration == 1) stop('First likelihood evaluation must not fail')
     optimEnv$NAcounter <- optimEnv$NAcounter + 1
+    fileFailedValues <- file.path(outputDir,'failedValues.RDS')
+    if (file.exists(fileFailedValues)){
+      failedValues <- readRDS(fileFailedValues)
+    } else {
+      failedValues <- data.table()
+    }
+    failedValues <- rbind(failedValues,
+      cbind(data.table(iteration = optimEnv$iteration),
+           as.data.table(as.list(optimEnv$currentParams))
+      ))
+    saveRDS(failedValues,fileFailedValues)
+    if (optimEnv$iteration == 1) stop('First likelihood evaluation must not fail')
+
     return(optimEnv$failValue)
   } else {
     return(min(-1 * sum(loglikelihoods),optimEnv$failValue))

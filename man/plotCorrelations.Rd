@@ -12,8 +12,7 @@ plotCorrelations(
   statusToShow = c("best", "current", "start"),
   scenarioList,
   corCut = 0.5,
-  pValueCut = 0.1,
-  nPlotsPopulation = 12
+  pValueCut = 0.1
 )
 }
 \arguments{

@@ -9,7 +9,8 @@ initializeOptimEnv(
   failValue = Inf,
   bestValue = Inf,
   NAcounter = 0,
-  iteration = 0
+  iteration = 0,
+  params = c()
 )
 }
 \arguments{

@@ -1,0 +1,98 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\documentclass[
+]{article}
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{graphicx}
+\makeatletter
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{% scales image to fit in text height/width
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi% select the smaller of both
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+% Set default figure placement to htbp
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Loglikelihood},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Loglikelihood}
+\author{}
+\date{\vspace{-2.5em}2025-04-16}
+
+\begin{document}
+\maketitle
+
+\subsection{Example data:}\label{example-data}
+
+\pandocbounded{\includegraphics[keepaspectratio]{test_truncated_files/figure-latex/unnamed-chunk-2-1.pdf}}
+
+\[ \text{logLikelihood} = \sum_i{log(d(y_i,M,S))} \]
+
+\[D0 = \int_{yMin}^{yMax}{d(y,M,S)dy}\]
+
+\[ \text{logLikelihood}_{truncated} = \sum{log(d(y)/D0)} = \sum{log(d(y))} - N*log(D0)  \]
+
+\pandocbounded{\includegraphics[keepaspectratio]{test_truncated_files/figure-latex/unnamed-chunk-3-1.pdf}}
+
+\subsection{Optimization of
+Loglikelihood}\label{optimization-of-loglikelihood}
+
+\pandocbounded{\includegraphics[keepaspectratio]{test_truncated_files/figure-latex/unnamed-chunk-6-1.pdf}}
+
+\subsection{Interprete Limits as
+Prior}\label{interprete-limits-as-prior}
+
+\[\text{logLikelihood} = \sum_i{log(d(y_i,M,S))} + \sum_i{log(d_{prior}(y_i,yMin,yMax))}  \]
+\pandocbounded{\includegraphics[keepaspectratio]{test_truncated_files/figure-latex/unnamed-chunk-7-1.pdf}}
+
+\pandocbounded{\includegraphics[keepaspectratio]{test_truncated_files/figure-latex/unnamed-chunk-10-1.pdf}}
+
+\end{document}

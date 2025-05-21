@@ -290,7 +290,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     dtDefinition[valueMode == PARAMETERTYPE$individual],
       colNamesDefiniton = c('distribution','unit','useAsFactor'),
     dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
-    colNamesTable =  c('distribution of Individual Values','unit','useAsFactor'),
+    colNamesTable =  c('hyperDistribution','unit','useAsFactor'),
     tableName = 'Prior')
   checkConsistencyWithDefinition(
     dtDefinition[valueMode == PARAMETERTYPE$global],
@@ -298,10 +298,6 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     dtPrior[valueMode == PARAMETERTYPE$global],
     colNamesTable = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
     tableName = 'Prior')
-
-  setnames(dtPrior,
-           old = c('distribution of Individual Values','prior Distribution'),
-           new = c('hyperDistribution','distribution'))
 
   checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][['hyperDistribution']],
                          subset.of = c('flat', getAllDistributions()))
@@ -342,7 +338,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     ))
   }
 
-  if (any(dtPrior$probability < 0 | dtPrior$probability > 1)) {
+  if (any(dtPrior$probability == 0)) {
     stop(paste(
       "Start value outside distribution range, check",
       paste(dtPrior[probability < 0 | probability > 1]$name, collapse = ", ")

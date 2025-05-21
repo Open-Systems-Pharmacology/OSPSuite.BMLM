@@ -4,12 +4,14 @@
 \alias{evaluateLogLikelihood}
 \title{Evaluate Log Likelihood}
 \usage{
-evaluateLogLikelihood(loglikelihoods, optimEnv)
+evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
 }
 \arguments{
 \item{loglikelihoods}{A vector of log likelihood values.}
 
 \item{optimEnv}{The optimization environment containing current state variables.}
+
+\item{outputDir}{A character string representing the path to the output directory.}
 }
 \value{
 A numeric value representing the current evaluation of the objective function.

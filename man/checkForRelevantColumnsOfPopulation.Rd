@@ -11,7 +11,6 @@ checkForRelevantColumnsOfPopulation(
   corCut,
   pValueCut,
   method,
-  nPlotsPopulation,
   dtMappedPaths
 )
 }

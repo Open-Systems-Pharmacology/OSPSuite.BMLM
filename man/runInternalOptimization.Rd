@@ -4,7 +4,7 @@
 \alias{runInternalOptimization}
 \title{Run Internal Optimization}
 \usage{
-runInternalOptimization(dtList, optimEnv)
+runInternalOptimization(dtList, optimEnv, outputDir)
 }
 \arguments{
 \item{dtList}{A list containing data tables relevant for the optimization process.}

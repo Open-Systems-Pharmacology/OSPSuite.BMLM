@@ -491,7 +491,7 @@ BMLMOptimization <-  R6::R6Class(
         ...
       )
 
-      print(plotList)
+      print(plotList[[1]])
       return(invisible(plotList))
 
     },

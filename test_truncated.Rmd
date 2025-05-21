@@ -1,0 +1,675 @@
+---
+title: "Loglikelihood"
+output:
+  html_document:
+    df_print: paged
+date: "2025-04-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+library(ggplot2)
+library(data.table)
+library(tidyr)
+library(ospsuite.bmlm)
+
+setDefaults() 
+theme_update(strip.background = element_blank())
+
+```
+
+## Example data:
+
+```{r}
+M0 = 0
+S0 = 1
+
+y = qnorm(seq(0.05,0.95,by = .05),mean = M0,sd = S0)
+
+M0 = mean(y)
+S0 = sd(y)
+
+yLimits = qnorm(c(0.01,0.99),mean = M0,sd = S0)
+
+D0 = dist(pnorm(q = yLimits,
+                mean = M0,
+                sd = S0))[1]
+```
+
+
+```{r}
+
+dtEx = data.table(y = y,
+                  d = dnorm(y, M0, S0),
+                  dsc = dnorm(y, M0, S0)/D0,
+                  p = pnorm(y, M0, S0))
+
+scf <- max(dtEx$dsc)
+
+ggplot(dtEx,mapping = aes(x = y)) +
+  geom_line(aes(y = d, color = "Density")) +
+  geom_line(aes(y = dsc, color = "Scaled Density")) +
+  geom_line(aes(y = p*scf, color = "Cumulative Probability")) +
+  geom_point(aes(y = d)) +
+  geom_point(aes(y = p*scf)) +
+  geom_vline(xintercept = M0, linetype = "dashed") +
+  geom_hline(yintercept = 0.5*scf, linetype = "dashed") +
+  geom_vline(xintercept = yLimits, linetype = "dotted") +
+  scale_color_manual(values = c("Density" = "blue", "Scaled Density" = "red", "Cumulative Probability" = "limegreen")) +
+  scale_y_continuous(
+    name = "Density d(y,M,S)",
+    sec.axis = sec_axis(~ ./scf, name = "Cumulated Probability")
+  ) +
+  labs(
+    title = "Example data",
+    x = "y",
+    y = "Density d(y,M,S)",
+    caption = paste0("Mean = ",round(M0,2),", Standard Deviation = ", round(S0,3),
+                     "\nLimits = ",paste(round(yLimits,2),collapse  = '-'))
+  )
+
+```
+
+$$ \text{logLikelihood} = \sum_i{log(d(y_i,M,S))} $$
+
+$$D0 = \int_{yMin}^{yMax}{d(y,M,S)dy}$$
+
+$$ \text{logLikelihood}_{truncated} = \sum{log(d(y)/D0)} = \sum{log(d(y))} - N*log(D0)  $$
+
+## sensitivity of Mean and SD on loglikelihood
+
+```{r}
+dt <- data.table()
+
+for (M in seq(yLimits[1],yLimits[2],length.out = 11)){
+  for (S in c(1/2,1,2)*S0){
+    
+    dt <- rbind(dt,
+                data.table(
+                  M = M,
+                  S = S,
+                  pLB = pnorm(q = yLimits[1],mean = M,sd = S),
+                  pUB = pnorm(q = yLimits[2],mean = M,sd = S),
+                  logLikelihood = sum(dnorm(x = y,mean = M,sd = S,log = TRUE))
+                )
+    )
+  }
+}
+
+dt[,D0 := (pUB -  pLB)]
+dt[,logD0 := log(D0)]
+dt[,logLikelihood_truncated := logLikelihood - length(y)*logD0]
+dt[,diff := logLikelihood - logLikelihood_truncated]
+
+dtMelted <- melt(dt, id.vars = c("M", "S"), measure.vars = c("logLikelihood", "D0", "logLikelihood_truncated"),
+                 variable.name = "Metric", value.name = "Value")
+dtMelted[,Stext := paste(round(S/S0,1), '* sd(y)')]
+
+ggplot(dtMelted, aes(x = M, y = Value, color = as.factor(Stext), group = Stext)) +
+  geom_line() +
+  facet_wrap(~ Metric, scales = "free") +
+  labs(x = 'Mean',
+       y = "Value",
+       color = "SD") +
+  geom_vline(xintercept = yLimits) +
+  theme_minimal() +
+  theme(legend.position = 'top')
+
+dtMelted2 <- melt(dt, id.vars = c("M", "S"), measure.vars = c( "D0", 'pUB','pLB'),
+                  variable.name = "Metric", value.name = "Value")
+dtMelted2[,Stext := paste(round(S/S0,1), '* sd(y)')]
+
+ggplot(dtMelted2, aes(x = M, y = Value, color = as.factor(Metric), group = Metric)) +
+  geom_line() +
+  facet_wrap(~ Stext, scales = "free") +
+  labs(x = 'Mean',
+       y = "Value",
+       color = "Metric") +
+  geom_vline(xintercept = yLimits) +
+  theme_minimal() +
+  theme(legend.position = 'top')
+
+
+```
+
+# Example wit lognormal
+
+```{r}
+M0L = 0
+S0L = 1
+
+yL = qlnorm(seq(0.05,0.95,by = .05),meanlog = M0L,sdlog = S0L)
+
+M0L = log(geomean(yL))
+S0L = log(geosd(yL))
+
+yLimitsL = qlnorm(c(0.01,0.99),meanlog = M0L,sdlog = S0L)
+
+D0L = dist(plnorm(q = yLimitsL,
+                  meanlog = M0L,
+                  sdlog =  S0L))[1]
+```
+
+
+```{r}
+
+yLall = c(yLimitsL,yL)
+dtEx = data.table(y = yLall,
+                  d = dlnorm(yLall, M0L, S0L),
+                  dsc = dlnorm(yLall, M0L, S0L)/D0L,
+                  p = plnorm(yLall, M0L, S0L))
+
+scf <- max(dtEx$dsc)
+
+ggplot(dtEx,mapping = aes(x = y)) +
+  geom_line(aes(y = d, color = "Density")) +
+  geom_line(aes(y = dsc, color = "Truncated Density")) +
+  geom_line(aes(y = p*scf, color = "Cumulative Probability")) +
+  geom_point(aes(y = d)) +
+  geom_point(aes(y = p*scf)) +
+  geom_vline(xintercept = exp(M0L), linetype = "dashed") +
+  geom_hline(yintercept = 0.5*scf, linetype = "dashed") +
+  geom_vline(xintercept = yLimitsL, linetype = "dotted") +
+  scale_color_manual(values = c("Density" = "blue", "Truncated Density" = "red", "Cumulative Probability" = "limegreen")) +
+  scale_y_continuous(
+    name = "Density d(y,M,S)",
+    sec.axis = sec_axis(~ ./scf, name = "Cumulated Probability")
+  ) +
+  labs(
+    title = "Example data",
+    x = "y",
+    caption = paste0("Geomean = ", round(exp(M0L), 2), ", Geo sd = ", round(exp(S0L), 3),
+                     "\nLimits = ", paste(round(yLimitsL, 2), collapse = '-'))
+  ) +
+  theme(legend.title = element_blank()) +
+  scale_x_log10() 
+
+```
+
+$$ \text{logLikelihood} = \sum_i{log(d(y_i,M,S))} $$
+
+$$D0 = \int_{yMin}^{yMax}{d(y,M,S)dy} = cum.p(yMax) - cum.p(yMin)$$
+
+$$ \text{logLikelihood}_{truncated} = \sum{log(d(y_i)/D0)} = \sum{log(d(y_i))} - N*log(D0)  $$
+
+
+
+## sensitivity of Mean and SD on loglikelihood
+
+```{r}
+dt <- data.table()
+
+for (M in exp(seq(log(yLimitsL[1]),log(yLimitsL[2]),length.out = 11))){
+  for (S in c(1/2,1,2)*S0L){
+    
+    dt <- rbind(dt,
+                data.table(
+                  M = M,
+                  S = S,
+                  pLB = plnorm(q = yLimitsL[1],meanlog = log(M),sdlog  = S),
+                  pUB = plnorm(q = yLimitsL[2],meanlog  = log(M),sdlog =  S),
+                  logLikelihood = sum(dlnorm(x = yL,meanlog =  log(M),sdlog = S,log = TRUE))
+                )
+    )
+  }
+}
+
+dt[,D0 := (pUB -  pLB)]
+dt[,logD0 := log(D0)]
+dt[,logLikelihood_truncated := logLikelihood - length(y)*logD0]
+dt[,diff := logLikelihood - logLikelihood_truncated]
+
+dtMelted <- melt(dt, id.vars = c("M", "S"), measure.vars = c("logLikelihood", "D0", "logLikelihood_truncated"),
+                 variable.name = "Metric", value.name = "Value")
+dtMelted[,Stext := paste(round(S/S0L,1), '* geo sd(y)')]
+
+ggplot(dtMelted, aes(x = M, y = Value, color = as.factor(Stext), group = Stext)) +
+  geom_line() +
+  facet_wrap(~ Metric, scales = "free") +
+  labs(x = 'geo mean',
+       y = "value",
+       color = "SD") +
+  geom_vline(xintercept = yLimitsL) +
+  theme_minimal() +
+  theme(legend.position = 'top') +
+  scale_x_log10()
+
+
+dtMelted2 <- melt(dt, id.vars = c("M", "S"), measure.vars = c( "D0", 'pUB','pLB'),
+                  variable.name = "Metric", value.name = "Value")
+dtMelted2[,Stext := paste(round(S/S0,1), '* sd(y)')]
+
+ggplot(dtMelted2, aes(x = M, y = Value, color = as.factor(Metric), group = Metric)) +
+  geom_line() +
+  facet_wrap(~ Stext, scales = "free") +
+  labs(x = 'geo mean',
+       y = "Value",
+       color = "Metric") +
+  geom_vline(xintercept = yLimitsL) +
+  theme_minimal() +
+  theme(legend.position = 'top') +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+## Optimization objective function: Loglikelihood_truncated
+
+```{r}
+# Define the loglikelihood function for truncated distributions
+logLikelihoodTruncated <- function(params, y, yLimits) {
+  M = params[1]
+  S = params[2]
+  
+  # Calculate probabilities for the limits
+  pLB = pnorm(q = yLimits[1], mean = M, sd = S)
+  pUB = pnorm(q = yLimits[2], mean = M, sd = S)
+  
+  # Calculate density and normalization constant D0
+  d = dnorm(x = y, mean = M, sd = S)
+  D0 = pUB - pLB
+  
+  # Calculate loglikelihood
+  logLikelihood = sum(log(d)) - length(y) * log(D0)
+  
+  if (!is.finite(logLikelihood)) logLikelihood <- -1e10
+  
+  return(-logLikelihood)  # Return negative for minimization
+}
+```
+
+
+```{r}
+# Initial parameter estimates
+initialParams <- c(M0, S0)
+
+
+dtOpt <- data.table()
+
+for (l in exp(seq(log(0.0001),log(0.04),length.out = 20))){
+  
+  yLimits_opt = qnorm(c(l,1-l))
+  
+  
+  # Run optimization
+  optim_result <- optim(par = initialParams, 
+                        fn = logLikelihoodTruncated, 
+                        y = y, 
+                        yLimits = yLimits_opt, 
+                        method = "BFGS")
+  
+  dtOpt <- rbind(dtOpt,
+                 data.table( yMin = yLimits_opt[1],
+                             M_optimized = optim_result$par[1],
+                             SD_optimized = optim_result$par[2],
+                             objective_value = optim_result$value,
+                             D0 = dist(pnorm(q = yLimits_opt,
+                                             mean = optim_result$par[1],
+                                             sd = optim_result$par[2]))[1]
+                 )
+  )
+}
+```
+
+
+```{r}
+
+dtOptMelted <- melt(dtOpt, id.vars = c("yMin"), measure.vars = c("M_optimized", "SD_optimized", "objective_value","D0"),
+                    variable.name = "Metric", value.name = "Value")
+
+
+ggplot(dtOptMelted,mapping = aes(x = yMin, y = Value)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(vars(Metric),ncol = 1, scales = 'free') +
+  geom_vline(xintercept = min(y))
+
+```
+
+## Interprete Limits as Prior
+
+$$\text{logLikelihood_with_prior} = \sum_i{log(d(y_i,M,S))} + \sum_i{log(d_{prior}(y_i,yMin,yMax))}  $$
+```{r}
+
+y2 = sort(c(-2.5,yLimits,yLimits[2]*1.001,2.5,y))
+
+ggplot(mapping = aes(x = y, y = dnorm(y,M0,S0))) +
+  geom_line() +
+  geom_point() +
+  geom_vline(xintercept = M0) +
+  geom_vline(xintercept = yLimits) +
+  geom_step(mapping = aes(x = y2, y = dunif(y2,min = yLimits[1],max = yLimits[2])), color = 'red') +
+  labs(
+    title = "Example data",
+    x = "y",
+    y = "Density d(y,M,S)",
+    caption = paste0("Mean = ",round(M0,2),", Standard Deviation = ", round(S0,3),
+                     "\nLimits = ",paste(round(yLimits,2),collapse  = '-'))
+  )
+
+```
+
+## Optimization objective function: logLikelihood_with_prior 
+
+```{r}
+# Define the loglikelihood function for truncated distributions
+logLikelihoodPrior <- function(params, y, yLimits) {
+  M = params[1]
+  S = params[2]
+  
+  
+  # Calculate density and normalization constant D0
+  d = dnorm(x = y, mean = M, sd = S,log = TRUE)
+  dp = dunif(x = y, min = yLimits[1], max = yLimits[2],log = TRUE)
+  
+  # Calculate loglikelihood
+  logLikelihood = sum(d + dp)
+  
+  if (!is.finite(logLikelihood)) logLikelihood <- -1e10
+  
+  return(-logLikelihood)  # Return negative for minimization
+}
+```
+
+
+```{r}
+# Initial parameter estimates
+initialParams <- c(M0, S0)
+
+
+dtOpt2 <- data.table()
+
+for (l in exp(seq(log(0.0001),log(0.04),length.out = 20))){
+  
+  yLimits_opt = qnorm(c(l,1-l))
+  
+  
+  # Run optimization
+  optim_result <- optim(par = initialParams, 
+                        fn = logLikelihoodPrior, 
+                        y = y, 
+                        yLimits = yLimits_opt, 
+                        method = "BFGS")
+  
+  dtOpt2 <- rbind(dtOpt2,
+                  data.table( yMin = yLimits_opt[1],
+                              M_optimized = optim_result$par[1],
+                              SD_optimized = optim_result$par[2],
+                              objective_value = optim_result$value
+                  )
+  )
+}
+```
+
+```{r}
+
+dtOptMelted2 <- melt(dtOpt2, id.vars = c("yMin"), measure.vars = c("M_optimized", "SD_optimized", "objective_value"),
+                     variable.name = "Metric", value.name = "Value")
+
+
+ggplot(dtOptMelted2,mapping = aes(x = yMin, y = Value)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(vars(Metric),ncol = 1, scales = 'free') +
+  geom_vline(xintercept = min(y))
+
+```
+
+
+# bugfix BAY301
+
+
+```{r}
+load('testDist.Rdata')
+
+dtValues <- dtValues[status == "best"]
+dtValues <- dtValues[name == "a2AP_halflife"]
+
+hyperParameter <- hyperParameter[status == "best"]
+hyperParameter <- hyperParameter[name == "a2AP_halflife"]
+
+
+
+plotObject <- ggplot(data = dtValues) +
+  geom_point(mapping = aes(x = statusValue, y = ecdf)) +
+  labs(x = 'a2AP_halflife [days(s)]',
+       y = 'cumulative proportion')
+
+
+lineData <- ospsuite.bmlm:::createLineData(hyperParameter = hyperParameter,
+                                           xScale = 'linear')
+
+plotObject <- plotObject +
+  geom_line(data = lineData, aes(x = x, y = value, color = status, linetype = status), linewidth = 1)
+
+
+print(plotObject)
+
+knitr::kable(hyperParameter[,c('hyperParameter','value','minValue','maxValue')])
+```
+
+
+### sensitivity of Mean and SD on loglikelihood
+
+```{r}
+dt <- data.table()
+
+yLimitsB <- c(hyperParameter[hyperParameter == 'geomean']$minValue,
+              hyperParameter[hyperParameter == 'geomean']$maxValue)
+yB <- dtValues$statusValue
+
+for (M in exp(seq(log(yLimitsB[1]),log(yLimitsB[2]),length.out = 11))){
+  for (S in c(1.257,seq(hyperParameter[hyperParameter == 'geosd']$minValue,
+                hyperParameter[hyperParameter == 'geosd']$maxValue,
+                length.out = 5))){
+    
+    dt <- rbind(dt,
+                data.table(
+                  M = M,
+                  S = S,
+                  pLB = plnorm_geomean(q = yLimitsB[1],geomean = M,geosd = S),
+                  pUB = plnorm_geomean(q = yLimitsB[2],geomean = M,geosd = S),
+                  logLikelihood = sum(dlnorm_geomean(x = yB,geomean = M,geosd = S,log = TRUE))
+                )
+    )
+  }
+}
+
+dt[,D0 := (pUB -  pLB)]
+dt[,logD0 := log(D0)]
+dt[,logLikelihood_truncated := logLikelihood - length(yB)*logD0]
+dt[,logD0TimesN := - length(yB)*log(D0)]
+dt[,diff := logLikelihood - logLikelihood_truncated]
+
+dtMelted <- melt(dt, id.vars = c("M", "S"), measure.vars = c("logLikelihood", "logD0TimesN", "logLikelihood_truncated"),
+                 variable.name = "Metric", value.name = "Value")
+dtMelted[,Stext := round(S,1)]
+
+ggplot(dtMelted, aes(x = M, y = Value, color = as.factor(Stext), group = Stext)) +
+  geom_line() +
+  facet_wrap(~ Metric, scales = "free") +
+  labs(x = 'geo mean',
+       y = "Value",
+       color = "geo sd") +
+  geom_vline(xintercept = yLimitsB) +
+  theme_minimal() +
+  theme(legend.position = 'top')
+
+dtMelted2 <- melt(dt, id.vars = c("M", "S"), measure.vars = c("logLikelihood", "logD0TimesN", "logLikelihood_truncated"),
+                  variable.name = "Metric", value.name = "Value")
+dtMelted2[,Stext := round(S,1)]
+
+
+ggplot(dtMelted2, aes(x = M, y = Value, color = as.factor(Metric), group = Metric)) +
+  geom_line() +
+  facet_wrap(~ Stext, scales = "free") +
+  labs(x = 'geo mean',
+       y = "Value",
+       color = "Metric") +
+  geom_vline(xintercept = yLimitsB) +
+  theme_minimal() +
+  theme(legend.position = 'top')
+
+```
+```{r}
+
+dtD <- data.table()
+
+for (M in c(yLimitsB[1],2.72,3.5,yLimitsB[2])){
+  for (S in c(1.1 ,1.257,2,4)){
+    
+    
+    yi = qlnorm_geomean(c(0.01,seq(0.05,0.95,by = .05),0.99),geomean = M,geosd = S)
+
+    dtD = rbind(dtD,
+                data.table(y = yi,
+                  d = dlnorm_geomean(yi, M, S),
+                  dsc = dlnorm_geomean(yi, M, S)/
+                    (plnorm_geomean(yLimitsB[2],M,S) -
+                       plnorm_geomean(yLimitsB[1],M,S)),
+                  geomean = M,
+                  geosd = S)
+    )
+
+  }
+}
+
+ggplot(dtD,mapping = aes(x = y)) +
+  geom_line(aes(y = d, color = "Density")) +
+  geom_line(aes(y = dsc, color = "Truncated Density")) +
+  geom_point(aes(y = d)) +
+  geom_vline(xintercept = yLimitsB) +
+  scale_color_manual(values = c("Density" = "blue", "Truncated Density" = "red")) +
+  scale_y_continuous(
+    name = "Density d(y,M,S)",
+    sec.axis = sec_axis(~ ./1, name = "GeoSD",breaks = NULL)
+  ) +
+  labs(
+    x = "y",
+  ) + 
+  facet_grid(geosd ~ geomean) +
+  theme(legend.title = element_blank(),
+        legend.position = 'top',legend.direction = 'horizontal') +
+  scale_x_log10(sec.axis = sec_axis(~ ./1, name = "GeoMean",breaks = NULL)) 
+```
+
+## timeprofiles sensitivity
+
+```{r}
+load(file = "H:/SPM_MultiLevelParameterIdentification/Examples/Internal/PBPK_BAY301/Scripts/ReportingFramework/tmp.Rdata")
+
+ggplot(dtLog,aes(x = value, y = logTimeProfile)) +
+  geom_line() +
+  geom_point(aes(fill = as.factor(status=='best'))) +
+  facet_wrap(vars(individualId), scales = 'free') +
+  theme(legend.position = 'none')
+
+
+
+
+```
+```{r}
+logLikelihoodTruncatedLog <- function(params, y, yLimits) {
+  M = params[1]
+  S = params[2]
+  
+  if (M < 2) return(1e10)
+  if (S > 4) return(1e10)
+  # Calculate probabilities for the limits
+  pLB = plnorm_geomean(q = yLimits[1], geomean =  M, geosd = S)
+  pUB = plnorm_geomean(q = yLimits[2], geomean =  M, geosd = S)
+  
+  # Calculate density and normalization constant D0
+  d = dlnorm_geomean(x = y, geomean = M, geosd = S)
+  D0 = pUB - pLB
+  
+  # Calculate loglikelihood
+  logLikelihood = sum(log(d)) - length(y) * log(D0)
+  
+  if (!is.finite(logLikelihood)) logLikelihood <- -1e10
+  
+  return(-logLikelihood)  # Return negative for minimization
+}
+```
+
+
+```{r}
+dtLog[,minLL := min(logTimeProfile), by = individualId]
+dtLog[,maxLL := max(logTimeProfile), by = individualId]
+
+
+initialParameters <- c(hyperParameter[hyperParameter == 'geomean']$value,
+                       hyperParameter[hyperParameter == 'geosd']$value)
+
+optim_result <- optim(par = initialParameters, 
+                      fn = logLikelihoodTruncatedLog, 
+                      y = dtValues$statusValue, 
+                      yLimits = yLimitsB, 
+                      method = "BFGS")
+
+optim_result
+
+```
+```{r}
+logLikelihoodTruncatedLogV <- function(params, dtLog, yLimits) {
+  M = params[1]
+  S = params[2]
+  y = params[3:25]
+  
+  if (M < 2) return(1e10)
+  if (S > 4) return(1e10)
+  # Calculate probabilities for the limits
+  pLB = plnorm_geomean(q = yLimits[1], geomean =  M, geosd = S)
+  pUB = plnorm_geomean(q = yLimits[2], geomean =  M, geosd = S)
+  
+  # Calculate density and normalization constant D0
+  d = dlnorm_geomean(x = y, geomean = M, geosd = S)
+  D0 = pUB - pLB
+  
+  # Calculate loglikelihood
+  logLikelihood = sum(log(d)) - length(y) * log(D0)
+  
+  tmp <- merge(dtLog,
+               data.table(individualId = unique(dtLog$individualId),
+                          value0 = y))
+  
+  result <- tmp[, .(logTimeprofile = approx(x = value, y = logTimeProfile,xout = value0)$y), by = 'individualId'] %>%  unique() 
+  
+  logLikelihood <- logLikelihood + sum(result$logTimeprofile)
+  
+  if (!is.finite(logLikelihood)) logLikelihood <- -1e10
+  
+  return(-logLikelihood)  # Return negative for minimization
+}
+```
+
+```{r}
+y <- dtLog[status == 'best']$value
+
+initialParameters <- c(hyperParameter[hyperParameter == 'geomean']$value,
+                       hyperParameter[hyperParameter == 'geosd']$value,
+                                             sample(y,length(y),replace = FALSE))
+
+names(initialParameters) <- c('geomean','geosd',
+unique(dtLog$individualId))
+
+optim_result <- optim(par = initialParameters, 
+                      fn = logLikelihoodTruncatedLogV, 
+                      yLimits = yLimitsB, 
+                      dtLog = dtLog,
+                      method = "SANN",control = list(maxit = 100000))
+
+
+tmp <- merge(dtLog,
+             data.table(value_opt = optim_result$par[seq(3,25)],
+                  individualId = names(optim_result$par[seq(3,25)])),
+             by = 'individualId')
+
+ggplot(tmp,aes(x = value, y = logTimeProfile)) +
+  geom_line() +
+  geom_point(aes(fill = as.factor(status=='best'))) +
+  facet_wrap(vars(individualId), scales = 'free') +
+  theme(legend.position = 'none') +
+  geom_vline(aes(xintercept = value_opt))
+```
+

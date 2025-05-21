@@ -232,7 +232,6 @@ plotDistributions <- function(dtList,
 
   dtValues[, ecdf := seq_len(.N) / .N, by = c('status', 'label')]
 
-
   hyperParameter <- setlogTruncationOffset(dtPrior = plotData[valueMode == PARAMETERTYPE$hyperParameter]  %>%
                                              merge(dtList$prior[,c("name","categoricCovariate",'hyperDistribution')] %>%
                                                      unique() ,
@@ -252,6 +251,7 @@ plotDistributions <- function(dtList,
                                              'maxValue',
                                              'label')
   )
+
   # Determine unique facets
   uniqueFacets <- unique(dtValues$label)
   totalFacets <- length(uniqueFacets)
@@ -273,7 +273,8 @@ plotDistributions <- function(dtList,
     dtValuesSubset <- dtValues[label %in% facetsToPlot]
 
     lineData <- createLineData(hyperParameter = hyperParameter[label %in% facetsToPlot],
-                               xScale = xScale)
+                               xScale = xScale,
+                               dtValues = dtValuesSubset)
 
     # Create the plot for the current subset
     plotObject <- ggplot(data = dtValuesSubset) +
@@ -301,8 +302,22 @@ plotDistributions <- function(dtList,
     plotList[[plotName]] <- plotObject
   }
 
+  dtPrior <- copy(dtList$prior)
+  dtPrior[, priorDescription := trimws(paste(distribution, ifelse(distribution == "flat", "",
+                                                                  paste0(
+                                                                    "(",
+                                                                    ifelse(is.na(p1_type), "", paste0(p1_type, ": ", p1_value)),
+                                                                    ifelse(is.na(p2_type), "", paste0(' ',p2_type, ": ", p2_value)),
+                                                                    ifelse(is.na(p3_type), "", paste0(' ',p3_type, ": ", p3_value)), ")"
+                                                                  )
+  )))]
+
+  hyperParameter <- hyperParameter %>%
+    merge(dtPrior[,c('name', 'hyperParameter','categoricCovariate','priorDescription')],
+          by = c('name', 'hyperParameter','categoricCovariate'))
+
   for (dtHyper in split(hyperParameter, by = 'label')){
-    tmpHyper <- dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue')],
+    tmpHyper <- dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue','priorDescription')],
                        ... ~ status , value.var = 'value')
 
     tmpLog <- rbind(stats::setNames(lapply(unique(dtHyper$status), function(testStatus) {
@@ -832,7 +847,7 @@ preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
 #'
 #' @return A data.table containing the line data for hyperparameters.
 #' @keywords internal
-createLineData <- function(hyperParameter, xScale) {
+createLineData <- function(hyperParameter, xScale, dtValues = NULL) {
   lineData <- data.table()
 
   for (dtHyperPar in split(hyperParameter, by = c('label', 'status'))) {
@@ -871,23 +886,44 @@ createLineData <- function(hyperParameter, xScale) {
 #'
 #' @return A ggplot object with a customized legend.
 #' @keywords internal
-customizeLegend <- function(plotObject, colorScalingVector) {
+customizeLegend <- function(plotObject, colorScalingVector,
+                            showLegends = TRUE,
+                            aesthetics = c('color','fill','shape','linetype')) {
   legendTitleShape <- 'Individual Values'
-  legendTitleLine <- 'Cumulative Distribution'
+  legendTitleLine <- 'Distribution'
 
-  plotObject +
-    scale_linetype_manual(values = c('dotted', 'solid', 'twodash'),
-                          breaks = names(colorScalingVector)) +
-    scale_shape_manual(values = c('square filled', 'triangle filled', 'circle filled'),
-                       breaks = names(colorScalingVector)) +
+  if ('linetype' %in% aesthetics){
+    plotObject <- plotObject +
+      scale_linetype_manual(values = c('dotted', 'solid', 'twodash'),
+                            breaks = names(colorScalingVector))
+  }
+  if ('shape' %in% aesthetics){
+    plotObject <- plotObject +
+      scale_shape_manual(values = c('square filled', 'triangle filled', 'circle filled'),
+                       breaks = names(colorScalingVector))
+  }
+  if ('color' %in% aesthetics){
+    plotObject <- plotObject +
     scale_color_manual(values = colorScalingVector,
-                       breaks = names(colorScalingVector)) +
+                       breaks = names(colorScalingVector))
+  }
+  if ('fill' %in% aesthetics){
+    plotObject <- plotObject +
     scale_fill_manual(values = colorScalingVector,
-                      breaks = names(colorScalingVector)) +
+                      breaks = names(colorScalingVector))
+  }
+
+  if (showLegends){
+    plotObject <- plotObject +
     guides(shape = guide_legend(title = legendTitleShape, order = 1),
            fill = guide_legend(title = legendTitleShape, order = 1),
            color = guide_legend(title = legendTitleLine, order = 2),
            linetype = guide_legend(title = legendTitleLine, order = 2))
+  } else{
+    plotObject <- plotObject +
+      theme(legend.position = 'none')
+  }
+
 }
 #' Prepare Plot Data for Parameter Values
 #'

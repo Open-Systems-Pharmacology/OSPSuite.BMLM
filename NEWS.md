@@ -1,5 +1,8 @@
 # ospsuite.bmlm NEWS
 
+## [0.1.5] - 2024-02-24
+- Bug fix log likelihood
+- Save failed parameters
 
 ## [0.1.5] - 2024-02-24
 - Add function evaluateAtInitialValues, openLogfile
