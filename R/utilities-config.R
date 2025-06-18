@@ -214,16 +214,17 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
 
   dtOutputPathIds <- getOutputPathIds(projectConfiguration$plotsFile)
 
-  dtOutputMappings <- data.table::copy(snp$ParameterIdentifications$OutputMappings[[selectedPI]]) %>%
-    data.table::setDT() %>%
-    setHeadersToLowerCase()
-
-  if (is.null(dtOutputMappings)) {
+  if (is.null(snp$ParameterIdentifications$OutputMappings) ||
+      is.null(snp$ParameterIdentifications$OutputMappings[[selectedPI]])) {
     dtOutputMappings <- data.table(
       outputPathId = dtOutputPathIds$outputPathId,
       scaling = SCALING$log
     )
   } else {
+    dtOutputMappings <- data.table::copy(snp$ParameterIdentifications$OutputMappings[[selectedPI]]) %>%
+    data.table::setDT() %>%
+    setHeadersToLowerCase()
+
     dtOutputMappings[, path := .replaceModelPath(path), by = "path"]
     dtOutputMappings <- dtOutputMappings %>%
       setDT() %>%
