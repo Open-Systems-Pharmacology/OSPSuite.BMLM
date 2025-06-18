@@ -299,7 +299,7 @@ getLikelihoodForIndividualGroup <-
     # get Loglikelihood of distribution
     logLikelihood <-
       do.call(paste0("d", tmp$hyperDistribution[1]), c(list(x = indGroup$value, log = TRUE), paramList)) -
-      length(indGroup$value)*tmp$logTruncationOffset[1]
+      tmp$logTruncationOffset[1]
 
     return(sum(logLikelihood))
   }
