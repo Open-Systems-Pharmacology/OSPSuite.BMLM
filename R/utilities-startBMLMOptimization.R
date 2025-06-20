@@ -696,6 +696,8 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
     }
   }
 
+  # individual parameter
+  if (nrow(dtStartValues) == 0) return(invisible())
   individualIds <-
     scenario$population$getCovariateValues("ObservedIndividualId")
 

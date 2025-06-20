@@ -1,10 +1,10 @@
 # ospsuite.bmlm NEWS
 
-## [0.1.7] - 2025-02-24
-- Bug fix log likelihood calculation off cutoff parameter
+## [0.1.8] - 20-Jun-2025
+- Bug fixes for run with no individual parameters
 
-## [0.1.6] - 2025-02-24
-- Bug fix log likelihood
+## [0.1.7] - 18-Jun-2025
+- Bug fix log likelihood calculation off cutoff parameter
 
 ## [0.1.5] - 2025-02-24
 - Add function evaluateAtInitialValues, openLogfile

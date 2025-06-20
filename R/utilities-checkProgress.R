@@ -220,6 +220,10 @@ plotDistributions <- function(dtList,
 
   xScale <- tolower(match.arg(xScale))
 
+  if (nrow(dtList$startValues) == 0 ){
+    stop('No distributed parameters available')
+  }
+
   plotData <- preparePlotDataParameterValues(dtList = dtList,
                                              currentStatus = currentStatus,
                                              bestStatus = bestStatus)
@@ -318,7 +322,7 @@ plotDistributions <- function(dtList,
 
   for (dtHyper in split(hyperParameter, by = 'label')){
     tmpHyper <- dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue','priorDescription')],
-                       ... ~ status , value.var = 'value')
+                      ... ~ status , value.var = 'value')
 
     tmpLog <- rbind(stats::setNames(lapply(unique(dtHyper$status), function(testStatus) {
       getLikelihoodForIndividualGroup(copy(dtValues)[label == dtHyper$label[1] &
@@ -330,7 +334,7 @@ plotDistributions <- function(dtList,
 
     dtHyper[,truncationOffset := 1-exp(logTruncationOffset) ]
     tmpTrunc <-  dcast(dtHyper[,c('truncationOffset','status','minValue.indValues','maxValue.indValues')] %>% unique(),
-                              ... ~ status , value.var = 'truncationOffset')
+                       ... ~ status , value.var = 'truncationOffset')
     tmpTrunc[,hyperParameter := paste0('likelihood outside range (',minValue.indValues,'-',maxValue.indValues,')')]
     tmpTrunc[,minValue.indValues := NULL]
     tmpTrunc[,maxValue.indValues := NULL]
@@ -375,6 +379,10 @@ plotCorrelations <- function(dtList,
 
   statusToShow = match.arg(statusToShow)
 
+  if (nrow(dtList$startValues) == 0 ){
+    stop('No distributed parameters available')
+  }
+
   plotData <- preparePlotDataParameterValues(dtList =  dtList,
                                              currentStatus = statusList$current,
                                              bestStatus = statusList$best)
@@ -397,15 +405,15 @@ plotCorrelations <- function(dtList,
 
 
   plotList <- checkForRelevantColumnsOfPopulation(plotData = plotData,
-                                                    labels = labels,
-                                                    scenarioList = scenarioList,
-                                                    corCut = corCut,
-                                                    pValueCut = pValueCut,
-                                                    method = method,
-                                                    dtMappedPaths = dtList$mappedPaths)
+                                                  labels = labels,
+                                                  scenarioList = scenarioList,
+                                                  corCut = corCut,
+                                                  pValueCut = pValueCut,
+                                                  method = method,
+                                                  dtMappedPaths = dtList$mappedPaths)
 
   plotList <- c(list('correlation_fitparameter' = pm),
-              plotList)
+                plotList)
 
   return(invisible(plotList))
 }
@@ -660,6 +668,11 @@ getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Pr
 
   sheetName <- match.arg(sheetName)
 
+  if (sheetName == 'IndividualStartValues' & nrow(dtList$startValues) == 0){
+    warning('No individual start values available')
+    return(data.table())
+  }
+
   identifier <- switch(sheetName,
                        Prior = c("name", "hyperParameter", "categoricCovariate"),
                        IndividualStartValues = c("name", "individualId", "categoricCovariate")
@@ -698,19 +711,19 @@ getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Pr
 #' @return NULL This function does not return a value; it prints correlation plots directly if relevant columns are found.
 #' @keywords internal
 checkForRelevantColumnsOfPopulation <- function(plotData,
-                                           labels,
-                                       scenarioList,
-                                       corCut,
-                                       pValueCut,
-                                       method,
-                                       dtMappedPaths){
+                                                labels,
+                                                scenarioList,
+                                                corCut,
+                                                pValueCut,
+                                                method,
+                                                dtMappedPaths){
 
   dtPop <- preparePopulationForCorrelationCheck(scenarioList,dtMappedPaths)
 
   mergedData <- merge(plotData,
-                     dtPop,
-                     by.x = 'individualId',
-                     by.y = 'ObservedIndividualId')
+                      dtPop,
+                      by.x = 'individualId',
+                      by.y = 'ObservedIndividualId')
 
   # Loop through each label to find correlation
   plotList = list()
@@ -726,48 +739,48 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
                    new = c('label','popCol')) %>%
           dplyr::select(c('label','popCol'))
 
-      if (is.numeric(mergedData[[popCol]])) {
-        # Calculate correlation for numeric columns
-        correlationValue <-
-          cor(mergedData[[label]],
-              mergedData[[popCol]],
-              use = "complete.obs",
-              method = method)
-        maxCorrelation <- max(maxCorrelation,abs(correlationValue))
-        if (abs(correlationValue) > corCut){
-          plotList[[paste('cor',label,popCol,sep = '_')]] <-
-            ggplot(data = plotData,
-                   mapping = aes(y = label,x = popCol)) +
-            geom_point(fill = 'black',na.rm = TRUE) +
-            geom_smooth(method = 'lm',formula = y ~ x,na.rm = TRUE) +
-            labs(y = label,
-                 x = popCol,
-                 title = paste('Cor:',round(correlationValue,2)))
-        }
-      } else if (is.factor(mergedData[[popCol]])) {
-        kruskalTestResult <- kruskal.test(label ~ popCol, data = plotData)
-        if (!is.na(kruskalTestResult$p.value)){
-          minPvalue <- min(minPvalue,kruskalTestResult$p.value)
-          if (kruskalTestResult$p.value < pValueCut)
+        if (is.numeric(mergedData[[popCol]])) {
+          # Calculate correlation for numeric columns
+          correlationValue <-
+            cor(mergedData[[label]],
+                mergedData[[popCol]],
+                use = "complete.obs",
+                method = method)
+          maxCorrelation <- max(maxCorrelation,abs(correlationValue))
+          if (abs(correlationValue) > corCut){
             plotList[[paste('cor',label,popCol,sep = '_')]] <-
-              ospsuite.plots::plotBoxWhisker(data = plotData,
-                                             mapping = aes(y =label,x = popCol)) +
-              geom_jitter(fill = 'black',na.rm = TRUE) +
+              ggplot(data = plotData,
+                     mapping = aes(y = label,x = popCol)) +
+              geom_point(fill = 'black',na.rm = TRUE) +
+              geom_smooth(method = 'lm',formula = y ~ x,na.rm = TRUE) +
               labs(y = label,
                    x = popCol,
-                   title = paste('pValue:',signif(kruskalTestResult$p.value,2))) +
-              theme(axis.text.x = element_text(angle = 45,hjust = 1))
+                   title = paste('Cor:',round(correlationValue,2)))
+          }
+        } else if (is.factor(mergedData[[popCol]])) {
+          kruskalTestResult <- kruskal.test(label ~ popCol, data = plotData)
+          if (!is.na(kruskalTestResult$p.value)){
+            minPvalue <- min(minPvalue,kruskalTestResult$p.value)
+            if (kruskalTestResult$p.value < pValueCut)
+              plotList[[paste('cor',label,popCol,sep = '_')]] <-
+                ospsuite.plots::plotBoxWhisker(data = plotData,
+                                               mapping = aes(y =label,x = popCol)) +
+                geom_jitter(fill = 'black',na.rm = TRUE) +
+                labs(y = label,
+                     x = popCol,
+                     title = paste('pValue:',signif(kruskalTestResult$p.value,2))) +
+                theme(axis.text.x = element_text(angle = 45,hjust = 1))
 
+          }
         }
-      }
       }
     }
   }
 
   if (length(plotList) == 0){
     message(paste0('no correlated columns found in population.\n',
-                  'maximal Correlation: ',round(maxCorrelation,2), '(cut: ',corCut,')\n',
-                  'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',pValueCut,')'))
+                   'maximal Correlation: ',round(maxCorrelation,2), '(cut: ',corCut,')\n',
+                   'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',pValueCut,')'))
   }
 
   return(invisible(plotList))
@@ -833,7 +846,7 @@ preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
   }
 
   if (length(excludedFactors) > 1)
-  dtPop <- dplyr::select(!any_of(excludedFactors))
+    dtPop <- dplyr::select(!any_of(excludedFactors))
 
   return(dtPop)
 }
@@ -900,25 +913,25 @@ customizeLegend <- function(plotObject, colorScalingVector,
   if ('shape' %in% aesthetics){
     plotObject <- plotObject +
       scale_shape_manual(values = c('square filled', 'triangle filled', 'circle filled'),
-                       breaks = names(colorScalingVector))
+                         breaks = names(colorScalingVector))
   }
   if ('color' %in% aesthetics){
     plotObject <- plotObject +
-    scale_color_manual(values = colorScalingVector,
-                       breaks = names(colorScalingVector))
+      scale_color_manual(values = colorScalingVector,
+                         breaks = names(colorScalingVector))
   }
   if ('fill' %in% aesthetics){
     plotObject <- plotObject +
-    scale_fill_manual(values = colorScalingVector,
-                      breaks = names(colorScalingVector))
+      scale_fill_manual(values = colorScalingVector,
+                        breaks = names(colorScalingVector))
   }
 
   if (showLegends){
     plotObject <- plotObject +
-    guides(shape = guide_legend(title = legendTitleShape, order = 1),
-           fill = guide_legend(title = legendTitleShape, order = 1),
-           color = guide_legend(title = legendTitleLine, order = 2),
-           linetype = guide_legend(title = legendTitleLine, order = 2))
+      guides(shape = guide_legend(title = legendTitleShape, order = 1),
+             fill = guide_legend(title = legendTitleShape, order = 1),
+             color = guide_legend(title = legendTitleLine, order = 2),
+             linetype = guide_legend(title = legendTitleLine, order = 2))
   } else{
     plotObject <- plotObject +
       theme(legend.position = 'none')
@@ -938,7 +951,7 @@ customizeLegend <- function(plotObject, colorScalingVector,
 #' @keywords internal
 preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
   # startValue
-  plotData <- rbind(
+  plotData <-
     dtList$prior[, c(
       'id',
       'name',
@@ -950,19 +963,22 @@ preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
       'valueMode',
       'hyperParameter'
     )] %>%
-      dplyr::mutate(individualId = NA),
-    dtList$startValues[, c('id',
-                           'startValue',
-                           'name',
-                           'categoricCovariate',
-                           'minValue',
-                           'maxValue',
-                           'scaling',
-                           'individualId')] %>%
-      dplyr::mutate(valueMode = PARAMETERTYPE$individual,
-                    hyperParameter = '')
-  )
-
+    dplyr::mutate(individualId = NA)
+  if (nrow(dtList$startValues) > 0){
+    plotData <- rbind(plotData,
+                      dtList$startValues[, c('id',
+                                             'startValue',
+                                             'name',
+                                             'categoricCovariate',
+                                             'minValue',
+                                             'maxValue',
+                                             'scaling',
+                                             'individualId')] %>%
+                        dplyr::mutate(valueMode = PARAMETERTYPE$individual,
+                                      hyperParameter = '')
+    )
+  }
+  plotData <- copy(plotData)
   plotData[, startParam := plogis(
     transformToUnbounded(
       value = startValue,

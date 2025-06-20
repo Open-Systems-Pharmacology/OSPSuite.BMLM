@@ -132,7 +132,7 @@ exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList,r
     scenarioList = scenarioList)
 
   saveDataToWorkbook(wb = wb, sheetName = sheetName,
-                     dt = dtdd,
+                     dt = dtAdd,
                      templateSheet = "Template",
                      templateXlsx = "ModelParameters.xslx")
 

@@ -299,8 +299,9 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     colNamesTable = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
     tableName = 'Prior')
 
-  checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][['hyperDistribution']],
-                         subset.of = c('flat', getAllDistributions()))
+  if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter))
+    checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][['hyperDistribution']],
+                           subset.of = c('flat', getAllDistributions()))
 
   validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
                            valueColumns = c('hyperDistribution'),
@@ -437,9 +438,10 @@ validateAndLoadIndividualStartValues <-
     dtStartValues <- dtStartValues[individualId %in% unique(dataObserved$individualId)]
 
     # validate
+    if (nrow(dtStartValues) == 0) return(dtStartValues)
+
     checkmate::assertNames(tolower(dtStartValues$scaling), subset.of = unlist(SCALING))
     checkmate::assertLogical(as.logical(dtStartValues$useAsFactor), any.missing = FALSE)
-
     validateGroupConsistency(dt = dtStartValues,
                              valueColumns = c('minValue', 'maxValue','scaling','useAsFactor'),
                              groupingColumns = c('name','categoricCovariate'))
@@ -573,14 +575,22 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
     # initialize variable to avoid linter message
     scenarioName <- linkedParameters <- NULL
 
-    dtDefinition <-
-      rbind(dtPrior[valueMode %in% PARAMETERTYPE$global, c("name","unit", "useAsFactor")],
-            dtPrior[valueMode %in% PARAMETERTYPE$hyperParameter, c("name","unit")] %>%
-              unique() %>%
-              merge(dtStartValues[,c("name", "useAsFactor")] %>%  unique(),
-                    by = c("name")) %>%
-              unique()
-    )
+    if (any(dtPrior$valueMode == PARAMETERTYPE$global)){
+      dtDefinition <-
+        dtPrior[valueMode %in% PARAMETERTYPE$global, c("name","unit", "useAsFactor")]
+    }else {
+      dtDefinition <- data.table()
+    }
+    if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter)){
+      dtDefinition <-
+        rbind(dtDefinition,
+              dtPrior[valueMode %in% PARAMETERTYPE$hyperParameter, c("name","unit")] %>%
+                unique() %>%
+                merge(dtStartValues[,c("name", "useAsFactor")] %>%  unique(),
+                      by = c("name")) %>%
+                unique()
+        )
+    }
 
     dtMappedPaths <-
       xlsxReadData(
@@ -666,13 +676,16 @@ getParams <-
   optimizationGroup <- match.arg(optimizationGroup)
   valueColumn <- match.arg(valueColumn)
 
-  # Select relevant columns from dtPrior and dtStartValues and create logConversion column
-  dtInput <- rbind(
-    dtPrior[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling','valueMode')],
-    dtStartValues[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling')],
-    fill = TRUE
-  ) %>%
-  setnames(old =  valueColumn,new =  "value")
+  # Select relevant columns from dtPrior and dtStartValues
+  dtInput <-
+    dtPrior[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling','valueMode')]
+  if (nrow(dtStartValues) > 0){
+    dtInput <- rbind(
+      dtInput,
+      dtStartValues[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling')],
+      fill = TRUE
+    ) }
+  setnames(dtInput,old =  valueColumn,new =  "value")
 
   # split parameters for optimizations
   dtInput <- switch(optimizationGroup,
@@ -710,13 +723,15 @@ getParams <-
 setParameterToTables <- function(dtList, params) {
 
   for (table in c('prior','startValues')){
-    dtList[[table]][id %in% names(params),param := params[id]]
-    dtList[[table]][id %in% names(params), value :=
-                      inverseTransformParams(param = param,
-                                             minValue = minValue,
-                                             maxValue = maxValue,
-                                             scaling = tolower(scaling)),
-                    by =.I]
+    if (nrow(dtList[[table]]) > 0){
+      dtList[[table]][id %in% names(params),param := params[id]]
+      dtList[[table]][id %in% names(params), value :=
+                        inverseTransformParams(param = param,
+                                               minValue = minValue,
+                                               maxValue = maxValue,
+                                               scaling = tolower(scaling)),
+                      by =.I]
+    }
   }
 
   return(dtList)

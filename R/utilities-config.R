@@ -465,11 +465,12 @@ validateParameterDefinition <- function(dtDefinition) {
     .var.name = paste("column 'Name' in", "ParameterDefinition")
   )
 
-  checkmate::assertNames(
-    unique(dtDefinition[valueMode == PARAMETERTYPE$individual]$distribution),
-    subset.of = getAllDistributions(),
-    .var.name = paste("column 'Distribution' in", "ParameterDefinition")
-  )
+  if (any(dtDefinition$valueMode == PARAMETERTYPE$individual))
+    checkmate::assertNames(
+      unique(dtDefinition[valueMode == PARAMETERTYPE$individual]$distribution),
+      subset.of = getAllDistributions(),
+      .var.name = paste("column 'Distribution' in", "ParameterDefinition")
+    )
 
   checkmate::assertNames(
     unique(dtDefinition[!is.na(categoricCovariate) & categoricCovariate !='']$categoricCovariate),

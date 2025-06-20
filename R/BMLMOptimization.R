@@ -60,6 +60,13 @@ BMLMOptimization <-  R6::R6Class(
 
       # Initialize data list
       private$scenarioList <- scenarioList
+      if (any(lapply(scenarioList,'getElement','scenarioType') == 'Individual')){
+        stop(paste('Please use only scenarios for virtual twin populations! Check',
+                   paste(names(scenarioList)[lapply(scenarioList,'getElement','scenarioType') == 'Individual']),
+                   collapse = ', '))
+      }
+
+
       if (asReload){
         dtList <- loadListsForRun(self$outputDir,self$runName)
 
@@ -230,7 +237,7 @@ BMLMOptimization <-  R6::R6Class(
 
       exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
                                             dtList = private$dtList,
-                                            runName = private$runName,
+                                            runName = self$runName,
                                             overwrite = overwrite)
     },
     #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
@@ -714,7 +721,9 @@ BMLMOptimization <-  R6::R6Class(
 
         if (!file.exists(file.path(self$outputDir, 'status.RDS'))) {
           # Prompt the user for confirmation to reset the run directory
-          response <- readline(prompt = "Output directory exists but seems to be corrupt. Do you want to reset everything in the run directory? (Yes/No): ")
+          response <- readline(prompt = paste("Output directory exists already but does not contain all mandatory files.",
+                  "\nDid it crash during the last initialisation?",
+                  "\nDo you want to reset everything in the run directory? (Yes/No): "))
           if (tolower(response) == "yes") {
             logAndPrintOptimization(paste('Reset Run', self$runName),
                                     outputDir = self$outputDir)
