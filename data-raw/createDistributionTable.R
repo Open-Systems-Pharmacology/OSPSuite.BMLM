@@ -97,19 +97,25 @@ for (distribution in names(hyperParameters)) {
 distributionTable <- rbind(distributionList)
 
 # add lnorm_geomean
-newLines <- distributionTable[distribution == 'lnorm']
-newLines[,distribution := 'lnorm_geomean']
-newLines[parameter == 'meanlog', `:=`(parameter = 'geomean',
-                                      minValue = 'minValue',
-                                      maxValue = 'maxValue',
-                                      startValue = 'startValue',
-                                      scaling = SCALING$log)]
-newLines[parameter == 'sdlog', `:=`(parameter = 'geosd',
-                                      minValue = 1,
-                                      scaling = SCALING$linear)]
+newLines <- distributionTable[distribution == "lnorm"]
+newLines[, distribution := "lnorm_geomean"]
+newLines[parameter == "meanlog", `:=`(
+  parameter = "geomean",
+  minValue = "minValue",
+  maxValue = "maxValue",
+  startValue = "startValue",
+  scaling = SCALING$log
+)]
+newLines[parameter == "sdlog", `:=`(
+  parameter = "geosd",
+  minValue = 1,
+  scaling = SCALING$linear
+)]
 
-distributionTable <- rbind(distributionTable,
-                           newLines)
+distributionTable <- rbind(
+  distributionTable,
+  newLines
+)
 
 
 setDF(distributionTable)

@@ -6,7 +6,7 @@
 \usage{
 addBMLMPConfiguration(
   projectConfiguration,
-  nameOfParameterIdentfication = NULL,
+  nameOfParameterIdentification = NULL,
   snapshotFile = NULL,
   overwrite = FALSE
 )
@@ -15,7 +15,7 @@ addBMLMPConfiguration(
 \item{projectConfiguration}{An object of class \code{ProjectConfiguration}, which contains configuration details for the project.
 This object should include paths to necessary folders and files for the BMLM project.}
 
-\item{nameOfParameterIdentfication}{A string representing the name of the parameter identification to be read from the snapshot.
+\item{nameOfParameterIdentification}{A string representing the name of the parameter identification to be read from the snapshot.
 This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.}
 
 \item{snapshotFile}{A string representing the path to the snapshot file. This file contains parameter identifications

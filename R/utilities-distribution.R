@@ -38,7 +38,7 @@ getDistributionRow <-
 
     tempDistributionTable <- as.data.table(distributionTable)
     return(tempDistributionTable[distribution == distributionName &
-                                   parameter == distributionParameter])
+      parameter == distributionParameter])
   }
 
 
@@ -69,13 +69,14 @@ getDistributionRow <-
 #'
 #' @examples
 #' # Example usage:
-#' computeStatFunction(values = c(0, 1), parameters = c("mean", "sd"),
-#'                      distribution = "norm", v = 0.5, type = "P")
+#' computeStatFunction(
+#'   values = c(0, 1), parameters = c("mean", "sd"),
+#'   distribution = "norm", v = 0.5, type = "P"
+#' )
 #'
 #' @export
-computeStatFunction <- function(values,parameters,distribution,v,type = c('D','P','Q','R'),log = FALSE,
-                                normalisationFactor = 1){
-
+computeStatFunction <- function(values, parameters, distribution, v, type = c("D", "P", "Q", "R"), log = FALSE,
+                                normalisationFactor = 1) {
   type <- match.arg(type)
 
   paramList <- setNames(as.numeric(values), parameters)
@@ -83,17 +84,17 @@ computeStatFunction <- function(values,parameters,distribution,v,type = c('D','P
 
   funcName <- paste0(tolower(type), distribution)
 
-  if (type == 'P') {
+  if (type == "P") {
     args <- c(list(q = v, log.p = log), paramList)
-  } else if (type == 'D') {
+  } else if (type == "D") {
     args <- c(list(x = v, log = log), paramList)
-  } else if (type == 'Q') {
+  } else if (type == "Q") {
     args <- c(list(p = v, log.p = log), paramList)
-  } else if (type == 'R') {
+  } else if (type == "R") {
     args <- c(list(n = v), paramList)
   }
 
-  return(do.call(funcName, args)/normalisationFactor)
+  return(do.call(funcName, args) / normalisationFactor)
 }
 
 
@@ -113,8 +114,8 @@ computeStatFunction <- function(values,parameters,distribution,v,type = c('D','P
 calculateProbability <- function(row, log = FALSE) {
   distribution <- row["distribution"]
 
-  if (distribution == 'flat'){
-    return(ifelse(log,0,1))
+  if (distribution == "flat") {
+    return(ifelse(log, 0, 1))
   }
   value <- as.numeric(row["value"])
 
@@ -126,12 +127,14 @@ calculateProbability <- function(row, log = FALSE) {
 
   prob <- tryCatch(
     {
-      computeStatFunction(values = paramValues,
-                          parameters = paramTypes,
-                          distribution = distribution,
-                          v = value,
-                          type = 'D',
-                          log = log)
+      computeStatFunction(
+        values = paramValues,
+        parameters = paramTypes,
+        distribution = distribution,
+        v = value,
+        type = "D",
+        log = log
+      )
     },
     error = function(e) {
       return(NA) # Return NA in case of error
@@ -183,7 +186,7 @@ dlnorm_geomean <- function(x, geomean = 1, geosd = exp(1), log = FALSE) {
   dlnorm(x = x, meanlog = log(geomean), sdlog = log(geosd), log = log)
 }
 
-plnorm_geomean <- function(q, geomean = 1, geosd = exp(1),lower.tail = TRUE, log.p = FALSE) {
+plnorm_geomean <- function(q, geomean = 1, geosd = exp(1), lower.tail = TRUE, log.p = FALSE) {
   plnorm(q = q, meanlog = log(geomean), sdlog = log(geosd), lower.tail = lower.tail, log.p = log.p)
 }
 

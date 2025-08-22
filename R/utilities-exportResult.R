@@ -1,6 +1,3 @@
-
-
-
 #' Save Final Values to Tables
 #'
 #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
@@ -14,16 +11,16 @@ saveFinalValuesToTables <- function(projectConfiguration, dtList) {
   wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
 
   dtNew <- addFinalValue(wb,
-                      sheetName = "Prior",
-                      identifier = c("name", "hyperParameter", "categoricCovariate"),
-                      newTable = dtList$prior
+    sheetName = "Prior",
+    identifier = c("name", "hyperParameter", "categoricCovariate"),
+    newTable = dtList$prior
   )
   xlsxWriteData(wb, sheetName = "Prior", dtNew)
 
   dtNew <- addFinalValue(wb,
-                      sheetName = "IndividualStartValues",
-                      identifier = c("name", "individualId", "categoricCovariate"),
-                      newTable = dtList$startValues
+    sheetName = "IndividualStartValues",
+    identifier = c("name", "individualId", "categoricCovariate"),
+    newTable = dtList$startValues
   )
   xlsxWriteData(wb, sheetName = "IndividualStartValues", dtNew)
 
@@ -51,56 +48,54 @@ exportOptimizedPopulation <-
            runName,
            addAsNewScenarios = TRUE,
            overwrite = FALSE) {
+    # initialize variable to avoid linter message
+    scenario_name <- populationId <- NULL # nolint camelCase, variable is derived by column name esqlabR
 
-  #initialize variable to avoid linter message
-  scenario_name <- populationId <- NULL #nolint camelCase, variable is derived by column name esqlabR
-
-  invisible(lapply(names(scenarioList), function(scenarioName) {
-    updateParameterValues(
-      scenarioName = scenarioName,
-      scenario = scenarioList[[scenarioName]],
-      dtPrior = dtList$prior,
-      dtStartValues = dtList$startValues,
-      dtMappedPaths = dtList$mappedPaths
-    )
-  }))
-
-  for (scenarioName in names(scenarioList)) {
-    newPopName <- paste0(scenarioList[[scenarioName]]$scenarioConfiguration$populationId, '_',runName, ".csv")
-    if (file.exists( file.path(projectConfiguration$populationsFolder,newPopName)) &
-        ! overwrite){
-      message(paste('no export of',newPopName, 'file already exists.'))
-    } else{
-      message(paste('export',newPopName))
-      ospsuite::exportPopulationToCSV(
-        population = scenarioList[[scenarioName]]$population,
-        filePath = file.path(
-          projectConfiguration$populationsFolder,
-          newPopName
-        )
+    invisible(lapply(names(scenarioList), function(scenarioName) {
+      updateParameterValues(
+        scenarioName = scenarioName,
+        scenario = scenarioList[[scenarioName]],
+        dtPrior = dtList$prior,
+        dtStartValues = dtList$startValues,
+        dtMappedPaths = dtList$mappedPaths
       )
+    }))
+
+    for (scenarioName in names(scenarioList)) {
+      newPopName <- paste0(scenarioList[[scenarioName]]$scenarioConfiguration$populationId, "_", runName, ".csv")
+      if (file.exists(file.path(projectConfiguration$populationsFolder, newPopName)) &
+        !overwrite) {
+        message(paste("no export of", newPopName, "file already exists."))
+      } else {
+        message(paste("export", newPopName))
+        ospsuite::exportPopulationToCSV(
+          population = scenarioList[[scenarioName]]$population,
+          filePath = file.path(
+            projectConfiguration$populationsFolder,
+            newPopName
+          )
+        )
+      }
     }
 
-  }
+    if (addAsNewScenarios) {
+      wb <- openxlsx::loadWorkbook(projectConfiguration$scenariosFile)
+      dt <- xlsxReadData(wb, sheetName = "Scenarios")
 
-  if (addAsNewScenarios){
-    wb <- openxlsx::loadWorkbook(projectConfiguration$scenariosFile)
-    dt <- xlsxReadData(wb, sheetName = "Scenarios")
+      dtSc <- dt[scenario_name %in% names(scenarioList)]
+      dtSc[, scenario_name := paste0(scenario_name, "_", runName)]
+      dtSc[, populationId := paste0(populationId, "_", runName)]
 
-    dtSc <- dt[scenario_name %in% names(scenarioList)]
-    dtSc[, scenario_name := paste0(scenario_name, '_',runName)]
-    dtSc[, populationId := paste0(populationId, '_',runName)]
+      if (overwrite) {
+        dt <- dt[!(scenario_name %in% dtSc$scenario_name)]
+      } else {
+        dtSc <- dtSc[!(scenario_name %in% dt$scenario_name)]
+      }
 
-    if (overwrite){
-      dt <- dt[!(scenario_name %in% dtSc$scenario_name)]
-    } else {
-      dtSc <- dtSc[!(scenario_name %in% dt$scenario_name)]
+      xlsxWriteData(wb, sheetName = "Scenarios", dt = rbind(dt, dtSc))
+
+      openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$scenariosFile, overwrite = TRUE)
     }
-
-    xlsxWriteData(wb, sheetName = "Scenarios", dt = rbind(dt, dtSc))
-
-    openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$scenariosFile, overwrite = TRUE)
-  }
   }
 #' Export Global Parameters to Configuration Tables
 #'
@@ -113,31 +108,33 @@ exportOptimizedPopulation <-
 #'
 #' @return NULL
 #' @export
-exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList,runName,overwrite = FALSE){
-
-  if (!any(dtList$prior$valueMode == PARAMETERTYPE$global)){
-    message('no global parameters available')
+exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList, runName, overwrite = FALSE) {
+  if (!any(dtList$prior$valueMode == PARAMETERTYPE$global)) {
+    message("no global parameters available")
     return(invisible())
   }
 
   wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
-  sheetName <- paste0(runName,'_global')
-  if (sheetName %in% wb$sheet_names & !overwrite)
-    stop(paste(sheetName,'already exists'))
+  sheetName <- paste0(runName, "_global")
+  if (sheetName %in% wb$sheet_names & !overwrite) {
+    stop(paste(sheetName, "already exists"))
+  }
 
-  message('export global parameters')
+  message("export global parameters")
   dtAdd <- extractParameterValues(
-    dtNew = dtList$prior[valueMode == PARAMETERTYPE$global,c('name','value')],
+    dtNew = dtList$prior[valueMode == PARAMETERTYPE$global, c("name", "value")],
     dtList = dtList,
-    scenarioList = scenarioList)
+    scenarioList = scenarioList
+  )
 
-  saveDataToWorkbook(wb = wb, sheetName = sheetName,
-                     dt = dtAdd,
-                     templateSheet = "Template",
-                     templateXlsx = "ModelParameters.xslx")
+  saveDataToWorkbook(
+    wb = wb, sheetName = sheetName,
+    dt = dtAdd,
+    templateSheet = "Template",
+    templateXlsx = "ModelParameters.xslx"
+  )
 
   openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$modelParamsFile, overwrite = TRUE)
-
 }
 #' Export Individual Values to Configuration Table
 #'
@@ -156,18 +153,20 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
 
   # Use lapply to process each individual
   results <- lapply(individualIds, function(sheetName) {
-    message(paste('export values for', sheetName))
+    message(paste("export values for", sheetName))
 
     dtInd <- dtList$startValues[sheetName == individualId]
 
     dt <- loadOrCreateSheetData(wb = wb, sheetName = sheetName)
 
-    dtAdd <- extractParameterValues(dtNew = dtInd[, !("useAsFactor"), with = FALSE],
-                                              dtList = dtList,
-                                              scenarioList = scenarioList)
+    dtAdd <- extractParameterValues(
+      dtNew = dtInd[, !("useAsFactor"), with = FALSE],
+      dtList = dtList,
+      scenarioList = scenarioList
+    )
 
     dt <- rbind(dt, dtAdd)
-    dt <- dt[!duplicated(dt[, c('container Path', 'parameter Name')], fromLast = TRUE)]
+    dt <- dt[!duplicated(dt[, c("container Path", "parameter Name")], fromLast = TRUE)]
 
     saveDataToWorkbook(wb = wb, sheetName = sheetName, dt = dt)
   })
@@ -189,10 +188,10 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
 #' @return NULL
 #' @export
 exportIndividualResultsToPkml <- function(projectConfiguration,
-                              scenarioList,
-                              dtList,
-                              outputDir,
-                              individualId){
+                                          scenarioList,
+                                          dtList,
+                                          outputDir,
+                                          individualId) {
   invisible(lapply(names(scenarioList), function(scenarioName) {
     updateParameterValues(
       scenarioName = scenarioName,
@@ -204,29 +203,32 @@ exportIndividualResultsToPkml <- function(projectConfiguration,
   }))
 
   for (scenarioName in names(scenarioList)) {
-    if (individualId %in% scenarioList[[scenarioName]]$population$getCovariateValues("ObservedIndividualId")){
+    if (individualId %in% scenarioList[[scenarioName]]$population$getCovariateValues("ObservedIndividualId")) {
       population <-
         ospsuite::populationToDataFrame(scenarioList[[scenarioName]]$population) %>%
         setDT()
       individual <-
-        population[ObservedIndividualId == individualId] %>%  dplyr::select(!any_of(
-          c('IndividualId', scenarioList[[scenarioName]]$population$allCovariateNames)
+        population[ObservedIndividualId == individualId] %>% dplyr::select(!any_of(
+          c("IndividualId", scenarioList[[scenarioName]]$population$allCovariateNames)
         ))
       sourceFile <-
         scenarioList[[scenarioName]]$simulation$sourceFile
       simNew <- ospsuite::loadSimulation(sourceFile)
       ospsuite::setParameterValuesByPath(
         parameterPaths = names(individual),
-        values = unname(unlist(individual[1,])),
+        values = unname(unlist(individual[1, ])),
         simulation = simNew,
         stopIfNotFound = FALSE
       )
-      ospsuite::saveSimulation(simulation = simNew,
-                               filePath = file.path(outputDir,
-                                                    gsub('\\.pkml',paste0('_',individualId,'.pkml'),basename(sourceFile))))
+      ospsuite::saveSimulation(
+        simulation = simNew,
+        filePath = file.path(
+          outputDir,
+          gsub("\\.pkml", paste0("_", individualId, ".pkml"), basename(sourceFile))
+        )
+      )
     }
   }
-
 }
 
 
@@ -242,21 +244,21 @@ exportIndividualResultsToPkml <- function(projectConfiguration,
 #' @keywords internal
 extractParameterValues <- function(dtNew, dtList, scenarioList) {
   # Merge the mapped paths with the individual data, excluding the 'useAsFactor' column
-  dtAdd <- merge(dtList$mappedPaths, dtNew, by = 'name')
+  dtAdd <- merge(dtList$mappedPaths, dtNew, by = "name")
 
   # Extract 'container Path' and 'parameter Name' from 'linkedParameters'
   dtAdd[, `container Path` := sapply(strsplit(linkedParameters, "\\|"), function(x) paste(x[-length(x)], collapse = "|"))]
   dtAdd[, `parameter Name` := sapply(strsplit(linkedParameters, "\\|"), function(x) tail(x, n = 1))]
 
   # Rename 'unit' column to 'units' for consistency
-  setnames(dtAdd, old = c('unit'), new = c('units'))
+  setnames(dtAdd, old = c("unit"), new = c("units"))
 
   # Loop through rows where 'useAsFactor' is TRUE
   for (iRow in which(as.logical(dtAdd$useAsFactor))) {
     # Select relevant columns and reshape the data from wide to long format
     tmp <- dtAdd[iRow] %>%
-      dplyr::select(c('linkedParameters', 'value', names(scenarioList))) %>%
-      tidyr::pivot_longer(cols = names(scenarioList), names_to = 'scenario', values_to = 'factor') %>%
+      dplyr::select(c("linkedParameters", "value", names(scenarioList))) %>%
+      tidyr::pivot_longer(cols = names(scenarioList), names_to = "scenario", values_to = "factor") %>%
       setDT()
 
     # Remove rows with NA factors
@@ -264,7 +266,7 @@ extractParameterValues <- function(dtNew, dtList, scenarioList) {
 
     # Check for consistency in factors; stop if any are duplicated
     if (any(duplicated(tmp$factor))) {
-      stop(paste(tmp$linkedParameters[1], 'factors are not consistent for scenarios'))
+      stop(paste(tmp$linkedParameters[1], "factors are not consistent for scenarios"))
     }
 
     # Keep only the first row (since factors should be consistent)
@@ -287,8 +289,8 @@ addFinalValue <- function(wb, sheetName, identifier, newTable) {
   dtHeaders <- dt[1]
   dt <- dt[-1]
 
-  dt[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), '', x)), .SDcols = identifier]
-  newTable[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), '', x)), .SDcols = identifier]
+  dt[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), "", x)), .SDcols = identifier]
+  newTable[, (identifier) := lapply(.SD, function(x) ifelse(is.na(x), "", x)), .SDcols = identifier]
 
 
   dt <- dt %>%
@@ -301,7 +303,7 @@ addFinalValue <- function(wb, sheetName, identifier, newTable) {
       sort = FALSE
     )
 
-  dt = rbind(dtHeaders,dt,fill = TRUE) %>%
+  dt <- rbind(dtHeaders, dt, fill = TRUE) %>%
     setcolorder(c(headers[seq(1, which(headers == "startValue"))], "finalValue"))
 
   return(dt)
@@ -333,15 +335,17 @@ loadOrCreateSheetData <- function(wb, sheetName) {
 #' @param templateXlsx A string representing the name of the template Excel file.
 #'
 #' @return NULL
-saveDataToWorkbook <- function(wb, sheetName, dt,templateSheet = 'template_Ind',
+saveDataToWorkbook <- function(wb, sheetName, dt, templateSheet = "template_Ind",
                                templateXlsx = "Individuals.xlsx") {
   if (sheetName %in% wb$sheet_names) {
     xlsxWriteData(wb = wb, sheetName = sheetName, dt = dt)
   } else {
-    addDataAsTemplateToXlsx(wb = wb,
-                            templateSheet = templateSheet,
-                            sheetName = sheetName,
-                            dtNewData = dt,
-                            templateXlsx = templateXlsx)
+    addDataAsTemplateToXlsx(
+      wb = wb,
+      templateSheet = templateSheet,
+      sheetName = sheetName,
+      dtNewData = dt,
+      templateXlsx = templateXlsx
+    )
   }
 }

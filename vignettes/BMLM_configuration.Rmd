@@ -36,13 +36,14 @@ Configuring your Bayesian Multilevel Model (BMLM) involves several key steps to 
    Start by adding the BMLM configuration file to your project configuration. You can load a snapshot file that contains predefined parameters or - if `snapshotFile = NULL` add the empty template.
 
 ```{r, eval=FALSE, echo=TRUE}
-   # Configuration step ----------------
-   # Add BMLM configuration file and set up parameter identification from snapshot
-   projectConfiguration <-
-     addBMLMPConfiguration(projectConfiguration,
-                           snapshotFile = file.path(projectConfiguration$modelFolder, 'mySnapshot.json'),
-                           nameOfParameterIdentfication = 'myParameterIdentification',
-                           overwrite = FALSE)
+# Configuration step ----------------
+# Add BMLM configuration file and set up parameter identification from snapshot
+projectConfiguration <-
+  addBMLMPConfiguration(projectConfiguration,
+    snapshotFile = file.path(projectConfiguration$modelFolder, "mySnapshot.json"),
+    nameOfParameterIdentfication = "myParameterIdentification",
+    overwrite = FALSE
+  )
 ```
 
 2. **Fill or Adjust the Sheets**: 
@@ -55,9 +56,11 @@ Configuring your Bayesian Multilevel Model (BMLM) involves several key steps to 
    After the sheets are populated, call the `configurePriors` function to fill in the **Priors** and **IndividualStartValues** sheets based on your BMLM configuration.
 
 ```{r, eval=FALSE, echo=TRUE}
-   # Configure Priors based on BMLM configuration file
-   configurePriors(projectConfiguration = projectConfiguration,
-                   dataObserved = dataObserved)
+# Configure Priors based on BMLM configuration file
+configurePriors(
+  projectConfiguration = projectConfiguration,
+  dataObserved = dataObserved
+)
 ```
 
 4. **Adjust the Priors and Start Values**: 

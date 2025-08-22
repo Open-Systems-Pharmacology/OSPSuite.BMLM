@@ -39,10 +39,12 @@ To begin, we need to create an instance of the BMLMOptimization class. This invo
 
 ```{r echo=TRUE, eval=FALSE}
 # Create the BMLMOptimization object
-myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
-                                runName = 'myRun',
-                                scenarioList = scenarioList,
-                                dataObserved = dataObserved)
+myRun <- BMLMOptimization$new(
+  projectConfiguration = projectConfiguration,
+  runName = "myRun",
+  scenarioList = scenarioList,
+  dataObserved = dataObserved
+)
 ```
 
 
@@ -69,8 +71,8 @@ To initiate the optimization, you can call the `startOptimization` method as fol
 ```{r echo=TRUE, eval=FALSE}
 # Start the optimization process
 myRun$startOptimization(
-  method = "BFGS",  # Specify the optimization method
-  control = list(maxit = 1000)  # Control parameters for the optimization
+  method = "BFGS", # Specify the optimization method
+  control = list(maxit = 1000) # Control parameters for the optimization
 )
 ```
 
@@ -102,8 +104,8 @@ Here’s how to restart the optimization:
 ```{r echo=TRUE, eval=FALSE}
 # Restart the optimization process
 myRun$startOptimization(
-  method = "BFGS",  # Specify the optimization method
-  control = list(maxit = 1000)  # Control parameters for the optimization
+  method = "BFGS", # Specify the optimization method
+  control = list(maxit = 1000) # Control parameters for the optimization
 )
 ```
 
@@ -257,10 +259,12 @@ Analyzing correlations helps identify relationships between parameters, which ca
 
 ```{r echo=TRUE, eval=FALSE}
 # Check correlations among parameters
-myRun$checkCorrelations(method = 'spearman', 
-                        statusToShow = 'best', 
-                        corCut = 0.5, 
-                        chiSquaredCut = 0.1)
+myRun$checkCorrelations(
+  method = "spearman",
+  statusToShow = "best",
+  corCut = 0.5,
+  chiSquaredCut = 0.1
+)
 ```
 
 
@@ -271,7 +275,7 @@ The `getCurrentConfigTable` function retrieves the current configuration table f
 
 ```{r echo=TRUE, eval=FALSE}
 # Get current configuration table
-currentConfig <- myRun$getCurrentConfigTable(projectConfiguration = projectConfiguration, sheetName = 'Prior')
+currentConfig <- myRun$getCurrentConfigTable(projectConfiguration = projectConfiguration, sheetName = "Prior")
 print(currentConfig)
 ```
 
@@ -286,11 +290,13 @@ The `exportIndividualResultsToPkml` function allows you to export individual res
 
 ```{r echo=TRUE, eval=FALSE}
 # Export individual results to PKML
-myRun$exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
-                                     scenarioList = scenarioList,
-                                     dtList = dtList,
-                                     outputDir = outputDirectory,
-                                     individualId = 'individual_1')
+myRun$exportIndividualResultsToPkml(
+  projectConfiguration = projectConfiguration,
+  scenarioList = scenarioList,
+  dtList = dtList,
+  outputDir = outputDirectory,
+  individualId = "individual_1"
+)
 ```
 
 ## 2. Exporting Optimized Population
@@ -299,9 +305,11 @@ The `exportResultAsPopulation` method allows you to export the optimized populat
 
 ```{r echo=TRUE, eval=FALSE}
 # Export optimized population data
-myRun$exportResultAsPopulation(projectConfiguration = projectConfiguration,
-                                 addAsNewScenarios = TRUE,
-                                 overwrite = FALSE)
+myRun$exportResultAsPopulation(
+  projectConfiguration = projectConfiguration,
+  addAsNewScenarios = TRUE,
+  overwrite = FALSE
+)
 ```
 
 ## 3. Exporting Individual Values to Configuration Table
@@ -319,8 +327,10 @@ The `exportGlobalsParametersToConfigTables` method allows you to export global p
 
 ```{r echo=TRUE, eval=FALSE}
 # Export global parameters to configuration tables
-myRun$exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
-                                            overwrite = FALSE)
+myRun$exportGlobalsParametersToConfigTables(
+  projectConfiguration = projectConfiguration,
+  overwrite = FALSE
+)
 ```
 
 ## 5. Exporting Final Values to BML Configuration Table

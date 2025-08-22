@@ -1,4 +1,3 @@
-
 #' Create Data List for BMLM Optimization
 #'
 #' This helper function creates a list of data.tables (`dtList`) required for the BMLM optimization process.
@@ -31,17 +30,21 @@ createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed)
   dtList$startValues <- validateAndLoadIndividualStartValues(
     projectConfiguration = projectConfiguration,
     dtHyperParameter = getHyperParameter(dtPrior = dtList$prior),
-    dataObserved =  dtList$data
+    dataObserved = dtList$data
   )
 
-  dtList$prior <- adjustHyperParameter(dtPrior = dtList$prior,
-                                       dtStartValues = dtList$startValues)
+  dtList$prior <- adjustHyperParameter(
+    dtPrior = dtList$prior,
+    dtStartValues = dtList$startValues
+  )
 
   dtList$mappedPaths <-
-    validateAndLoadMappedPaths(projectConfiguration = projectConfiguration,
-                               dtPrior = dtList$prior,
-                               dtStartValues = dtList$startValues,
-                               scenarioList = scenarioList)
+    validateAndLoadMappedPaths(
+      projectConfiguration = projectConfiguration,
+      dtPrior = dtList$prior,
+      dtStartValues = dtList$startValues,
+      scenarioList = scenarioList
+    )
 
   dtList$data <- addAndValidateErrorModel(
     projectConfiguration = projectConfiguration,
@@ -69,7 +72,6 @@ createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed)
 #'
 #' @export
 prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList) {
-
   # make sure not to change dataObserved outside function
   dataObservedForMatch <- data.table::copy(dataObserved)
 
@@ -83,34 +85,34 @@ prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList
     stop(
       paste(
         'There are scenarios which are not selected as "DefaultScenario" in sheet "DataGroups" "Plots.xlsx".',
-        'This is mandatory to connect data and simulations:',
-        paste(setdiff(scenarioNames, dtDataGroups$defaultScenario), collapse = ', ')
+        "This is mandatory to connect data and simulations:",
+        paste(setdiff(scenarioNames, dtDataGroups$defaultScenario), collapse = ", ")
       )
     )
   }
 
   # Clean up observed data columns
-  if ('scenario' %in% names(dataObservedForMatch)) dataObservedForMatch[, scenario := NULL]
-  if ('outputPath' %in% names(dataObservedForMatch)) dataObservedForMatch[, outputPath := NULL]
+  if ("scenario" %in% names(dataObservedForMatch)) dataObservedForMatch[, scenario := NULL]
+  if ("outputPath" %in% names(dataObservedForMatch)) dataObservedForMatch[, outputPath := NULL]
 
   # Merge data tables
   dataObservedForMatch <- dataObservedForMatch %>%
-    merge(unique(dtDataGroups[, c('group', 'defaultScenario')]), by = 'group') %>%
-    data.table::setnames(old = 'defaultScenario', 'scenario') %>%
-    merge(dtOutputs[, c('outputPathId', 'outputPath')], by = 'outputPathId')
+    merge(unique(dtDataGroups[, c("group", "defaultScenario")]), by = "group") %>%
+    data.table::setnames(old = "defaultScenario", "scenario") %>%
+    merge(dtOutputs[, c("outputPathId", "outputPath")], by = "outputPathId")
 
   # reduce data for selected scenarios
   dataObservedForMatch <- dataObservedForMatch[scenario %in% names(scenarioList)]
 
-  dataObservedForMatch <- calculateUnitFactors(dataObservedForMatch,dtOutputs,scenarioList)
+  dataObservedForMatch <- calculateUnitFactors(dataObservedForMatch, dtOutputs, scenarioList)
 
   # Check data class
   if (!all(dataObservedForMatch$dataClass == DATACLASS$tpIndividual)) {
     stop(
       paste(
         'Please select only scenarios which are matched as "DefaultScenarios" in sheet "DataGroups" "Plots.xlsx" to individual data.',
-        'Check dataGroup',
-        paste(unique(dataObservedForMatch[dataClass != DATACLASS$tpIndividual]$group), collapse = ', ')
+        "Check dataGroup",
+        paste(unique(dataObservedForMatch[dataClass != DATACLASS$tpIndividual]$group), collapse = ", ")
       )
     )
   }
@@ -132,13 +134,13 @@ prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList
 #' and computes the unit factor for time.
 #'
 #' @keywords internal
-calculateUnitFactors <- function(dataObserved,dtOutputs,scenarioList){
+calculateUnitFactors <- function(dataObserved, dtOutputs, scenarioList) {
   # Get unit conversion factors
-  dtUnit <- unique(dataObserved[, c('scenario', 'outputPathId', 'yUnit')]) %>%
-    merge(dtOutputs, by = 'outputPathId')
+  dtUnit <- unique(dataObserved[, c("scenario", "outputPathId", "yUnit")]) %>%
+    merge(dtOutputs, by = "outputPathId")
 
   # Calculate unit factor for x
-  dtUnit[, unitFactorX := ospsuite::toUnit(quantityOrDimension = 'Time', values = 1, targetUnit = dataObserved$xUnit[1])]
+  dtUnit[, unitFactorX := ospsuite::toUnit(quantityOrDimension = "Time", values = 1, targetUnit = dataObserved$xUnit[1])]
 
   # Initialize conversion factors
   dtUnit[, dataFactor := NA_real_]
@@ -147,7 +149,6 @@ calculateUnitFactors <- function(dataObserved,dtOutputs,scenarioList){
 
   # Calculate conversion factors
   for (iRow in seq_len(nrow(dtUnit))) {
-
     sim <- scenarioList[[dtUnit$scenario[iRow]]]$simulation
 
     quantity <- ospsuite::getQuantity(path = dtUnit$outputPath[iRow], container = sim)
@@ -168,13 +169,14 @@ calculateUnitFactors <- function(dataObserved,dtOutputs,scenarioList){
       molWeight = sim$molWeightFor(dtUnit$outputPath[iRow])
     )
 
-    dtUnit$endTimeSimulation[iRow] = sim$outputSchema$endTime * dtUnit$unitFactorX[iRow]
+    dtUnit$endTimeSimulation[iRow] <- sim$outputSchema$endTime * dtUnit$unitFactorX[iRow]
   }
 
   # Merge conversion factors back to observed data
   dataObserved <- dataObserved %>%
-    merge(dtUnit[,c('scenario', 'outputPathId', 'unitFactorX', 'unitFactorY', 'dataFactor', 'displayUnit','endTimeSimulation')],
-          by = c('scenario', 'outputPathId'))
+    merge(dtUnit[, c("scenario", "outputPathId", "unitFactorX", "unitFactorY", "dataFactor", "displayUnit", "endTimeSimulation")],
+      by = c("scenario", "outputPathId")
+    )
 
   # Adjust yValues and units
   dataObserved[, yValues := yValues * dataFactor]
@@ -182,18 +184,20 @@ calculateUnitFactors <- function(dataObserved,dtOutputs,scenarioList){
   dataObserved[, yUnit := displayUnit]
   dataObserved[, displayUnit := NULL]
 
-  if (any(dataObserved$xValues < 0)){
-    warning('data with time < 0 is outside simulation range will be ignored')
+  if (any(dataObserved$xValues < 0)) {
+    warning("data with time < 0 is outside simulation range will be ignored")
     dataObserved <- dataObserved[xValues >= 0]
   }
-  if (any(dataObserved$xValues > dataObserved$endTimeSimulation)){
+  if (any(dataObserved$xValues > dataObserved$endTimeSimulation)) {
     writeTableToLog(dataObserved[xValues > endTimeSimulation] %>%
-                      dplyr::select(any_of(c(getColumnsForColumnType(dataObserved,'identifier'),
-                                             'xValues','endTimeSimulation','timeUnit'))))
-    warning('data with time outside simulation range will be ignored')
+      dplyr::select(any_of(c(
+        getColumnsForColumnType(dataObserved, "identifier"),
+        "xValues", "endTimeSimulation", "timeUnit"
+      ))))
+    warning("data with time outside simulation range will be ignored")
     dataObserved <- dataObserved[xValues <= endTimeSimulation]
   }
-  dataObserved[,endTimeSimulation := NULL]
+  dataObserved[, endTimeSimulation := NULL]
 
 
   return(dataObserved)
@@ -228,7 +232,7 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
 
   dataObservedForMatch <- dataObservedForMatch %>%
     merge(dtErrorModel,
-          by = "outputPathId"
+      by = "outputPathId"
     )
 
   if (nrow(dataObservedForMatch[yValues < lloq / 2]) > 0) {
@@ -266,16 +270,16 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     projectConfiguration$addOns$bMLMConfigurationFile,
     sheetName = "Prior",
     skipDescriptionRow = TRUE,
-    alwaysCharacter = c('P1_type','P2_type','P3_type')
+    alwaysCharacter = c("P1_type", "P2_type", "P3_type")
   )
-  if (nrow(dtPrior) == 0) stop('empty Prior sheet')
+  if (nrow(dtPrior) == 0) stop("empty Prior sheet")
 
   checkmate::assertCharacter(dtPrior$name, any.missing = FALSE)
   checkmate::assertNames(dtPrior$valueMode, subset.of = unlist(PARAMETERTYPE))
 
   checkDuplicates(
     dt = dtPrior,
-    identifierCols = c('name', 'categoricCovariate', 'hyperParameter'),
+    identifierCols = c("name", "categoricCovariate", "hyperParameter"),
     sheetName = "Prior"
   )
 
@@ -288,47 +292,58 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
   # check consistency with definitions
   checkConsistencyWithDefinition(
     dtDefinition[valueMode == PARAMETERTYPE$individual],
-      colNamesDefiniton = c('distribution','unit','useAsFactor'),
+    colNamesDefiniton = c("distribution", "unit", "useAsFactor"),
     dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
-    colNamesTable =  c('hyperDistribution','unit','useAsFactor'),
-    tableName = 'Prior')
+    colNamesTable = c("hyperDistribution", "unit", "useAsFactor"),
+    tableName = "Prior"
+  )
   checkConsistencyWithDefinition(
     dtDefinition[valueMode == PARAMETERTYPE$global],
-    colNamesDefiniton = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
+    colNamesDefiniton = c("unit", "startValue", "minValue", "maxValue", "scaling", "useAsFactor"),
     dtPrior[valueMode == PARAMETERTYPE$global],
-    colNamesTable = c('unit','startValue',	'minValue',	'maxValue','scaling',	'useAsFactor'),
-    tableName = 'Prior')
+    colNamesTable = c("unit", "startValue", "minValue", "maxValue", "scaling", "useAsFactor"),
+    tableName = "Prior"
+  )
 
-  if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter))
-    checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][['hyperDistribution']],
-                           subset.of = c('flat', getAllDistributions()))
-
-  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
-                           valueColumns = c('hyperDistribution'),
-                           groupingColumns = c('name','categoricCovariate'))
-
-  validateGroupConsistency(dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
-                           valueColumns = c('unit'),
-                           groupingColumns = c('name'))
-
-  checkmate::assertNumeric(dtPrior$minValue,any.missing = FALSE)
-  checkmate::assertNumeric(dtPrior$maxValue,any.missing = FALSE)
-
-  if (any(is.na(dtPrior$startValue))){
-    dtPrior[is.na(startValue),
-            startValues := runif(1, min = minValue, max = maxValue),
-            by = c('name','categoricCovariate','hyperParameter')]
+  if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter)) {
+    checkmate::assertNames(dtPrior[valueMode == PARAMETERTYPE$hyperParameter][["hyperDistribution"]],
+      subset.of = c("flat", getAllDistributions())
+    )
   }
 
-  checkmate::assertNumeric(dtPrior$startValue,any.missing = FALSE)
+  validateGroupConsistency(
+    dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
+    valueColumns = c("hyperDistribution"),
+    groupingColumns = c("name", "categoricCovariate")
+  )
+
+  validateGroupConsistency(
+    dt = dtPrior[valueMode == PARAMETERTYPE$hyperParameter],
+    valueColumns = c("unit"),
+    groupingColumns = c("name")
+  )
+
+  checkmate::assertNumeric(dtPrior$minValue, any.missing = FALSE)
+  checkmate::assertNumeric(dtPrior$maxValue, any.missing = FALSE)
+
+  if (any(is.na(dtPrior$startValue))) {
+    dtPrior[is.na(startValue),
+      startValue := runif(1, min = minValue, max = maxValue),
+      by = c("name", "categoricCovariate", "hyperParameter")
+    ]
+  }
+
+  checkmate::assertNumeric(dtPrior$startValue, any.missing = FALSE)
 
   dtPrior <- checkMinMaxValues(dtPrior)
 
   checkmate::assertNames(tolower(dtPrior[valueMode != PARAMETERTYPE$outputError]$scaling),
-                         subset.of = unlist(SCALING))
+    subset.of = unlist(SCALING)
+  )
   checkmate::assertLogical(as.logical(dtPrior[valueMode != PARAMETERTYPE$outputError]$useAsFactor), any.missing = FALSE)
   checkmate::assertNames(dtPrior$distribution,
-                         subset.of = c('flat', getAllDistributions()))
+    subset.of = c("flat", getAllDistributions())
+  )
 
   dtPrior[, probability := apply(.SD, 1, calculateProbability)]
 
@@ -346,7 +361,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     ))
   }
 
-  dtPrior[,id:=paste0('P',.I)]
+  dtPrior[, id := paste0("P", .I)]
 
   return(dtPrior)
 }
@@ -367,14 +382,14 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
 #'
 #' @keywords internal
 adjustHyperParameter <- function(dtPrior, dtStartValues) {
-
   # Keep non-hyperParameter rows
   dtPriorNew <- dtPrior[valueMode != PARAMETERTYPE$hyperParameter]
 
   # Reduce hyperparameter to match available data
   dtHyperParameter <- dtPrior[valueMode == PARAMETERTYPE$hyperParameter] %>%
     merge(unique(dtStartValues[, .(name, categoricCovariate)]),
-          by = c('name', 'categoricCovariate'))
+      by = c("name", "categoricCovariate")
+    )
 
   dtPriorNew <- rbind(dtPriorNew, dtHyperParameter)
 
@@ -438,13 +453,17 @@ validateAndLoadIndividualStartValues <-
     dtStartValues <- dtStartValues[individualId %in% unique(dataObserved$individualId)]
 
     # validate
-    if (nrow(dtStartValues) == 0) return(dtStartValues)
+    if (nrow(dtStartValues) == 0) {
+      return(dtStartValues)
+    }
 
     checkmate::assertNames(tolower(dtStartValues$scaling), subset.of = unlist(SCALING))
     checkmate::assertLogical(as.logical(dtStartValues$useAsFactor), any.missing = FALSE)
-    validateGroupConsistency(dt = dtStartValues,
-                             valueColumns = c('minValue', 'maxValue','scaling','useAsFactor'),
-                             groupingColumns = c('name','categoricCovariate'))
+    validateGroupConsistency(
+      dt = dtStartValues,
+      valueColumns = c("minValue", "maxValue", "scaling", "useAsFactor"),
+      groupingColumns = c("name", "categoricCovariate")
+    )
 
 
     dtDefinition <- xlsxReadData(
@@ -456,20 +475,21 @@ validateAndLoadIndividualStartValues <-
     # check consistency with definitions
     checkConsistencyWithDefinition(
       dtDefinition[valueMode == PARAMETERTYPE$individual],
-      colNamesDefiniton = c('minValue', 'maxValue','scaling','useAsFactor'),
+      colNamesDefiniton = c("minValue", "maxValue", "scaling", "useAsFactor"),
       dtStartValues,
-      colNamesTable =  c('minValue', 'maxValue','scaling','useAsFactor'),
-      tableName = 'Prior')
+      colNamesTable = c("minValue", "maxValue", "scaling", "useAsFactor"),
+      tableName = "Prior"
+    )
 
 
     checkDuplicates(
       dt = dtStartValues,
-      identifierCols =  c('name', 'categoricCovariate', 'individualId'),
+      identifierCols = c("name", "categoricCovariate", "individualId"),
       sheetName = "StartValues"
     )
 
-    checkmate::assertNumeric(dtStartValues$minValue,any.missing = FALSE)
-    checkmate::assertNumeric(dtStartValues$maxValue,any.missing = FALSE)
+    checkmate::assertNumeric(dtStartValues$minValue, any.missing = FALSE)
+    checkmate::assertNumeric(dtStartValues$maxValue, any.missing = FALSE)
 
     dtStartValues <- checkMinMaxValues(dtStartValues)
 
@@ -484,7 +504,7 @@ validateAndLoadIndividualStartValues <-
 
     dtStartValuesNew[, startValue := value]
 
-    dtStartValuesNew[,id:=paste0('S',.I)]
+    dtStartValuesNew[, id := paste0("S", .I)]
 
 
     return(dtStartValuesNew)
@@ -508,18 +528,20 @@ randomizeIndividualStartValues <-
     # Merge with hyperparameters
     tmp <-
       merge(dtHyperParameter,
-            unique(indGroup[, .(name, categoricCovariate)]),
-            by = c("name", "categoricCovariate")
+        unique(indGroup[, .(name, categoricCovariate)]),
+        by = c("name", "categoricCovariate")
       )
 
-    if (nrow(tmp) > 0){
+    if (nrow(tmp) > 0) {
       hyperDistribution <- tmp$hyperDistribution[1]
       # Create a list of parameters for the distribution function
       paramList <- stats::setNames(tmp$value, tmp$hyperParameter)
     } else {
-      hyperDistribution <- 'unif'
-      paramList <- list(min = indGroup$minValue[1],
-                        max = indGroup$maxValue[1])
+      hyperDistribution <- "unif"
+      paramList <- list(
+        min = indGroup$minValue[1],
+        max = indGroup$maxValue[1]
+      )
     }
 
 
@@ -540,7 +562,7 @@ randomizeIndividualStartValues <-
       trials <- trials + 1
     }
     if (nNew > 0) {
-      stop(paste("Not possible to generate random startValues in boundarys for",indGroup$name[1]))
+      stop(paste("Not possible to generate random startValues in boundarys for", indGroup$name[1]))
     }
 
     # Check if all values are within the distribution range
@@ -575,20 +597,22 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
     # initialize variable to avoid linter message
     scenarioName <- linkedParameters <- NULL
 
-    if (any(dtPrior$valueMode == PARAMETERTYPE$global)){
+    if (any(dtPrior$valueMode == PARAMETERTYPE$global)) {
       dtDefinition <-
-        dtPrior[valueMode %in% PARAMETERTYPE$global, c("name","unit", "useAsFactor")]
-    }else {
+        dtPrior[valueMode %in% PARAMETERTYPE$global, c("name", "unit", "useAsFactor")]
+    } else {
       dtDefinition <- data.table()
     }
-    if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter)){
+    if (any(dtPrior$valueMode == PARAMETERTYPE$hyperParameter)) {
       dtDefinition <-
-        rbind(dtDefinition,
-              dtPrior[valueMode %in% PARAMETERTYPE$hyperParameter, c("name","unit")] %>%
-                unique() %>%
-                merge(dtStartValues[,c("name", "useAsFactor")] %>%  unique(),
-                      by = c("name")) %>%
-                unique()
+        rbind(
+          dtDefinition,
+          dtPrior[valueMode %in% PARAMETERTYPE$hyperParameter, c("name", "unit")] %>%
+            unique() %>%
+            merge(dtStartValues[, c("name", "useAsFactor")] %>% unique(),
+              by = c("name")
+            ) %>%
+            unique()
         )
     }
 
@@ -599,7 +623,7 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
         skipDescriptionRow = TRUE
       )
 
-    checkDuplicates(dt = dtMappedPaths, identifierCols = c('name','linkedParameters'), sheetName= 'MappedPaths')
+    checkDuplicates(dt = dtMappedPaths, identifierCols = c("name", "linkedParameters"), sheetName = "MappedPaths")
 
     checkmate::assertNames(unique(dtMappedPaths$name), must.include = unique(dtDefinition$name))
 
@@ -654,166 +678,40 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
 
 
 # Input transformation -----------
-#' Prepare Input Data
-#'
-#' This function prepares the input data for the L-BFGS-B algorithm by merging and transforming
-#' the provided data tables. It handles log transformations based on specified conditions.
-#'
-#' @param dtPrior A data.table containing prior values
-#' @param dtStartValues A data.table containing start values
-#' @param valueColumn Name of column with value of interest either 'value' or 'startValue'.
-#'
-#' @return A data.table with combined and transformed input data.
-#' @keywords internal
-getParams <-
-  function(dtPrior,
-           dtStartValues,
-           valueColumn = c('value', 'startValue'),
-           optimizationGroup = c('both','external','internal')) {
-    # initialize variables to avoid linter messages
-  value <- minValue <- maxValue <- scaling <- NULL
-
-  optimizationGroup <- match.arg(optimizationGroup)
-  valueColumn <- match.arg(valueColumn)
-
-  # Select relevant columns from dtPrior and dtStartValues
-  dtInput <-
-    dtPrior[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling','valueMode')]
-  if (nrow(dtStartValues) > 0){
-    dtInput <- rbind(
-      dtInput,
-      dtStartValues[, c('id',..valueColumn, 'minValue', 'maxValue', 'scaling')],
-      fill = TRUE
-    ) }
-  setnames(dtInput,old =  valueColumn,new =  "value")
-
-  # split parameters for optimizations
-  dtInput <- switch(optimizationGroup,
-                    'external' = dtInput[is.na(valueMode) | valueMode == PARAMETERTYPE$global],
-                    'internal' = dtInput[valueMode %in% c(PARAMETERTYPE$hyperParameter,PARAMETERTYPE$outputError)],
-                    dtInput)
-
-  checkmate::assertNumeric(dtInput$value, any.missing = FALSE)
-  checkmate::assertNumeric(dtInput$minValue, any.missing = FALSE)
-  checkmate::assertNumeric(dtInput$maxValue, any.missing = FALSE)
-  checkmate::assertNames(tolower(dtInput$scaling), subset.of = unlist(SCALING))
-
-  # Transform params to unbounded values
-  dtInput[, param := transformToUnbounded(value = value,
-                                          minValue = minValue,
-                                          maxValue = maxValue,
-                                          scaling = tolower(scaling)),
-          by = .I]
-
-  initialValues <- stats::setNames(dtInput$param,
-                                   dtInput$id)
-
-  return(initialValues)
-}
-
-#' Set Parameter to Tables
-#'
-#' This function updates the parameter values in the provided data.tables based on the optimization results.
-#'
-#' @param dtList A list containing various data.tables used in the optimization process.
-#' @param params A numeric vector of parameters for the likelihood calculation.
-#'
-#' @return A list containing the updated data.tables.
-#' @keywords internal
-setParameterToTables <- function(dtList, params) {
-
-  for (table in c('prior','startValues')){
-    if (nrow(dtList[[table]]) > 0){
-      dtList[[table]][id %in% names(params),param := params[id]]
-      dtList[[table]][id %in% names(params), value :=
-                        inverseTransformParams(param = param,
-                                               minValue = minValue,
-                                               maxValue = maxValue,
-                                               scaling = tolower(scaling)),
-                      by =.I]
-    }
-  }
-
-  return(dtList)
-}
-#' Transform to Unbounded Values
-#'
-#' This function transforms parameters to unbounded values based on the scaling type.
-#'
-#' @param value A numeric value of values to be transformed.
-#' @param minValue A numeric value of minimum values.
-#' @param maxValue A numeric value of maximum values.
-#' @param scaling A value indicating the scaling type for value.
-#'
-#' @return A numeric value of transformed values.
-#' @keywords internal
-transformToUnbounded <- function(value, minValue, maxValue, scaling) {
-  param <- if(tolower(scaling) == SCALING$log){
-    qlogis((log(value) - log(minValue)) / (log(maxValue) - log(minValue)))
-  } else {
-    qlogis((value - minValue) / (maxValue - minValue))
-  }
-
-  # keep param finite
-  param <- pmax(-20,pmin(20,param))
-  return(param)
-}
-
-#' Inverse Transform Parameters
-#'
-#' This function applies the inverse transformation to the parameters to retrieve original values.
-#'
-#' @param param A numeric value of parameters to be transformed back.
-#' @param minValue A numeric value of minimum values.
-#' @param maxValue A numeric value of maximum values.
-#' @param scaling A value indicating the scaling type for each parameter.
-#'
-#' @return A numeric vector of original values.
-#' @keywords internal
-inverseTransformParams <- function(param, minValue, maxValue, scaling) {
-  if(tolower(scaling) == SCALING$log){
-    exp(plogis(param) * (log(maxValue) - log(minValue)) + log(minValue))
-  } else{
-    plogis(param) * (maxValue - minValue) + minValue
-  }
-
-}
 
 
 # auxiliaries --------------
-
-
 checkConsistencyWithDefinition <- function(dtDefinition,
                                            colNamesDefiniton,
-                               dt,colNamesTable,
-                               tableName){
-
-  tmp <- merge(dtDefinition %>%
-                 dplyr::select(any_of(c('name', colNamesDefiniton))) %>%
-                 unique(),
-               dt %>%
-                 dplyr::select(any_of(c('name', colNamesTable))) %>%
-                 unique() %>%
-                 setnames(old = colNamesTable, new = colNamesDefiniton),
-               by = 'name',
-               all.y = TRUE,
-               suffixes = c('',paste0('.',tableName))
+                                           dt, colNamesTable,
+                                           tableName) {
+  tmp <- merge(
+    dtDefinition %>%
+      dplyr::select(any_of(c("name", colNamesDefiniton))) %>%
+      unique(),
+    dt %>%
+      dplyr::select(any_of(c("name", colNamesTable))) %>%
+      unique() %>%
+      setnames(old = colNamesTable, new = colNamesDefiniton),
+    by = "name",
+    all.y = TRUE,
+    suffixes = c("", paste0(".", tableName))
   )
 
-  if (nrow(tmp) > 1){
-    for (col in colNamesDefiniton){
-      tmpInconsistent <- tmp[get(col) != get(paste0(col,'.',tableName))]
-      if (nrow(tmpInconsistent) > 0){
+  if (nrow(tmp) > 1) {
+    for (col in colNamesDefiniton) {
+      tmpInconsistent <- tmp[get(col) != get(paste0(col, ".", tableName))]
+      if (nrow(tmpInconsistent) > 0) {
         print(tmpInconsistent)
-        warning(paste0("Sheet '",tableName, "' is not consistent with sheet 'ParameterDefinition' for column '",
-                      col, "' for parameter(s): '",paste(tmpInconsistent$name,collapse = "', '"),".",
-                      " Settings defined in 'ParameterDefinition' are ignored!"))
+        warning(paste0(
+          "Sheet '", tableName, "' is not consistent with sheet 'ParameterDefinition' for column '",
+          col, "' for parameter(s): '", paste(tmpInconsistent$name, collapse = "', '"), ".",
+          " Settings defined in 'ParameterDefinition' are ignored!"
+        ))
       }
     }
-
   }
   return(invisible())
-
 }
 
 
@@ -842,7 +740,7 @@ checkMinMaxValues <- function(dt) {
 
   if ("scaling" %in% names(dt)) {
     tmpFailing <- dt[scaling == SCALING$log &
-                       (value <= 0 | minValue < 0 | maxValue < 0)]
+      (value <= 0 | minValue < 0 | maxValue < 0)]
     if ("valueMode" %in% names(dt)) tmpFailing <- tmpFailing[valueMode != PARAMETERTYPE$hyperParameter]
 
     if (nrow(tmpFailing) > 0) {
@@ -883,25 +781,17 @@ checkDuplicates <- function(dt, identifierCols, sheetName) {
 #'
 #' @param dtList A list containing data tables to be saved.
 #' @param outputDir A character string representing the path to the output directory.
-#' @param params Optional; a numeric vector of parameters to set in the data tables (default is NULL).
 #'
 #' @keywords internal
-saveDataTablesAsCSV <- function(dtList, outputDir, params = NULL) {
-  if (!is.null(params)) {
-    dtList <- setParameterToTables(
-      dtList = dtList,
-      params = params
-    )
-  }
-
-  for (name in   csvFiles <-
-       c("data", "mappedPaths", "prior", "startValues")) {
+saveDataTablesAsCSV <- function(dtList, outputDir) {
+  for (name in csvFiles <-
+    c("data", "mappedPaths", "prior", "startValues")) {
     filePath <- file.path(outputDir, paste0(name, ".csv"))
     write.csv(
       dtList[[name]],
       file = filePath,
       row.names = FALSE,
-      fileEncoding = 'UTF-8'
+      fileEncoding = "UTF-8"
     )
   }
 }
@@ -921,28 +811,25 @@ saveDataTablesAsCSV <- function(dtList, outputDir, params = NULL) {
 #'         list elements are named after the CSV files (without the '.csv' extension).
 #'
 #' @export
-loadListsForRun <- function(outputDir,runName){
+loadListsForRun <- function(outputDir, runName) {
+  csvFiles <- c("data.csv", "mappedPaths.csv", "prior.csv", "startValues.csv")
 
-
-  csvFiles <- c("data.csv","mappedPaths.csv","prior.csv","startValues.csv")
-
-  dtList = list()
+  dtList <- list()
   for (csvFile in csvFiles) {
-    tmp <- data.table::fread(file.path(outputDir,csvFile),encoding = 'UTF-8')
+    tmp <- data.table::fread(file.path(outputDir, csvFile), encoding = "UTF-8")
 
-    if ('individualId' %in% names(tmp)){
-      tmp[,individualId := as.character(individualId)]
+    if ("individualId" %in% names(tmp)) {
+      tmp[, individualId := as.character(individualId)]
     }
 
     # add new column parameter as column name 'name' get confused in some applications
-    if ('name' %in% names(tmp)){
-      tmp[,parameter := name]
+    if ("name" %in% names(tmp)) {
+      tmp[, parameter := name]
     }
 
-    dtList[[gsub('.csv','',csvFile)]] <- tmp
+    dtList[[gsub(".csv", "", csvFile)]] <- tmp
   }
 
 
   return(dtList)
-
 }

@@ -8,7 +8,7 @@
 #' @param projectConfiguration An object of class `ProjectConfiguration`, which contains configuration details for the project.
 #' This object should include paths to necessary folders and files for the BMLM project.
 #'
-#' @param nameOfParameterIdentfication A string representing the name of the parameter identification to be read from the snapshot.
+#' @param nameOfParameterIdentification A string representing the name of the parameter identification to be read from the snapshot.
 #' This should match one of the names specified in the snapshot file. If NULL, the function will not attempt to read any parameters.
 #'
 #' @param snapshotFile A string representing the path to the snapshot file. This file contains parameter identifications
@@ -22,14 +22,14 @@
 #' @export
 #'
 addBMLMPConfiguration <- function(projectConfiguration,
-                                  nameOfParameterIdentfication = NULL,
+                                  nameOfParameterIdentification = NULL,
                                   snapshotFile = NULL,
                                   overwrite = FALSE) {
   checkmate::assertClass(projectConfiguration, classes = "ProjectConfiguration")
-  checkmate::assertString(nameOfParameterIdentfication)
+  checkmate::assertString(nameOfParameterIdentification)
   checkmate::assertString(snapshotFile, null.ok = TRUE)
   checkmate::assertFlag(overwrite)
-  bMLMConfigurationFile <- paste0("BMLMConfiguration_", nameOfParameterIdentfication, ".xlsx")
+  bMLMConfigurationFile <- paste0("BMLMConfiguration_", nameOfParameterIdentification, ".xlsx")
 
   projectConfiguration$addAddOnFileToConfiguration(
     property = "bMLMConfigurationFile",
@@ -38,10 +38,10 @@ addBMLMPConfiguration <- function(projectConfiguration,
     templatePath = system.file("templates", "BMLMConfiguration.xlsx", package = "ospsuite.bmlm")
   )
 
-  if (!is.null(snapshotFile) && !is.null(nameOfParameterIdentfication)) {
+  if (!is.null(snapshotFile) && !is.null(nameOfParameterIdentification)) {
     readIdentificationParameterFromSnapshot(
       snapshotFile = snapshotFile,
-      nameOfParameterIdentfication = nameOfParameterIdentfication,
+      nameOfParameterIdentification = nameOfParameterIdentification,
       projectConfiguration = projectConfiguration,
       overwrite = overwrite
     )
@@ -60,7 +60,7 @@ addBMLMPConfiguration <- function(projectConfiguration,
 #' @param snapshotFile A string representing the path to the snapshot file. This file should be in JSON format and contain
 #' parameter identifications that can be extracted and used to update the project configuration.
 #'
-#' @param nameOfParameterIdentfication A string representing the name of the parameter identification to be read from the snapshot.
+#' @param nameOfParameterIdentification A string representing the name of the parameter identification to be read from the snapshot.
 #' This should correspond to a valid entry under `ParameterIdentifications` in the snapshot file.
 #'
 #' @param projectConfiguration An object of class `ProjectConfigurationBMLM`, which contains configuration details for the project.
@@ -74,7 +74,7 @@ addBMLMPConfiguration <- function(projectConfiguration,
 #' @export
 #'
 readIdentificationParameterFromSnapshot <- function(snapshotFile,
-                                                    nameOfParameterIdentfication,
+                                                    nameOfParameterIdentification,
                                                     projectConfiguration,
                                                     overwrite = FALSE) {
   bMLMConfigurationFile <- file.path(projectConfiguration$addOns$bMLMConfigurationFile)
@@ -86,9 +86,9 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
   if (nrow(definitionDTHeader) == 1 || overwrite) {
     checkmate::assertFileExists(fs::path_abs(snapshotFile))
     snp <- jsonlite::fromJSON(fs::path_abs(snapshotFile))
-    checkmate::assertChoice(nameOfParameterIdentfication, snp$ParameterIdentifications$Name)
+    checkmate::assertChoice(nameOfParameterIdentification, snp$ParameterIdentifications$Name)
 
-    selectedPI <- which(snp$ParameterIdentifications$Name == nameOfParameterIdentfication)
+    selectedPI <- which(snp$ParameterIdentifications$Name == nameOfParameterIdentification)
 
     linkedParameter <- snp$ParameterIdentifications$IdentificationParameters[[selectedPI]]
     linkedParameterDT <- extractIdentificationParameter(linkedParameter)
@@ -116,11 +116,11 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
       updateFixedParameters(
         linkedParameterDT = linkedParameterDT, # nolint identation
         projectConfiguration = projectConfiguration,
-        nameOfParameterIdentfication = nameOfParameterIdentfication
+        nameOfParameterIdentification = nameOfParameterIdentification
       )
     }
 
-    message(paste0("Add '", nameOfParameterIdentfication, " from snapshot to Configurationfile"))
+    message(paste0("Add '", nameOfParameterIdentification, " from snapshot to Configurationfile"))
   }
 
   return(invisible())
@@ -215,15 +215,15 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
   dtOutputPathIds <- getOutputPathIds(projectConfiguration$plotsFile)
 
   if (is.null(snp$ParameterIdentifications$OutputMappings) ||
-      is.null(snp$ParameterIdentifications$OutputMappings[[selectedPI]])) {
+    is.null(snp$ParameterIdentifications$OutputMappings[[selectedPI]])) {
     dtOutputMappings <- data.table(
       outputPathId = dtOutputPathIds$outputPathId,
       scaling = SCALING$log
     )
   } else {
     dtOutputMappings <- data.table::copy(snp$ParameterIdentifications$OutputMappings[[selectedPI]]) %>%
-    data.table::setDT() %>%
-    setHeadersToLowerCase()
+      data.table::setDT() %>%
+      setHeadersToLowerCase()
 
     dtOutputMappings[, path := .replaceModelPath(path), by = "path"]
     dtOutputMappings <- dtOutputMappings %>%
@@ -252,9 +252,11 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
   }
 
   dtOutputMappings[, errorModel := ifelse(tolower(scaling) == SCALING$log,
-                                          ERRORMODEL$log_absolute,
-                                          ERRORMODEL$absolute),
-                   by = "outputPathId"] # nolint identation
+    ERRORMODEL$log_absolute,
+    ERRORMODEL$absolute
+  ),
+  by = "outputPathId"
+  ] # nolint identation
 
   dtOutputMappings[, scaling := NULL]
 
@@ -275,10 +277,10 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
 #'
 #' @param linkedParameterDT A data.table containing linked parameters, including their fixed status and values.
 #' @param projectConfiguration An object of class `ProjectConfigurationBMLM`, which contains configuration details for the project.
-#' @param nameOfParameterIdentfication A string representing the name of the parameter identification.
+#' @param nameOfParameterIdentification A string representing the name of the parameter identification.
 #'
 #' @keywords internal
-updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameOfParameterIdentfication) {
+updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameOfParameterIdentification) {
   # Initialize variables to NULL to avoid linter messages
   linkedParameters <- isFixed <- NULL
 
@@ -310,12 +312,12 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
 
   checkmate::assertFileExists(projectConfiguration$modelParamsFile)
 
-  if (!(nameOfParameterIdentfication %in% openxlsx::getSheetNames(projectConfiguration$modelParamsFile))) {
+  if (!(nameOfParameterIdentification %in% openxlsx::getSheetNames(projectConfiguration$modelParamsFile))) {
     wbP <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
-    xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = nameOfParameterIdentfication, dt = modelParameters)
+    xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = nameOfParameterIdentification, dt = modelParameters)
     openxlsx::saveWorkbook(wb = wbP, projectConfiguration$modelParamsFile, overwrite = TRUE)
   } else {
-    warning(paste("Sheet", nameOfParameterIdentfication, "exists already in", projectConfiguration$modelParamsFile))
+    warning(paste("Sheet", nameOfParameterIdentification, "exists already in", projectConfiguration$modelParamsFile))
   }
 }
 
@@ -390,10 +392,10 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dtPrior <- loadPriorData(wb, overwrite)
   dtDefinition <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition", skipDescriptionRow = TRUE) # nolint
-  dtDefinition[,categoricCovariate := as.character(categoricCovariate)]
-  dtDefinition[is.na(categoricCovariate),categoricCovariate := '']
+  dtDefinition[, categoricCovariate := as.character(categoricCovariate)]
+  dtDefinition[is.na(categoricCovariate), categoricCovariate := ""]
 
-  validateParameterDefinition(dtDefinition)
+  validateParameterDefinition(dtDefinition = dtDefinition, dataObserved = dataObserved)
   isEdited <- FALSE
 
   if (nrow(dtPrior) == 1 | overwrite) {
@@ -454,10 +456,11 @@ loadPriorData <- function(wb, overwrite) {
 #' required columns are present and contain valid data.
 #'
 #' @param dtDefinition A data.table containing parameter definitions to be validated.
+#' @param dataObserved A data.table of observed data.
 #'
 #' @return invisible(NULL). This function is called for its side effects (validation).
 #' @keywords internal
-validateParameterDefinition <- function(dtDefinition) {
+validateParameterDefinition <- function(dtDefinition, dataObserved) {
   checkmate::assertCharacter(
     dtDefinition$name,
     unique = TRUE,
@@ -465,15 +468,16 @@ validateParameterDefinition <- function(dtDefinition) {
     .var.name = paste("column 'Name' in", "ParameterDefinition")
   )
 
-  if (any(dtDefinition$valueMode == PARAMETERTYPE$individual))
+  if (any(dtDefinition$valueMode == PARAMETERTYPE$individual)) {
     checkmate::assertNames(
       unique(dtDefinition[valueMode == PARAMETERTYPE$individual]$distribution),
       subset.of = getAllDistributions(),
       .var.name = paste("column 'Distribution' in", "ParameterDefinition")
     )
+  }
 
   checkmate::assertNames(
-    unique(dtDefinition[!is.na(categoricCovariate) & categoricCovariate !='']$categoricCovariate),
+    unique(dtDefinition[!is.na(categoricCovariate) & categoricCovariate != ""]$categoricCovariate),
     subset.of = names(dataObserved),
     .var.name = paste("column 'CategoricCovariate' in", "ParameterDefinition")
   )
@@ -545,17 +549,17 @@ createStartValues <- function(dtDefinition, dataObserved) {
 
   for (iRow in which(dtDefinition$valueMode == PARAMETERTYPE$individual)) {
     covariates <- dtDefinition$categoricCovariate[iRow]
-    if (is.na(covariates) | covariates == '') covariates <- NULL
+    if (is.na(covariates) | covariates == "") covariates <- NULL
 
     tmpStartValues <- dataObserved %>%
       dplyr::select(dplyr::any_of(c("individualId", covariates))) %>%
       unique() %>%
       data.table::setDT()
-    tmpStartValues <- cbind(tmpStartValues,dtDefinition[iRow,c('name','minValue','maxValue','scaling','useAsFactor')])
+    tmpStartValues <- cbind(tmpStartValues, dtDefinition[iRow, c("name", "minValue", "maxValue", "scaling", "useAsFactor")])
 
     if (!is.null(covariates)) {
-      tmpStartValues[,categoricCovariate := paste(.SD),by = c('individualId','name'),.SDcols = covariates]
-      tmpStartValues <-  tmpStartValues %>% dplyr::select(!all_of(covariates))
+      tmpStartValues[, categoricCovariate := paste(.SD), by = c("individualId", "name"), .SDcols = covariates]
+      tmpStartValues <- tmpStartValues %>% dplyr::select(!all_of(covariates))
     }
 
     dtStartValues <- rbind(
@@ -582,7 +586,7 @@ addGlobalPriorParameter <- function(dtPrior, dtDefinition) {
   valueMode <- startValue <- NULL # nolint camelCase
 
   globalParams <- dtDefinition[valueMode == PARAMETERTYPE$global] %>% # nolint identation
-    dplyr::mutate(distribution = 'flat')
+    dplyr::mutate(distribution = "flat")
 
   dtPrior <-
     rbind(
@@ -610,14 +614,14 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
   newRows <- list()
 
   # Process each parameter row
-  for (iRow in which(dtDefinition$valueMode == "individual" & 'distribution' != 'flat')) {
+  for (iRow in which(dtDefinition$valueMode == "individual" & "distribution" != "flat")) {
     par <- dtDefinition[iRow, ]
 
     # Determine subgroups
-    if(!is.na(par$categoricCovariate) && par$categoricCovariate != ""){
-       subGroups <-   unique(dataObserved[[par$categoricCovariate]])
-    } else{
-      subGroups <-  ''
+    if (!is.na(par$categoricCovariate) && par$categoricCovariate != "") {
+      subGroups <- unique(dataObserved[[par$categoricCovariate]])
+    } else {
+      subGroups <- ""
     }
 
     # Create rows for each subgroup
@@ -648,7 +652,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
           } else {
             return(newValue)
           }
-        }),valueNames)
+        }), valueNames)
 
         # Create the hyperparameter row with common and specific values
         newRows[[length(newRows) + 1]] <-

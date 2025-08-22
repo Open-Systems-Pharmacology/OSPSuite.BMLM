@@ -4,10 +4,12 @@
 \alias{validateParameterDefinition}
 \title{Validate Parameter Definition}
 \usage{
-validateParameterDefinition(dtDefinition)
+validateParameterDefinition(dtDefinition, dataObserved)
 }
 \arguments{
 \item{dtDefinition}{A data.table containing parameter definitions to be validated.}
+
+\item{dataObserved}{A data.table of observed data.}
 }
 \value{
 invisible(NULL). This function is called for its side effects (validation).

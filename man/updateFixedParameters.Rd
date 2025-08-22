@@ -7,7 +7,7 @@
 updateFixedParameters(
   linkedParameterDT,
   projectConfiguration,
-  nameOfParameterIdentfication
+  nameOfParameterIdentification
 )
 }
 \arguments{
@@ -15,7 +15,7 @@ updateFixedParameters(
 
 \item{projectConfiguration}{An object of class \code{ProjectConfigurationBMLM}, which contains configuration details for the project.}
 
-\item{nameOfParameterIdentfication}{A string representing the name of the parameter identification.}
+\item{nameOfParameterIdentification}{A string representing the name of the parameter identification.}
 }
 \description{
 This helper function updates fixed parameters in the project configuration by writing them to the appropriate sheet.

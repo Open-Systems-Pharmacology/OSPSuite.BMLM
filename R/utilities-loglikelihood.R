@@ -43,10 +43,9 @@ getLogLikelihood <-
 #' @keywords internal
 getLikelihoodTimeProfiles <- function(dtPrior,
                                       dtRes) {
-
   # initialize variables to avoid linter messages
   yValues <- predicted <- errorModel <- sigma <- isCensored <- lloq <- lowerBound <- logLikelihood <- valueMode <- NULL
-  dtRes <- updateModelError(dtPrior,dtRes)
+  dtRes <- updateModelError(dtPrior, dtRes)
 
   dtRes[, isCensored := !is.na(lloq) & lloq > yValues]
 
@@ -119,15 +118,14 @@ getLikelihoodTimeProfiles <- function(dtPrior,
 #' }
 #'
 calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, lloq, lowerBound = 0) {
-
   # Validate that all inputs are of the correct type and length
-  checkmate::assertNumeric(yValue, len = 1)  # yValue should be a single numeric value
-  checkmate::assertNumeric(predicted, len = 1)  # predicted should be a single numeric value
-  checkmate::assertChoice(model, c("absolute", "proportional", "log_absolute"))  # model must be one of the specified choices
-  checkmate::assertNumeric(sigma, len = 1)  # sigma should be a single numeric value
-  checkmate::assertLogical(isCensored, len = 1)  # isCensored should be a single logical value
-  checkmate::assertNumeric(lloq, len = 1)  # lloq should be a single numeric value
-  checkmate::assertNumeric(lowerBound, len = 1)  # lowerBound should be a single numeric value
+  checkmate::assertNumeric(yValue, len = 1) # yValue should be a single numeric value
+  checkmate::assertNumeric(predicted, len = 1) # predicted should be a single numeric value
+  checkmate::assertChoice(model, c("absolute", "proportional", "log_absolute")) # model must be one of the specified choices
+  checkmate::assertNumeric(sigma, len = 1) # sigma should be a single numeric value
+  checkmate::assertLogical(isCensored, len = 1) # isCensored should be a single logical value
+  checkmate::assertNumeric(lloq, len = 1) # lloq should be a single numeric value
+  checkmate::assertNumeric(lowerBound, len = 1) # lowerBound should be a single numeric value
 
   # If predicted value is NA or below the lower bound, return log(0) (indicating a very low likelihood)
   if (is.na(predicted) || predicted < lowerBound) {
@@ -136,29 +134,32 @@ calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, 
 
   # Calculate the probability of being below the lower bound based on the selected model
   pLB <- switch(model,
-                absolute = pnorm(q = lowerBound, mean = predicted, sd = sigma, log = FALSE),
-                proportional = pnorm(q = lowerBound, mean = predicted, sd = sigma * predicted, log = FALSE),
-                log_absolute = plnorm(q = lowerBound, meanlog = log(predicted), sdlog = sigma, log = FALSE))
+    absolute = pnorm(q = lowerBound, mean = predicted, sd = sigma, log = FALSE),
+    proportional = pnorm(q = lowerBound, mean = predicted, sd = sigma * predicted, log = FALSE),
+    log_absolute = plnorm(q = lowerBound, meanlog = log(predicted), sdlog = sigma, log = FALSE)
+  )
 
   # If the data is censored, calculate the probability of being above the lower limit of quantification (lloq)
   if (isCensored) {
     p <- switch(model,
-                absolute = pnorm(q = clloq, mean = predicted, sd = sigma, log = FALSE),
-                proportional = pnorm(q = lloq, mean = predicted, sd = sigma * predicted, log = FALSE),
-                log_absolute = plnorm(q = lloq, meanlog = log(predicted), sdlog = sigma, log = FALSE))
-    p <- log(p - pLB)  # Log-transform the probability adjusted for the lower bound
+      absolute = pnorm(q = clloq, mean = predicted, sd = sigma, log = FALSE),
+      proportional = pnorm(q = lloq, mean = predicted, sd = sigma * predicted, log = FALSE),
+      log_absolute = plnorm(q = lloq, meanlog = log(predicted), sdlog = sigma, log = FALSE)
+    )
+    p <- log(p - pLB) # Log-transform the probability adjusted for the lower bound
   } else {
     # If the data is notored, calculate the log likelihood based on the chosen model
     p <- switch(model,
-                absolute = dnorm(x = yValue, mean = predicted, sd = sigma, log = TRUE),
-                proportional = dnorm(x = yValue, mean = predicted, sd = sigma * predicted, log = TRUE),
-                log_absolute = dlnorm(x = yValue, meanlog = log(predicted), sdlog = sigma, log = TRUE))
+      absolute = dnorm(x = yValue, mean = predicted, sd = sigma, log = TRUE),
+      proportional = dnorm(x = yValue, mean = predicted, sd = sigma * predicted, log = TRUE),
+      log_absolute = dlnorm(x = yValue, meanlog = log(predicted), sdlog = sigma, log = TRUE)
+    )
   }
 
   # Adjust the log likelihood by subtracting the log probability of being below the lower bound
   p <- p - log(1 - pLB)
 
-  return(p)  # Return the final log likelihood value
+  return(p) # Return the final log likelihood value
 }
 
 
@@ -191,9 +192,10 @@ getLikelihoodPriors <- function(dtPrior) {
 #' @keywords internal
 getLikelihoodHyperParameter <-
   function(dtStartValues, dtPrior) {
-
-    dtHyperParameter <- setlogTruncationOffset(dtPrior = dtPrior,
-                                               dtStartValues = dtStartValues)
+    dtHyperParameter <- setlogTruncationOffset(
+      dtPrior = dtPrior,
+      dtStartValues = dtStartValues
+    )
 
     logLikelihood <- sum(unlist(
       lapply(
@@ -223,46 +225,52 @@ getLikelihoodHyperParameter <-
 #' @return A data.table containing the hyperparameters, their values, and the computed log truncation offsets.
 #'
 #' @keywords internal
-setlogTruncationOffset <- function(dtPrior,dtStartValues,
-                                   identifier =  c('name', 'categoricCovariate'),
-                                   colsToKeep = c("hyperParameter",
-                                   "value",
-                                   "hyperDistribution",
-                                   "scaling",
-                                   'logTruncationOffset')) {
-
+setlogTruncationOffset <- function(dtPrior, dtStartValues,
+                                   identifier = c("name", "categoricCovariate"),
+                                   colsToKeep = c(
+                                     "hyperParameter",
+                                     "value",
+                                     "hyperDistribution",
+                                     "scaling",
+                                     "logTruncationOffset"
+                                   )) {
   dtHyperParameter <- data.table()
   # Reduce hyperparameter to match available data
   dtPriorHyper <- dtPrior[valueMode == PARAMETERTYPE$hyperParameter] %>%
     merge(unique(dtStartValues[, .(name, categoricCovariate, minValue, maxValue)]),
-          by = c('name', 'categoricCovariate'),
-          suffixes = c('', '.indValues'))
+      by = c("name", "categoricCovariate"),
+      suffixes = c("", ".indValues")
+    )
 
   # Loop through each hyperparameter group
   for (dtGroup in split(dtPriorHyper, by = identifier)) {
-
     # Create a named list of parameters
     paramList <- setNames(dtGroup$value, dtGroup$hyperParameter)
 
     # Calculate logTruncationOffset
-    dtGroup[, pLB := do.call(paste0("p", dtGroup$hyperDistribution[1]),
-                             c(
-                               list(q = dtGroup$minValue.indValues[1], log = FALSE), paramList
-                             ))]
-    dtGroup[, pUB := do.call(paste0("p", dtGroup$hyperDistribution[1]),
-                             c(
-                               list(q = dtGroup$maxValue.indValues[1], log = FALSE), paramList
-                             ))]
+    dtGroup[, pLB := do.call(
+      paste0("p", dtGroup$hyperDistribution[1]),
+      c(
+        list(q = dtGroup$minValue.indValues[1], log = FALSE), paramList
+      )
+    )]
+    dtGroup[, pUB := do.call(
+      paste0("p", dtGroup$hyperDistribution[1]),
+      c(
+        list(q = dtGroup$maxValue.indValues[1], log = FALSE), paramList
+      )
+    )]
 
     dtGroup[, logTruncationOffset := log(pUB - pLB)]
 
     # Combine results
-    dtHyperParameter <- rbind(dtHyperParameter,
-                        dtGroup    %>%
-                          dplyr::select(any_of(c(
-                            identifier,
-                            colsToKeep
-                          )))
+    dtHyperParameter <- rbind(
+      dtHyperParameter,
+      dtGroup %>%
+        dplyr::select(any_of(c(
+          identifier,
+          colsToKeep
+        )))
     )
   }
 
@@ -291,7 +299,9 @@ getLikelihoodForIndividualGroup <-
       )
 
     # if no Hyperparameter exist for group return probability 1
-    if (nrow(tmp) == 0) return(0)
+    if (nrow(tmp) == 0) {
+      return(0)
+    }
 
     # Get parameters for distributions
     paramList <- stats::setNames(tmp$value, tmp$hyperParameter)
@@ -303,6 +313,3 @@ getLikelihoodForIndividualGroup <-
 
     return(sum(logLikelihood))
   }
-
-
-

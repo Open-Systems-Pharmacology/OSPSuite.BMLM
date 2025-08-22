@@ -6,7 +6,7 @@
 \usage{
 readIdentificationParameterFromSnapshot(
   snapshotFile,
-  nameOfParameterIdentfication,
+  nameOfParameterIdentification,
   projectConfiguration,
   overwrite = FALSE
 )
@@ -15,7 +15,7 @@ readIdentificationParameterFromSnapshot(
 \item{snapshotFile}{A string representing the path to the snapshot file. This file should be in JSON format and contain
 parameter identifications that can be extracted and used to update the project configuration.}
 
-\item{nameOfParameterIdentfication}{A string representing the name of the parameter identification to be read from the snapshot.
+\item{nameOfParameterIdentification}{A string representing the name of the parameter identification to be read from the snapshot.
 This should correspond to a valid entry under \code{ParameterIdentifications} in the snapshot file.}
 
 \item{projectConfiguration}{An object of class \code{ProjectConfigurationBMLM}, which contains configuration details for the project.

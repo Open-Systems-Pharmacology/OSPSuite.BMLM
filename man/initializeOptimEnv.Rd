@@ -9,7 +9,9 @@ initializeOptimEnv(
   failValue = Inf,
   bestValue = Inf,
   NAcounter = 0,
+  outsideRangeCounter = 0,
   iteration = 0,
+  scalingMethod = SCALINGMETHOD$hardBounds,
   params = c()
 )
 }

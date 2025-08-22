@@ -48,7 +48,9 @@ and random generation) based on the specified distribution and parameters.
 }
 \examples{
 # Example usage:
-computeStatFunction(values = c(0, 1), parameters = c("mean", "sd"),
-                     distribution = "norm", v = 0.5, type = "P")
+computeStatFunction(
+  values = c(0, 1), parameters = c("mean", "sd"),
+  distribution = "norm", v = 0.5, type = "P"
+)
 
 }

@@ -4,14 +4,12 @@
 \alias{saveDataTablesAsCSV}
 \title{Save Data Tables as CSV}
 \usage{
-saveDataTablesAsCSV(dtList, outputDir, params = NULL)
+saveDataTablesAsCSV(dtList, outputDir)
 }
 \arguments{
 \item{dtList}{A list containing data tables to be saved.}
 
 \item{outputDir}{A character string representing the path to the output directory.}
-
-\item{params}{Optional; a numeric vector of parameters to set in the data tables (default is NULL).}
 }
 \description{
 Saves the provided data tables to CSV files in the specified output directory.

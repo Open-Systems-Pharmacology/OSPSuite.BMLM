@@ -1,7 +1,7 @@
 #' @title Parameter types
 #' @export
 #' @family enum helpers
-PARAMETERTYPE <- ospsuite.utils::enum(c(  #nolint camelCase
+PARAMETERTYPE <- ospsuite.utils::enum(c( # nolint camelCase
   "global",
   "hyperParameter",
   "outputError",
@@ -12,7 +12,7 @@ PARAMETERTYPE <- ospsuite.utils::enum(c(  #nolint camelCase
 #' @title Error Model
 #' @export
 #' @family enum helpers
-ERRORMODEL <- ospsuite.utils::enum(c( #nolint camelCase
+ERRORMODEL <- ospsuite.utils::enum(c( # nolint camelCase
   "proportional",
   "absolute",
   "log_absolute"
@@ -21,16 +21,24 @@ ERRORMODEL <- ospsuite.utils::enum(c( #nolint camelCase
 #' @title Scalings
 #' @export
 #' @family enum helpers
-SCALING <- ospsuite.utils::enum(c( #nolint camelCase
+SCALING <- ospsuite.utils::enum(c( # nolint camelCase
   log = "log",
   linear = "linear"
 ))
 
 #' @title Status of optimization Runs
 #' @family enum helpers
-RUNSTATUS <- ospsuite.utils::enum(c( #nolint camelCase
+RUNSTATUS <- ospsuite.utils::enum(c( # nolint camelCase
   initialized = "initialized",
   running = "running",
   stopped = "stopped",
   corrupt = "corrupt"
+))
+
+#' @title Methods to scale parameters
+#' @export
+#' @family enum helpers
+SCALINGMETHOD <- ospsuite.utils::enum(c( # nolint camelCase
+  logsig = "logsig",
+  hardBounds = "hardBounds"
 ))

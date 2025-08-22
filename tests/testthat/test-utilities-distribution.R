@@ -44,42 +44,51 @@ test_that("rlnorm_geomean matches rlnorm", {
 
 
 test_that("computeStatFunction works correctly", {
-
   # Test for the normal distribution (mean = 0, sd = 1)
   values <- c(0, 1)
   parameters <- c("mean", "sd")
 
   # Test Probability (P)
-  expect_equal(computeStatFunction(values, parameters, "norm", 0, type = "P"),
-               pnorm(0, mean = 0, sd = 1))
+  expect_equal(
+    computeStatFunction(values, parameters, "norm", 0, type = "P"),
+    pnorm(0, mean = 0, sd = 1)
+  )
 
   # Test Density (D)
-  expect_equal(computeStatFunction(values, parameters, "norm", 0, type = "D"),
-               dnorm(0, mean = 0, sd = 1))
+  expect_equal(
+    computeStatFunction(values, parameters, "norm", 0, type = "D"),
+    dnorm(0, mean = 0, sd = 1)
+  )
 
   # Test Quantile (Q)
-  expect_equal(computeStatFunction(values, parameters, "norm", 0.5, type = "Q"),
-               qnorm(0.5, mean = 0, sd = 1))
+  expect_equal(
+    computeStatFunction(values, parameters, "norm", 0.5, type = "Q"),
+    qnorm(0.5, mean = 0, sd = 1)
+  )
 
   # Test Random Generation (R)
-  set.seed(123)  # For reproducibility
+  set.seed(123) # For reproducibility
   r <- rnorm(5, mean = 0, sd = 1)
-  set.seed(123)  # For reproducibility
+  set.seed(123) # For reproducibility
   expect_equal(computeStatFunction(values, parameters, "norm", 5, type = "R"),
-               r, tolerance = 1e-5)  # Allow small tolerance for randomness
+    r,
+    tolerance = 1e-5
+  ) # Allow small tolerance for randomness
 
   # Test Log Probability
-  expect_equal(computeStatFunction(values, parameters, "norm", 0, type = "P", log = TRUE),
-               log(pnorm(0, mean = 0, sd = 1)))
+  expect_equal(
+    computeStatFunction(values, parameters, "norm", 0, type = "P", log = TRUE),
+    log(pnorm(0, mean = 0, sd = 1))
+  )
 
   # Test Log Density
-  expect_equal(computeStatFunction(values, parameters, "norm", 0, type = "D", log = TRUE),
-               log(dnorm(0, mean = 0, sd = 1)))
-
+  expect_equal(
+    computeStatFunction(values, parameters, "norm", 0, type = "D", log = TRUE),
+    log(dnorm(0, mean = 0, sd = 1))
+  )
 })
 
 test_that("calculateProbability works correctly", {
-
   # Test for normal distribution (mean = 0, sd = 1)
   rowNorm <- c(distribution = "norm", value = 0, mean_type = "mean", mean_value = 0, sd_type = "sd", sd_value = 1)
 
@@ -99,7 +108,7 @@ test_that("calculateProbability works correctly", {
   expect_equal(calculateProbability(rowUnif, log = TRUE), log(dunif(0.5, min = 0, max = 1)))
 
   # Test for flat distribution
-  rowFlat <- c(distribution = "flat", value = 0)  # Flat distribution should return 1 or 0 based on log
+  rowFlat <- c(distribution = "flat", value = 0) # Flat distribution should return 1 or 0 based on log
 
   # Test Flat Density (should return 1)
   expect_equal(calculateProbability(rowFlat), 1)
@@ -117,6 +126,5 @@ test_that("calculateProbability works correctly", {
   rowMissingParam <- c(distribution = "norm", value = 0, mean_type = "mean", mean_value = NA, sd_type = "sd", sd_value = 1)
 
   # Test that missing parameters return NA
-  expect_equal(calculateProbability(rowMissingParam), dnorm(x = 0,sd = 1))
+  expect_equal(calculateProbability(rowMissingParam), dnorm(x = 0, sd = 1))
 })
-

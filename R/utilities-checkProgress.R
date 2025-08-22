@@ -12,77 +12,114 @@
 #'
 #' @return A ggplot object visualizing the convergence of model parameters.
 #' @export
+
+# Main function
 plotConvergence <- function(dtConvergence,
-                            displayVariablesIndx = seq(1,5),
+                            displayVariablesIndx = NULL,
                             titletxt = NULL,
                             nPoints = 200,
-                            selectionMode = c('last', 'random', 'first')) {
+                            selectionMode = c("last", "random", "first")) {
+  checkmate::assertInteger(displayVariablesIndx,
+    lower = 1, upper = 6,
+    unique = TRUE, any.missing = FALSE, null.ok = TRUE
+  )
 
-  columnheaders <- c(objectiveValue = 'value of objective function: -loglikelihood',
-                     logTimeProfile = '- loglikelihood TimeProfile',
-                     logHyperParameter = '- loglikelihood HyperParameter',
-                     logPrior = '- loglikelihood Prior',
-                     percentageOfFailure = 'percentage of failed iterations')
+  # Helper function to calculate objective values and percentages
+  calculateConvergenceMetrics <- function(dt) {
+    dt[, objectiveValue := -(logTimeProfile + logHyperParameter + logPrior)]
+    dt[, `:=`(
+      logTimeProfile = -logTimeProfile,
+      logHyperParameter = -logHyperParameter,
+      logPrior = -logPrior
+    )]
+    dt[, percentageOfFailure := NAcounter / iteration * 100]
+    dt[, percentageOutsideRange := outsideRangeCounter / iteration * 100]
+    return(dt)
+  }
 
-  # Match the selection mode to ensure it's one of the allowed values
-  selectionMode <- match.arg(selectionMode)
-  displayVariablesIndx <- as.integer(displayVariablesIndx)
-  checkmate::assertInteger(displayVariablesIndx,lower = 1,upper = length(columnheaders),unique = TRUE,any.missing = FALSE)
+  # Helper function to get display variable indices
+  getColumnHeaders <- function(dt, displayVariablesIndx) {
+    columnheaders <- c(
+      objectiveValue = "value of objective function: -loglikelihood",
+      logTimeProfile = "- loglikelihood TimeProfile",
+      logHyperParameter = "- loglikelihood HyperParameter",
+      logPrior = "- loglikelihood Prior",
+      percentageOfFailure = "percentage of failed iterations",
+      percentageOutsideRange = "percentage of iterations with parameters outside range"
+    )
 
-  displayVariables <- names(columnheaders[displayVariablesIndx])
+    if (is.null(displayVariablesIndx)) {
+      displayVariablesIndx <- which(sapply(names(columnheaders), function(col) any(dt[[col]] != 0)))
+    }
 
+    return(columnheaders[displayVariablesIndx])
+  }
 
-  # Calculate the objective value as the negative sum of log likelihoods
-  dtConvergence[, objectiveValue := -(logTimeProfile + logHyperParameter + logPrior)]
-  dtConvergence[,  `:=` (logTimeProfile = - logTimeProfile,
-                         logHyperParameter = -logHyperParameter,
-                         logPrior = -logPrior)]
-  dtConvergence[,percentageOfFailure := NAcounter/iteration*100]
+  # Helper function to select points based on selection mode
+  selectPoints <- function(dt, nPointsAvailable, nPoints, selectionMode) {
+    if (nPointsAvailable > nPoints) {
+      ixSelected <- switch(selectionMode,
+        first = seq(1, nPoints) + nPointsAvailable - nPoints,
+        random = sort(c(1, sample(seq(2, nPointsAvailable - 1), size = nPoints - 2, replace = FALSE), nPointsAvailable)),
+        last = seq(1, nPoints)
+      )
+      dt <- dt[ixSelected]
+    }
+    return(dt)
+  }
 
-  nPointsAvailable <- nrow(dtConvergence[event == 'best'])
-  if (nPointsAvailable == 1){
-    message(paste('only one points available, please wait for plots'))
+  # Calculate metrics
+  dtConvergence <- calculateConvergenceMetrics(dtConvergence)
+
+  nPointsAvailable <- nrow(dtConvergence[event == "best"])
+  if (nPointsAvailable == 1) {
+    message(paste("only one point available, please wait for plots"))
     return(NULL)
   }
 
+  columnheaders <- getColumnHeaders(
+    dt = dtConvergence,
+    displayVariablesIndx = displayVariablesIndx
+  )
+
   # Select points based on the specified selection mode
-  # Attention sis sorted decending for print
-  if (nPointsAvailable > nPoints) {
-    ixSelected <- switch(selectionMode,
-                         first = seq(1, nPoints) + nPointsAvailable - nPoints,
-                         random = sort(c(1, sample(seq(2, nPointsAvailable - 1), size = nPoints - 2, replace = FALSE), nPointsAvailable)),
-                         last = seq(1, nPoints)
-    )
-    dtConvergence <- dtConvergence[ixSelected]
-  }
+  selectionMode <- match.arg(selectionMode)
+  dtConvergence <- selectPoints(dtConvergence, nPointsAvailable, nPoints, selectionMode)
 
   # Reshape the data for plotting
-  plotData <- data.table::melt(dtConvergence[event == 'best'],
-                               measure.vars = displayVariables,
-                               variable.name = 'summand',
-                               value.name = 'value')
+  plotData <- data.table::melt(dtConvergence[event == "best"],
+    measure.vars = names(columnheaders),
+    variable.name = "summand",
+    value.name = "value"
+  )
+
   plotData$summand <- factor(plotData$summand,
-                             levels = displayVariables)
+    levels = names(columnheaders)
+  )
   levels(plotData$summand) <- columnheaders[levels(plotData$summand)]
 
   # Create the plot using ggplot2
   plotObject <- ggplot(plotData, mapping = aes(x = iteration, y = value)) +
-    geom_step(mapping = aes(color = 'current', linetype = 'current')) +
-    geom_hline(mapping = aes(yintercept = value, color = 'start', linetype = 'start'),
-               data = plotData[iteration == 1]) +
-    facet_wrap(~summand, ncol = 1, scales = 'free_y') +
-    scale_color_manual(values = c(current = 'black', start = 'darkred')) +
-    scale_linetype_manual(values = c(current = 'solid', start = 'dotted')) +
-    labs(y = '', color = '', linetype = '',
-         title = titletxt) +
-    theme(legend.position = 'none') +
+    geom_step(mapping = aes(color = "current", linetype = "current")) +
+    geom_hline(
+      mapping = aes(yintercept = value, color = "start", linetype = "start"),
+      data = plotData[iteration == 1]
+    ) +
+    facet_wrap(~summand, ncol = 1, scales = "free_y") +
+    scale_color_manual(values = c(current = "black", start = "darkred")) +
+    scale_linetype_manual(values = c(current = "solid", start = "dotted")) +
+    labs(
+      y = "", color = "", linetype = "",
+      title = titletxt
+    ) +
+    theme(legend.position = "none") +
     layerWatermark()
 
-  # add restart
-  if (any(dtConvergence$event == 'restart')){
+  # Add restart points as vertical lines
+  if (any(dtConvergence$event == "restart")) {
     plotObject <- plotObject +
-      geom_vline(data = dtConvergence[event == 'restart'],mapping = aes(xintercept = iteration) ) +
-      labs(caption = 'vertical lines indicate restart of algorithm')
+      geom_vline(data = dtConvergence[event == "restart"], mapping = aes(xintercept = iteration)) +
+      labs(caption = "vertical lines indicate restart of algorithm")
   }
 
   return(invisible(list(convergence = plotObject)))
@@ -108,25 +145,26 @@ plotParameterLimits <-
            titeltxt,
            nCols,
            nRows,
-           colorScalingVector =  c(
-             current = 'darkgreen',
-             start = 'lightblue',
-             best = 'orange'
+           colorScalingVector = c(
+             current = "darkgreen",
+             start = "lightblue",
+             best = "orange"
            )) {
-
-    plotData <- preparePlotDataParameterValues(dtList =  dtList,
-                                               currentStatus = statusList$current,
-                                               bestStatus = statusList$best)
-    plotData[,xlabel := '']
-    plotData[valueMode ==  PARAMETERTYPE$individual,xlabel :=individualId]
-    plotData[valueMode ==  PARAMETERTYPE$hyperParameter, xlabel :=hyperParameter,by = .I]
+    plotData <- preparePlotDataParameterValues(
+      dtList = dtList,
+      currentStatus = statusList$current,
+      bestStatus = statusList$best
+    )
+    plotData[, xlabel := ""]
+    plotData[valueMode == PARAMETERTYPE$individual, xlabel := individualId]
+    plotData[valueMode == PARAMETERTYPE$hyperParameter, xlabel := hyperParameter, by = .I]
 
     plotData$xlabel <- factor(plotData$xlabel, levels = unique(plotData$xlabel), ordered = TRUE)
 
     plotData <- reshapePlotDataParameterValues(plotData)
 
 
-    plotData[,label := ifelse(is.na(categoricCovariate),name,paste0(name,' (',categoricCovariate,')'))]
+    plotData[, label := ifelse(is.na(categoricCovariate), name, paste0(name, " (", categoricCovariate, ")"))]
     plotData$label <- factor(plotData$label, levels = unique(plotData$label), ordered = TRUE)
 
     plotDataInd <- plotData[!(valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError))]
@@ -143,11 +181,11 @@ plotParameterLimits <-
 
     plotList <- list()
 
-    for (iPlot in seq(0,totalPlots)) {
+    for (iPlot in seq(0, totalPlots)) {
       if (iPlot == 0) {
         plotObject <- ggplot(plotDataNonInd) +
-          suppressWarnings(geom_point(utils::modifyList(mapping,aes(x = name)))) +
-          facet_wrap(vars(valueMode), ncol = 2, scales = 'free_y')
+          suppressWarnings(geom_point(utils::modifyList(mapping, aes(x = name)))) +
+          facet_wrap(vars(valueMode), ncol = 2, scales = "free_y")
       } else {
         # Determine the facets for the current plot
         startIndex <- (iPlot - 1) * nCols * nRows + 1
@@ -156,9 +194,9 @@ plotParameterLimits <-
         facetsToPlot <- uniqueFacets[startIndex:endIndex]
 
         # Create the plot using the subset
-        plotObject <- ggplot( plotDataInd[label %in% facetsToPlot]) +
-          suppressWarnings(geom_point(utils::modifyList(mapping,aes(x = xlabel)))) +
-          facet_wrap(vars(label), ncol = nCols, scales = 'free_y')
+        plotObject <- ggplot(plotDataInd[label %in% facetsToPlot]) +
+          suppressWarnings(geom_point(utils::modifyList(mapping, aes(x = xlabel)))) +
+          facet_wrap(vars(label), ncol = nCols, scales = "free_y")
       }
 
       plotObject <-
@@ -169,22 +207,21 @@ plotParameterLimits <-
         ) +
         coord_flip() +
         labs(
-          x = '',
-          y = '',
-          color = '',
-          shape = '',
+          x = "",
+          y = "",
+          color = "",
+          shape = "",
           title = titeltxt
         ) +
         scale_y_continuous(
           breaks = seq(0, 1, by = 0.25),
-          labels = c('min', rep('', 3), 'max')
+          labels = c("min", rep("", 3), "max")
         ) +
         layerWatermark() +
-        theme(legend.direction = 'horizontal')
+        theme(legend.direction = "horizontal")
 
-      plotName <- paste0('parameterLimits_',ifelse(iPlot == 0,'global',paste('individual',iPlot,sep = '_')))
+      plotName <- paste0("parameterLimits_", ifelse(iPlot == 0, "global", paste("individual", iPlot, sep = "_")))
       plotList[[plotName]] <- plotObject
-
     }
 
     return(invisible(plotList))
@@ -212,48 +249,53 @@ plotDistributions <- function(dtList,
                               nRows = 3,
                               xScale = unlist(SCALING),
                               titeltxt = NULL,
-                              colorScalingVector =  c(
-                                start = 'lightblue',
-                                current = 'darkgreen',
-                                best = 'orange'
+                              colorScalingVector = c(
+                                start = "lightblue",
+                                current = "darkgreen",
+                                best = "orange"
                               )) {
-
   xScale <- tolower(match.arg(xScale))
 
-  if (nrow(dtList$startValues) == 0 ){
-    stop('No distributed parameters available')
+  if (nrow(dtList$startValues) == 0) {
+    stop("No distributed parameters available")
   }
 
-  plotData <- preparePlotDataParameterValues(dtList = dtList,
-                                             currentStatus = currentStatus,
-                                             bestStatus = bestStatus)
+  plotData <- preparePlotDataParameterValues(
+    dtList = dtList,
+    currentStatus = currentStatus,
+    bestStatus = bestStatus
+  )
   plotData <- reshapePlotDataParameterValues(plotData)
 
-  plotData <- addLabel(plotData = plotData,dtPrior =  dtList$prior)
+  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior)
 
   dtValues <- plotData[valueMode == PARAMETERTYPE$individual] %>%
-    setorderv(c('label', 'status', 'statusValue'))
+    setorderv(c("label", "status", "statusValue"))
 
-  dtValues[, ecdf := seq_len(.N) / .N, by = c('status', 'label')]
+  dtValues[, ecdf := seq_len(.N) / .N, by = c("status", "label")]
 
-  hyperParameter <- setlogTruncationOffset(dtPrior = plotData[valueMode == PARAMETERTYPE$hyperParameter]  %>%
-                                             merge(dtList$prior[,c("name","categoricCovariate",'hyperDistribution')] %>%
-                                                     unique() ,
-                                                   by = c("name","categoricCovariate")) %>%
-                                             setnames('statusValue','value'),
-                                           dtStartValues =  dtValues,
-                                           identifier = c('name', 'categoricCovariate','status'),
-                                           colsToKeep = c(
-                                             "hyperParameter",
-                                             "value",
-                                             "hyperDistribution",
-                                             "scaling",
-                                             'logTruncationOffset',
-                                             'minValue.indValues',
-                                             'maxValue.indValues',
-                                             'minValue',
-                                             'maxValue',
-                                             'label')
+  hyperParameter <- setlogTruncationOffset(
+    dtPrior = plotData[valueMode == PARAMETERTYPE$hyperParameter] %>%
+      merge(
+        dtList$prior[, c("name", "categoricCovariate", "hyperDistribution")] %>%
+          unique(),
+        by = c("name", "categoricCovariate")
+      ) %>%
+      setnames("statusValue", "value"),
+    dtStartValues = dtValues,
+    identifier = c("name", "categoricCovariate", "status"),
+    colsToKeep = c(
+      "hyperParameter",
+      "value",
+      "hyperDistribution",
+      "scaling",
+      "logTruncationOffset",
+      "minValue.indValues",
+      "maxValue.indValues",
+      "minValue",
+      "maxValue",
+      "label"
+    )
   )
 
   # Determine unique facets
@@ -263,10 +305,9 @@ plotDistributions <- function(dtList,
   # Calculate how many plots are needed
   totalPlots <- ceiling(totalFacets / (nCols * nRows))
 
-  plotList = list()
+  plotList <- list()
 
   for (iPlot in seq_len(totalPlots)) {
-
     # Determine the facets for the current plot
     startIndex <- (iPlot - 1) * nCols * nRows + 1
     endIndex <- min(startIndex + (nCols * nRows) - 1, totalFacets)
@@ -276,16 +317,20 @@ plotDistributions <- function(dtList,
     # Subset the data for the current plot
     dtValuesSubset <- dtValues[label %in% facetsToPlot]
 
-    lineData <- createLineData(hyperParameter = hyperParameter[label %in% facetsToPlot],
-                               xScale = xScale,
-                               dtValues = dtValuesSubset)
+    lineData <- createLineData(
+      hyperParameter = hyperParameter[label %in% facetsToPlot],
+      xScale = xScale,
+      dtValues = dtValuesSubset
+    )
 
     # Create the plot for the current subset
     plotObject <- ggplot(data = dtValuesSubset) +
       geom_point(mapping = aes(x = statusValue, y = ecdf, fill = status, shape = status)) +
-      labs(x = 'parameter values',
-           y = 'cumulative proportion',
-           title = titeltxt)
+      labs(
+        x = "parameter values",
+        y = "cumulative proportion",
+        title = titeltxt
+      )
 
     if (xScale == SCALING$log) {
       plotObject <- plotObject + scale_x_log10()
@@ -298,53 +343,61 @@ plotDistributions <- function(dtList,
 
     # Add faceting to the plot
     plotObject <- plotObject +
-      facet_wrap(vars(label), scales = 'free_x', ncol = nCols) +
+      facet_wrap(vars(label), scales = "free_x", ncol = nCols) +
       layerWatermark()
 
     # Store the plot in the list
-    plotName <- paste0('distributions_',iPlot)
+    plotName <- paste0("distributions_", iPlot)
     plotList[[plotName]] <- plotObject
   }
 
   dtPrior <- copy(dtList$prior)
   dtPrior[, priorDescription := trimws(paste(distribution, ifelse(distribution == "flat", "",
-                                                                  paste0(
-                                                                    "(",
-                                                                    ifelse(is.na(p1_type), "", paste0(p1_type, ": ", p1_value)),
-                                                                    ifelse(is.na(p2_type), "", paste0(' ',p2_type, ": ", p2_value)),
-                                                                    ifelse(is.na(p3_type), "", paste0(' ',p3_type, ": ", p3_value)), ")"
-                                                                  )
+    paste0(
+      "(",
+      ifelse(is.na(p1_type), "", paste0(p1_type, ": ", p1_value)),
+      ifelse(is.na(p2_type), "", paste0(" ", p2_type, ": ", p2_value)),
+      ifelse(is.na(p3_type), "", paste0(" ", p3_type, ": ", p3_value)), ")"
+    )
   )))]
 
   hyperParameter <- hyperParameter %>%
-    merge(dtPrior[,c('name', 'hyperParameter','categoricCovariate','priorDescription')],
-          by = c('name', 'hyperParameter','categoricCovariate'))
+    merge(dtPrior[, c("name", "hyperParameter", "categoricCovariate", "priorDescription")],
+      by = c("name", "hyperParameter", "categoricCovariate")
+    )
 
-  for (dtHyper in split(hyperParameter, by = 'label')){
-    tmpHyper <- dcast(dtHyper[,c('hyperParameter','status','value','minValue','maxValue','priorDescription')],
-                      ... ~ status , value.var = 'value')
+  for (dtHyper in split(hyperParameter, by = "label")) {
+    tmpHyper <- dcast(dtHyper[, c("hyperParameter", "status", "value", "minValue", "maxValue", "priorDescription")],
+      ... ~ status,
+      value.var = "value"
+    )
 
     tmpLog <- rbind(stats::setNames(lapply(unique(dtHyper$status), function(testStatus) {
-      getLikelihoodForIndividualGroup(copy(dtValues)[label == dtHyper$label[1] &
-                                                       status == testStatus] %>%
-                                        setnames('statusValue', 'value'),
-                                      dtHyper[status == testStatus])
-    }), unique(dtHyper$status))) %>%  as.data.table()
-    tmpLog[, hyperParameter := 'loglikelihood']
+      getLikelihoodForIndividualGroup(
+        copy(dtValues)[label == dtHyper$label[1] &
+          status == testStatus] %>%
+          setnames("statusValue", "value"),
+        dtHyper[status == testStatus]
+      )
+    }), unique(dtHyper$status))) %>% as.data.table()
+    tmpLog[, hyperParameter := "loglikelihood"]
 
-    dtHyper[,truncationOffset := 1-exp(logTruncationOffset) ]
-    tmpTrunc <-  dcast(dtHyper[,c('truncationOffset','status','minValue.indValues','maxValue.indValues')] %>% unique(),
-                       ... ~ status , value.var = 'truncationOffset')
-    tmpTrunc[,hyperParameter := paste0('likelihood outside range (',minValue.indValues,'-',maxValue.indValues,')')]
-    tmpTrunc[,minValue.indValues := NULL]
-    tmpTrunc[,maxValue.indValues := NULL]
+    dtHyper[, truncationOffset := 1 - exp(logTruncationOffset)]
+    tmpTrunc <- dcast(dtHyper[, c("truncationOffset", "status", "minValue.indValues", "maxValue.indValues")] %>% unique(),
+      ... ~ status,
+      value.var = "truncationOffset"
+    )
+    tmpTrunc[, hyperParameter := paste0("likelihood outside range (", minValue.indValues, "-", maxValue.indValues, ")")]
+    tmpTrunc[, minValue.indValues := NULL]
+    tmpTrunc[, maxValue.indValues := NULL]
 
-    tmp = rbind(tmpHyper,
-                tmpLog,
-                tmpTrunc,
-                fill = TRUE) %>%
-      setnames('hyperParameter','.')
-    print(knitr::kable(tmp,caption = dtHyper$label[1]))
+    tmp <- rbind(tmpHyper,
+      tmpLog,
+      tmpTrunc,
+      fill = TRUE
+    ) %>%
+      setnames("hyperParameter", ".")
+    print(knitr::kable(tmp, caption = dtHyper$label[1]))
 
     plotList[[dtHyper$label[1]]] <- tmp
   }
@@ -371,49 +424,55 @@ plotDistributions <- function(dtList,
 plotCorrelations <- function(dtList,
                              statusList,
                              titeltxt = NULL,
-                             method = 'spearman',
-                             statusToShow = c('best', 'current', 'start'),
+                             method = "spearman",
+                             statusToShow = c("best", "current", "start"),
                              scenarioList,
                              corCut = 0.5,
-                             pValueCut = 0.1){
+                             pValueCut = 0.1) {
+  statusToShow <- match.arg(statusToShow)
 
-  statusToShow = match.arg(statusToShow)
-
-  if (nrow(dtList$startValues) == 0 ){
-    stop('No distributed parameters available')
+  if (nrow(dtList$startValues) == 0) {
+    stop("No distributed parameters available")
   }
 
-  plotData <- preparePlotDataParameterValues(dtList =  dtList,
-                                             currentStatus = statusList$current,
-                                             bestStatus = statusList$best)
+  plotData <- preparePlotDataParameterValues(
+    dtList = dtList,
+    currentStatus = statusList$current,
+    bestStatus = statusList$best
+  )
   plotData <- reshapePlotDataParameterValues(plotData[valueMode == PARAMETERTYPE$individual])
   plotData <- plotData[status == statusToShow]
-  plotData <- addLabel(plotData = plotData,dtPrior =  dtList$prior,unitSep = '\n',identifier = 'name')
+  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior, unitSep = "\n", identifier = "name")
 
   labels <- unique(plotData$label)
 
-  plotData <- dcast(plotData[,c('statusValue','label','individualId')], ... ~ label, value.var = 'statusValue')
+  plotData <- dcast(plotData[, c("statusValue", "label", "individualId")], ... ~ label, value.var = "statusValue")
   pm <- GGally::ggpairs(plotData,
-                        columns = labels,
-                        switch = 'y',
-                        diag = list(continuous = GGally::wrap("barDiag",bins = 20,na.rm = TRUE)),
-                        upper = list(continuous = GGally::wrap("cor", method = method,use = "complete.obs")),
-                        lower = list(continuous = GGally::wrap("points", na.rm = TRUE)),
-                        title = titeltxt,
-                        mapping = aes(shape = 'circle')) +
-    theme(strip.placement = 'outside')
+    columns = labels,
+    switch = "y",
+    diag = list(continuous = GGally::wrap("barDiag", bins = 20, na.rm = TRUE)),
+    upper = list(continuous = GGally::wrap("cor", method = method, use = "complete.obs")),
+    lower = list(continuous = GGally::wrap("points", na.rm = TRUE)),
+    title = titeltxt,
+    mapping = aes(shape = "circle")
+  ) +
+    theme(strip.placement = "outside")
 
 
-  plotList <- checkForRelevantColumnsOfPopulation(plotData = plotData,
-                                                  labels = labels,
-                                                  scenarioList = scenarioList,
-                                                  corCut = corCut,
-                                                  pValueCut = pValueCut,
-                                                  method = method,
-                                                  dtMappedPaths = dtList$mappedPaths)
+  plotList <- checkForRelevantColumnsOfPopulation(
+    plotData = plotData,
+    labels = labels,
+    scenarioList = scenarioList,
+    corCut = corCut,
+    pValueCut = pValueCut,
+    method = method,
+    dtMappedPaths = dtList$mappedPaths
+  )
 
-  plotList <- c(list('correlation_fitparameter' = pm),
-                plotList)
+  plotList <- c(
+    list("correlation_fitparameter" = pm),
+    plotList
+  )
 
   return(invisible(plotList))
 }
@@ -439,7 +498,6 @@ plotPredictedVsObserved <- function(
     nCols = 2,
     titeltxt = NULL,
     ...) {
-
   xyScale <- tolower(match.arg(xyScale))
 
   # Get unique outputPathIds
@@ -460,15 +518,16 @@ plotPredictedVsObserved <- function(
       groupAesthetics = c(),
       ...
     ) +
-      labs(subtitle = id,
-           title = titeltxt)
+      labs(
+        subtitle = id,
+        title = titeltxt
+      )
 
     # Add facet wrapping by scenario and group
     plotObject <- plotObject +
       facet_wrap(vars(scenario, group), ncol = nCols)
 
     plotList[[id]] <- plotObject
-
   }
 
   return(invisible(plotList))
@@ -491,50 +550,57 @@ plotPredictedVsTime <- function(
     nCols = 4,
     titeltxt = NULL,
     ...) {
-
   yScale <- tolower(match.arg(yScale))
 
   plotList <- list()
 
-  for (dtResGroup in split(dtRes, by = c('outputPathId','scenarioName'))){
-
+  for (dtResGroup in split(dtRes, by = c("outputPathId", "scenarioName"))) {
     # for inidividuals with only one measurement plot predcition as stright line
-    dtIndCount <- dtResGroup[,.N,by = individualId]
+    dtIndCount <- dtResGroup[, .N, by = individualId]
 
-    plotData = rbind(dtResGroup,
-                     dtResGroup[individualId %in% dtIndCount[N>1]$individualId] %>%
-                       .[,dataType := 'simulated'])
+    plotData <- rbind(
+      dtResGroup,
+      dtResGroup[individualId %in% dtIndCount[N > 1]$individualId] %>%
+        .[, dataType := "simulated"]
+    )
 
-    plotDataSingleValue <- dtResGroup[individualId %in% dtIndCount[N==1]$individualId]
+    plotDataSingleValue <- dtResGroup[individualId %in% dtIndCount[N == 1]$individualId]
 
     yUnit <- dtResGroup$yUnit[1]
 
     plotObject <-
-      ospsuite_plotTimeProfile(plotData = plotData,
-                               mapping = aes(y = predicted,groupby = outputPathId),
-                               observedMapping = aes(y = yValues,
-                                                     groupby = outputPathId),
-                               yscale = tolower(yScale),
-                               xscale.args = list(limits = c(NA,NA)),
-                               ...) +
-      facet_wrap(vars(individualId),ncol = min(nCols,dplyr::n_distinct(dtResGroup$individualId))) +
-      labs(title = titeltxt,
-           subtitle = dtResGroup$scenario[1],
-           y = dtResGroup$outputPathId[1]) +
-      theme(legend.position = 'none')
+      ospsuite_plotTimeProfile(
+        plotData = plotData,
+        mapping = aes(y = predicted, groupby = outputPathId),
+        observedMapping = aes(
+          y = yValues,
+          groupby = outputPathId
+        ),
+        yscale = tolower(yScale),
+        xscale.args = list(limits = c(NA, NA)),
+        ...
+      ) +
+      facet_wrap(vars(individualId), ncol = min(nCols, dplyr::n_distinct(dtResGroup$individualId))) +
+      labs(
+        title = titeltxt,
+        subtitle = dtResGroup$scenario[1],
+        y = dtResGroup$outputPathId[1]
+      ) +
+      theme(legend.position = "none")
 
     if (nrow(plotDataSingleValue) > 1) {
       plotObject <- plotObject +
-        geom_point(mapping = aes(x = xValues, y = predicted),
-                   data = plotDataSingleValue, shape = 'plus')
+        geom_point(
+          mapping = aes(x = xValues, y = predicted),
+          data = plotDataSingleValue, shape = "plus"
+        )
     }
 
-    plotName <- paste(dtResGroup$outputPathId[1],dtResGroup$scenarioName[1],sep = '_')
+    plotName <- paste(dtResGroup$outputPathId[1], dtResGroup$scenarioName[1], sep = "_")
     plotList[[plotName]] <- plotObject
   }
 
   return(invisible(plotList))
-
 }
 #' Create and Print Residuals vs Time Plots
 #'
@@ -549,8 +615,7 @@ plotPredictedVsTime <- function(
 #'
 #' @return NULL This function does not return a value; it prints the plots directly.
 #' @export
-plotResidualsVsTime <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
-
+plotResidualsVsTime <- function(dtRes, nCols = 2, titeltxt = NULL, ...) {
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
 
@@ -563,12 +628,15 @@ plotResidualsVsTime <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
 
     # Create the base plot for residuals vs observed
     plotObject <- ospsuite_plotResidualsVsTime(filteredData,
-                                               mapping = aes(y =resNorm),
-                                               groupAesthetics = c()) +
+      mapping = aes(y = resNorm),
+      groupAesthetics = c()
+    ) +
       facet_wrap(vars(scenario, group), ncol = nCols) +
-      labs(y = 'Residuals',
-           subtitle = id,
-           title = titeltxt)
+      labs(
+        y = "Residuals",
+        subtitle = id,
+        title = titeltxt
+      )
 
     plotList[[id]] <- plotObject
   }
@@ -587,8 +655,7 @@ plotResidualsVsTime <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
 #'
 #' @return NULL This function does not return a value; it prints the plots directly.
 #' @export
-plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
-
+plotResidualsAsHistogram <- function(dtRes, nCols = 2, titeltxt = NULL, ...) {
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
 
@@ -599,16 +666,22 @@ plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
     filteredData <- dtRes[dtRes$outputPathId == id, ]
 
     # Create the base plot for residuals vs observed
-    plotObject <- ospsuite.plots::plotHistogram(filteredData,mapping = aes(x = resNorm, color = 'blue'),
-                                                distribution = 'normal',plotAsFrequency = TRUE) +
-      stat_function(fun = dnorm, args = list(mean = 0, sd = 1),
-                    color = "black", linewidth = 1) +
-      geom_vline(xintercept = 0,linewidth = 0.5) +
+    plotObject <- ospsuite.plots::plotHistogram(filteredData,
+      mapping = aes(x = resNorm, color = "blue"),
+      distribution = "normal", plotAsFrequency = TRUE
+    ) +
+      stat_function(
+        fun = dnorm, args = list(mean = 0, sd = 1),
+        color = "black", linewidth = 1
+      ) +
+      geom_vline(xintercept = 0, linewidth = 0.5) +
       facet_wrap(vars(scenario, group), ncol = nCols) +
-      theme(legend.position = 'none') +
-      labs(x = 'Residuals',
-           subtitle = id,
-           title = titeltxt)
+      theme(legend.position = "none") +
+      labs(
+        x = "Residuals",
+        subtitle = id,
+        title = titeltxt
+      )
 
     # Print the plot
     plotList[[id]] <- plotObject
@@ -628,8 +701,7 @@ plotResidualsAsHistogram <- function(dtRes, nCols = 2,titeltxt = NULL,...) {
 #'
 #' @return NULL This function does not return a value; it prints the plots directly.
 #' @export
-plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
-
+plotResidualsAsQQ <- function(dtRes, nCols = 2, titeltxt = NULL, self...) {
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
 
@@ -640,19 +712,20 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
     filteredData <- dtRes[dtRes$outputPathId == id, ]
 
     # Create the base plot for residuals vs observed
-    plotObject <- ospsuite.plots::plotQQ(data = filteredData,mapping = aes(sample = resNorm)) +
+    plotObject <- ospsuite.plots::plotQQ(data = filteredData, mapping = aes(sample = resNorm)) +
       facet_wrap(vars(scenario, group), ncol = nCols) +
-      theme(legend.position = 'none') +
-      labs(y = 'Residuals',
-           subtitle = id,
-           title = titeltxt)
+      theme(legend.position = "none") +
+      labs(
+        y = "Residuals",
+        subtitle = id,
+        title = titeltxt
+      )
 
     # Print the plot
-    plotList[[id]] <-plotObject
+    plotList[[id]] <- plotObject
   }
 
   return(invisible(plotList))
-
 }
 #' Get Current Configuration Table
 #'
@@ -664,32 +737,31 @@ plotResidualsAsQQ <- function(dtRes, nCols = 2,titeltxt = NULL,self...) {
 #'
 #' @return A data.table containing the current configuration values.
 #' @export
-getCurrentConfigTable <- function(projectConfiguration, dtList,sheetName = c('Prior','IndividualStartValues')) {
-
+getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("Prior", "IndividualStartValues")) {
   sheetName <- match.arg(sheetName)
 
-  if (sheetName == 'IndividualStartValues' & nrow(dtList$startValues) == 0){
-    warning('No individual start values available')
+  if (sheetName == "IndividualStartValues" & nrow(dtList$startValues) == 0) {
+    warning("No individual start values available")
     return(data.table())
   }
 
   identifier <- switch(sheetName,
-                       Prior = c("name", "hyperParameter", "categoricCovariate"),
-                       IndividualStartValues = c("name", "individualId", "categoricCovariate")
+    Prior = c("name", "hyperParameter", "categoricCovariate"),
+    IndividualStartValues = c("name", "individualId", "categoricCovariate")
   )
 
   dtOld <- switch(sheetName,
-                  Prior = dtList$prior,
-                  IndividualStartValues = dtList$startValues
+    Prior = dtList$prior,
+    IndividualStartValues = dtList$startValues
   )
 
 
   wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
 
   dtNew <- addFinalValue(wb,
-                         sheetName = sheetName,
-                         identifier = identifier,
-                         newTable = dtOld
+    sheetName = sheetName,
+    identifier = identifier,
+    newTable = dtOld
   )
 
   return(dtNew)
@@ -716,75 +788,87 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
                                                 corCut,
                                                 pValueCut,
                                                 method,
-                                                dtMappedPaths){
-
-  dtPop <- preparePopulationForCorrelationCheck(scenarioList,dtMappedPaths)
+                                                dtMappedPaths) {
+  dtPop <- preparePopulationForCorrelationCheck(scenarioList, dtMappedPaths)
 
   mergedData <- merge(plotData,
-                      dtPop,
-                      by.x = 'individualId',
-                      by.y = 'ObservedIndividualId')
+    dtPop,
+    by.x = "individualId",
+    by.y = "ObservedIndividualId"
+  )
 
   # Loop through each label to find correlation
-  plotList = list()
-  maxCorrelation = 0
-  minPvalue = 1
+  plotList <- list()
+  maxCorrelation <- 0
+  minPvalue <- 1
   for (label in labels) {
-    for (popCol in setdiff(names(dtPop), c('ObservedIndividualId'))) {
-      iNonNans = which(!is.na(mergedData[[popCol]]) &
-                         !is.na(mergedData[[label]]))
-      if (length(iNonNans) > 3){
+    for (popCol in setdiff(names(dtPop), c("ObservedIndividualId"))) {
+      iNonNans <- which(!is.na(mergedData[[popCol]]) &
+        !is.na(mergedData[[label]]))
+      if (length(iNonNans) > 3) {
         plotData <- copy(mergedData) %>%
-          setnames(old = c(label,popCol),
-                   new = c('label','popCol')) %>%
-          dplyr::select(c('label','popCol'))
+          setnames(
+            old = c(label, popCol),
+            new = c("label", "popCol")
+          ) %>%
+          dplyr::select(c("label", "popCol"))
 
         if (is.numeric(mergedData[[popCol]])) {
           # Calculate correlation for numeric columns
           correlationValue <-
             cor(mergedData[[label]],
-                mergedData[[popCol]],
-                use = "complete.obs",
-                method = method)
-          maxCorrelation <- max(maxCorrelation,abs(correlationValue))
-          if (abs(correlationValue) > corCut){
-            plotList[[paste('cor',label,popCol,sep = '_')]] <-
-              ggplot(data = plotData,
-                     mapping = aes(y = label,x = popCol)) +
-              geom_point(fill = 'black',na.rm = TRUE) +
-              geom_smooth(method = 'lm',formula = y ~ x,na.rm = TRUE) +
-              labs(y = label,
-                   x = popCol,
-                   title = paste('Cor:',round(correlationValue,2)))
+              mergedData[[popCol]],
+              use = "complete.obs",
+              method = method
+            )
+          maxCorrelation <- max(maxCorrelation, abs(correlationValue))
+          if (abs(correlationValue) > corCut) {
+            plotList[[paste("cor", label, popCol, sep = "_")]] <-
+              ggplot(
+                data = plotData,
+                mapping = aes(y = label, x = popCol)
+              ) +
+              geom_point(fill = "black", na.rm = TRUE) +
+              geom_smooth(method = "lm", formula = y ~ x, na.rm = TRUE) +
+              labs(
+                y = label,
+                x = popCol,
+                title = paste("Cor:", round(correlationValue, 2))
+              )
           }
         } else if (is.factor(mergedData[[popCol]])) {
           kruskalTestResult <- kruskal.test(label ~ popCol, data = plotData)
-          if (!is.na(kruskalTestResult$p.value)){
-            minPvalue <- min(minPvalue,kruskalTestResult$p.value)
-            if (kruskalTestResult$p.value < pValueCut)
-              plotList[[paste('cor',label,popCol,sep = '_')]] <-
-                ospsuite.plots::plotBoxWhisker(data = plotData,
-                                               mapping = aes(y =label,x = popCol)) +
-                geom_jitter(fill = 'black',na.rm = TRUE) +
-                labs(y = label,
-                     x = popCol,
-                     title = paste('pValue:',signif(kruskalTestResult$p.value,2))) +
-                theme(axis.text.x = element_text(angle = 45,hjust = 1))
-
+          if (!is.na(kruskalTestResult$p.value)) {
+            minPvalue <- min(minPvalue, kruskalTestResult$p.value)
+            if (kruskalTestResult$p.value < pValueCut) {
+              plotList[[paste("cor", label, popCol, sep = "_")]] <-
+                ospsuite.plots::plotBoxWhisker(
+                  data = plotData,
+                  mapping = aes(y = label, x = popCol)
+                ) +
+                geom_jitter(fill = "black", na.rm = TRUE) +
+                labs(
+                  y = label,
+                  x = popCol,
+                  title = paste("pValue:", signif(kruskalTestResult$p.value, 2))
+                ) +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1))
+            }
           }
         }
       }
     }
   }
 
-  if (length(plotList) == 0){
-    message(paste0('no correlated columns found in population.\n',
-                   'maximal Correlation: ',round(maxCorrelation,2), '(cut: ',corCut,')\n',
-                   'minimal pValue of Chisquare test: ',signif(minPvalue,2),'(cut: ',pValueCut,')'))
+  if (length(plotList) == 0) {
+    message(paste0(
+      "no correlated columns found in population.\n",
+      "maximal Correlation: ", round(maxCorrelation, 2), "(cut: ", corCut, ")\n",
+      "minimal pValue of Chisquare test: ", signif(minPvalue, 2), "(cut: ", pValueCut, ")"
+    ))
   }
 
   return(invisible(plotList))
-
 }
 #' Prepare Population Data for Correlation Check
 #'
@@ -803,11 +887,13 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
 #'
 #' @export
 preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
-
-  dtPop <- rbindlist(lapply(scenarioList, function(scenario){
-    ospsuite::populationToDataFrame(scenario$population) %>%
-      setDT() }),
-    fill = TRUE) %>%
+  dtPop <- rbindlist(
+    lapply(scenarioList, function(scenario) {
+      ospsuite::populationToDataFrame(scenario$population) %>%
+        setDT()
+    }),
+    fill = TRUE
+  ) %>%
     unique()
 
   # delete simulated individual ID to not confuse with individualId of observedData
@@ -822,31 +908,32 @@ preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
 
   # convert characters to factor
   numericColumns <- names(dtPop)[sapply(dtPop, function(col) is.numeric(col))]
-  for (col in setdiff(names(dtPop), c('ObservedIndividualId', numericColumns))) {
+  for (col in setdiff(names(dtPop), c("ObservedIndividualId", numericColumns))) {
     dtPop[[col]] <- factor(dtPop[[col]])
   }
 
   # Check for identical factors
-  excludedFactors = c()
+  excludedFactors <- c()
   factorColumns <- names(dtPop)[sapply(dtPop, is.factor)]
   for (i in seq_len(length(factorColumns) - 1)) {
     if (!(factorColumns[i] %in% excludedFactors)) {
-      nGroupedData = nrow(dtPop[,.N, by = c(factorColumns[i])])
+      nGroupedData <- nrow(dtPop[, .N, by = c(factorColumns[i])])
 
       for (j in seq(i + 1, length(factorColumns))) {
-        nGroupedData2 = nrow(dtPop[,.N, by = c(factorColumns[i], factorColumns[j])])
+        nGroupedData2 <- nrow(dtPop[, .N, by = c(factorColumns[i], factorColumns[j])])
 
         if (nGroupedData == nGroupedData2) {
           message(paste("Factors", factorColumns[i], "and", factorColumns[j], "leads to the same patient groups.
                       Ignore", factorColumns[j], "for analysis."))
-          excludedFactors = factorColumns[j]
+          excludedFactors <- factorColumns[j]
         }
       }
     }
   }
 
-  if (length(excludedFactors) > 1)
+  if (length(excludedFactors) > 1) {
     dtPop <- dplyr::select(!any_of(excludedFactors))
+  }
 
   return(dtPop)
 }
@@ -863,29 +950,33 @@ preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
 createLineData <- function(hyperParameter, xScale, dtValues = NULL) {
   lineData <- data.table()
 
-  for (dtHyperPar in split(hyperParameter, by = c('label', 'status'))) {
-
+  for (dtHyperPar in split(hyperParameter, by = c("label", "status"))) {
     x <- if (xScale == SCALING$log) {
       exp(seq(log(dtHyperPar$minValue.indValues[1]),
-              log(dtHyperPar$maxValue.indValues[1]),
-              length.out = 100))
+        log(dtHyperPar$maxValue.indValues[1]),
+        length.out = 100
+      ))
     } else {
       seq(dtHyperPar$minValue.indValues[1],
-          dtHyperPar$maxValue.indValues[1],
-          length.out = 100)
+        dtHyperPar$maxValue.indValues[1],
+        length.out = 100
+      )
     }
 
-    argList <- stats::setNames(as.numeric(dtHyperPar[['value']]), as.character(dtHyperPar[['hyperParameter']]))
+    argList <- stats::setNames(as.numeric(dtHyperPar[["value"]]), as.character(dtHyperPar[["hyperParameter"]]))
 
-    y <- do.call(paste0('p', dtHyperPar$hyperDistribution[1]), args = c(list(q = x), argList))
-    y <- (y - y[1])/diff(range(y))
+    y <- do.call(paste0("p", dtHyperPar$hyperDistribution[1]), args = c(list(q = x), argList))
+    y <- (y - y[1]) / diff(range(y))
 
-    lineData <- rbind(lineData,
-                      data.table(x = x,
-                                 value = y,
-                                 status = dtHyperPar$status[1],
-                                 label = dtHyperPar$label[1]))
-
+    lineData <- rbind(
+      lineData,
+      data.table(
+        x = x,
+        value = y,
+        status = dtHyperPar$status[1],
+        label = dtHyperPar$label[1]
+      )
+    )
   }
 
   return(lineData)
@@ -901,42 +992,51 @@ createLineData <- function(hyperParameter, xScale, dtValues = NULL) {
 #' @keywords internal
 customizeLegend <- function(plotObject, colorScalingVector,
                             showLegends = TRUE,
-                            aesthetics = c('color','fill','shape','linetype')) {
-  legendTitleShape <- 'Individual Values'
-  legendTitleLine <- 'Distribution'
+                            aesthetics = c("color", "fill", "shape", "linetype")) {
+  legendTitleShape <- "Individual Values"
+  legendTitleLine <- "Distribution"
 
-  if ('linetype' %in% aesthetics){
+  if ("linetype" %in% aesthetics) {
     plotObject <- plotObject +
-      scale_linetype_manual(values = c('dotted', 'solid', 'twodash'),
-                            breaks = names(colorScalingVector))
+      scale_linetype_manual(
+        values = c("dotted", "solid", "twodash"),
+        breaks = names(colorScalingVector)
+      )
   }
-  if ('shape' %in% aesthetics){
+  if ("shape" %in% aesthetics) {
     plotObject <- plotObject +
-      scale_shape_manual(values = c('square filled', 'triangle filled', 'circle filled'),
-                         breaks = names(colorScalingVector))
+      scale_shape_manual(
+        values = c("square filled", "triangle filled", "circle filled"),
+        breaks = names(colorScalingVector)
+      )
   }
-  if ('color' %in% aesthetics){
+  if ("color" %in% aesthetics) {
     plotObject <- plotObject +
-      scale_color_manual(values = colorScalingVector,
-                         breaks = names(colorScalingVector))
+      scale_color_manual(
+        values = colorScalingVector,
+        breaks = names(colorScalingVector)
+      )
   }
-  if ('fill' %in% aesthetics){
+  if ("fill" %in% aesthetics) {
     plotObject <- plotObject +
-      scale_fill_manual(values = colorScalingVector,
-                        breaks = names(colorScalingVector))
-  }
-
-  if (showLegends){
-    plotObject <- plotObject +
-      guides(shape = guide_legend(title = legendTitleShape, order = 1),
-             fill = guide_legend(title = legendTitleShape, order = 1),
-             color = guide_legend(title = legendTitleLine, order = 2),
-             linetype = guide_legend(title = legendTitleLine, order = 2))
-  } else{
-    plotObject <- plotObject +
-      theme(legend.position = 'none')
+      scale_fill_manual(
+        values = colorScalingVector,
+        breaks = names(colorScalingVector)
+      )
   }
 
+  if (showLegends) {
+    plotObject <- plotObject +
+      guides(
+        shape = guide_legend(title = legendTitleShape, order = 1),
+        fill = guide_legend(title = legendTitleShape, order = 1),
+        color = guide_legend(title = legendTitleLine, order = 2),
+        linetype = guide_legend(title = legendTitleLine, order = 2)
+      )
+  } else {
+    plotObject <- plotObject +
+      theme(legend.position = "none")
+  }
 }
 #' Prepare Plot Data for Parameter Values
 #'
@@ -949,58 +1049,69 @@ customizeLegend <- function(plotObject, colorScalingVector,
 #'
 #' @return A data.table containing the prepared plot data.
 #' @keywords internal
-preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
+preparePlotDataParameterValues <- function(dtList, currentStatus, bestStatus) {
   # startValue
   plotData <-
     dtList$prior[, c(
-      'id',
-      'name',
-      'categoricCovariate',
-      'startValue',
-      'minValue',
-      'maxValue',
-      'scaling',
-      'valueMode',
-      'hyperParameter'
+      "id",
+      "name",
+      "categoricCovariate",
+      "startValue",
+      "minValue",
+      "maxValue",
+      "scaling",
+      "valueMode",
+      "hyperParameter"
     )] %>%
     dplyr::mutate(individualId = NA)
-  if (nrow(dtList$startValues) > 0){
-    plotData <- rbind(plotData,
-                      dtList$startValues[, c('id',
-                                             'startValue',
-                                             'name',
-                                             'categoricCovariate',
-                                             'minValue',
-                                             'maxValue',
-                                             'scaling',
-                                             'individualId')] %>%
-                        dplyr::mutate(valueMode = PARAMETERTYPE$individual,
-                                      hyperParameter = '')
+  if (nrow(dtList$startValues) > 0) {
+    plotData <- rbind(
+      plotData,
+      dtList$startValues[, c(
+        "id",
+        "startValue",
+        "name",
+        "categoricCovariate",
+        "minValue",
+        "maxValue",
+        "scaling",
+        "individualId"
+      )] %>%
+        dplyr::mutate(
+          valueMode = PARAMETERTYPE$individual,
+          hyperParameter = ""
+        )
     )
   }
   plotData <- copy(plotData)
-  plotData[, startParam := plogis(
-    transformToUnbounded(
-      value = startValue,
+  # TODO
+  plotData[
+    , startParam := plogis(
+      transformToUnbounded(
+        value = startValue,
+        minValue = minValue,
+        maxValue = maxValue,
+        scaling = tolower(scaling)
+      )
+    ),
+    .I
+  ]
+
+  # current
+  plotData[, param := currentStatus$params[id]]
+  plotData[
+    , currentValue := inverseTransformParams(
+      param = param,
       minValue = minValue,
       maxValue = maxValue,
       scaling = tolower(scaling)
-    )),
-    .I]
-
-  # current
-  plotData[ ,param := currentStatus$params[id]]
-  plotData[, currentValue := inverseTransformParams(
-    param = param,
-    minValue = minValue,
-    maxValue = maxValue,
-    scaling = tolower(scaling)
-  ),
-  .I]
+    ),
+    .I
+  ]
   plotData[, currentParam := plogis(param), .I]
 
   # best
-  plotData[ ,param := bestStatus$params[id]]
+  plotData[, param := bestStatus$params[id]]
   plotData[, bestParam := plogis(param), .I]
   plotData[, bestValue := inverseTransformParams(
     param = param,
@@ -1021,22 +1132,24 @@ preparePlotDataParameterValues <- function(dtList, currentStatus,bestStatus) {
 #' @return A data.table with enhanced plot data suitable for visualization.
 #' @keywords internal
 reshapePlotDataParameterValues <- function(plotData) {
-
-  #reshapes the plot data for visualization by melting the data.table.
-  plotData[,param:= NULL]
+  # reshapes the plot data for visualization by melting the data.table.
+  plotData[, param := NULL]
   # Assuming plotData is already a data.table
   plotData <- melt(plotData,
-                   measure.vars = c('startValue', 'currentValue', 'bestValue',
-                                    'startParam', 'currentParam', 'bestParam'),
-                   variable.name = 'status',
-                   value.name = 'statusValue')
+    measure.vars = c(
+      "startValue", "currentValue", "bestValue",
+      "startParam", "currentParam", "bestParam"
+    ),
+    variable.name = "status",
+    value.name = "statusValue"
+  )
 
   # Create the 'type' column and modify the 'status' column
-  plotData[, type := ifelse(grepl('Param', status), 'statusParam', 'statusValue')]
-  plotData[, status := gsub('Value', '', gsub('Param', '', status))]
+  plotData[, type := ifelse(grepl("Param", status), "statusParam", "statusValue")]
+  plotData[, status := gsub("Value", "", gsub("Param", "", status))]
 
   # Reshape the data to wide format
-  plotData <- dcast(plotData, ... ~ type, value.var = 'statusValue')
+  plotData <- dcast(plotData, ... ~ type, value.var = "statusValue")
 
   return(plotData)
 }
@@ -1056,14 +1169,13 @@ reshapePlotDataParameterValues <- function(plotData) {
 #' @return A numeric value representing the calculated residual.
 #' @keywords internal
 calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq) {
-
   # Validate that all inputs are of the correct type and length
-  checkmate::assertNumeric(yValue, len = 1)  # yValue should be a single numeric value
-  checkmate::assertNumeric(predicted, len = 1)  # predicted should be a single numeric value
-  checkmate::assertChoice(model, c("absolute", "proportional", "log_absolute"))  # model must be one of the specified choices
-  checkmate::assertNumeric(sigma, len = 1)  # sigma should be a single numeric value
-  checkmate::assertLogical(isCensored, len = 1)  # isCensored should be a single logical value
-  checkmate::assertNumeric(lloq, len = 1)  # lloq should be a single numeric value
+  checkmate::assertNumeric(yValue, len = 1) # yValue should be a single numeric value
+  checkmate::assertNumeric(predicted, len = 1) # predicted should be a single numeric value
+  checkmate::assertChoice(model, c("absolute", "proportional", "log_absolute")) # model must be one of the specified choices
+  checkmate::assertNumeric(sigma, len = 1) # sigma should be a single numeric value
+  checkmate::assertLogical(isCensored, len = 1) # isCensored should be a single logical value
+  checkmate::assertNumeric(lloq, len = 1) # lloq should be a single numeric value
 
   # If predicted value is NA or below the lower bound, return log(0) (indicating a very low likelihood)
   if (is.na(predicted)) {
@@ -1074,21 +1186,21 @@ calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq)
   # If the data is censored, calculate the probability of being above the lower limit of quantification (lloq)
   if (isCensored) {
     res <- switch(model,
-                  absolute = (lloq - predicted)/sigma,
-                  proportional = (lloq - predicted)/ (sigma * predicted),
-                  log_absolute = (log(lloq) - log(predicted))/ sigma
+      absolute = (lloq - predicted) / sigma,
+      proportional = (lloq - predicted) / (sigma * predicted),
+      log_absolute = (log(lloq) - log(predicted)) / sigma
     )
   } else {
     # If the data is notored, calculate the log likelihood based on the chosen model
     res <- switch(model,
-                  absolute = (yValue - predicted)/sigma,
-                  proportional =  (yValue - predicted)/ (sigma * predicted),
-                  log_absolute =(log(yValue) - log(predicted))/ sigma
+      absolute = (yValue - predicted) / sigma,
+      proportional = (yValue - predicted) / (sigma * predicted),
+      log_absolute = (log(yValue) - log(predicted)) / sigma
     )
   }
 
 
-  return(res)  # Return the final log likelihood value
+  return(res) # Return the final log likelihood value
 }
 #' Add Labels to Plot Data
 #'
@@ -1100,20 +1212,20 @@ calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq)
 #'
 #' @return A data.table with labels added for each parameter.
 #' @keywords internal
-addLabel <- function(plotData,dtPrior,unitSep = ' ',identifier = c('name', 'categoricCovariate')){
-
+addLabel <- function(plotData, dtPrior, unitSep = " ", identifier = c("name", "categoricCovariate")) {
   plotData <- merge(plotData,
-                    dtPrior[,c(..identifier,'unit')] %>%
-                      unique(),
-                    by = identifier)
+    dtPrior[, c(..identifier, "unit")] %>%
+      unique(),
+    by = identifier
+  )
 
-  plotData[,label := ifelse(is.na(unit),name,paste0(name,unitSep,'[',unit,']'))]
-  if ('categoricCovariate' %in% identifier){
-    plotData[,label := ifelse(is.na(categoricCovariate) | categoricCovariate == '',
-                              label,
-                              paste0(label,' (',categoricCovariate,')'))]
+  plotData[, label := ifelse(is.na(unit), name, paste0(name, unitSep, "[", unit, "]"))]
+  if ("categoricCovariate" %in% identifier) {
+    plotData[, label := ifelse(is.na(categoricCovariate) | categoricCovariate == "",
+      label,
+      paste0(label, " (", categoricCovariate, ")")
+    )]
   }
 
   return(plotData)
-
 }

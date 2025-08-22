@@ -40,6 +40,8 @@ optimizeParameters(
 \item{failValue}{A numeric value to set if evaluation of the objective function fails.}
 
 \item{...}{Additional arguments passed to the optimization function.}
+
+\item{scalingMethod}{A character string specifying the scaling method.}
 }
 \value{
 A list containing the result of the optimization process.

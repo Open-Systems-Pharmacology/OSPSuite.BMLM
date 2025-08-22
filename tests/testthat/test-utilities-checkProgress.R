@@ -1,4 +1,3 @@
-
 # Sample data for testing
 set.seed(123)
 dtConvergence <- data.table(
@@ -6,8 +5,9 @@ dtConvergence <- data.table(
   logTimeProfile = rnorm(300, mean = -10, sd = 1),
   logHyperParameter = rnorm(300, mean = -10, sd = 1),
   logPrior = rnorm(300, mean = -10, sd = 1),
-  NAcounter = sample(0:10, 300, replace = TRUE),
-  event = sample(c('best', 'restart'), size = 300, prob = c(0.95,0.05),replace = TRUE)
+  NAcounter = sort(sample(0:10, 300, replace = TRUE)),
+  outsideRangeCounter = sort(sample(0:100, 300, replace = TRUE)),
+  event = sample(c("best", "restart"), size = 300, prob = c(0.95, 0.05), replace = TRUE)
 )
 
 # Visual test for plotConvergence

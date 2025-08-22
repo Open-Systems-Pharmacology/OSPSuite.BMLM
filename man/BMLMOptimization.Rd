@@ -515,7 +515,7 @@ containing convergence data and visualizing the results using ggplot2.}
 \subsection{Method \code{checkConvergence()}}{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkConvergence(
-  displayVariablesIndx = seq(1, 5),
+  displayVariablesIndx = NULL,
   nPoints = 200,
   selectionMode = c("last", "random", "first")
 )}\if{html}{\out{</div>}}
@@ -525,9 +525,11 @@ containing convergence data and visualizing the results using ggplot2.}
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{displayVariablesIndx}}{An integer vector specifying which variables to display.
-default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
+1 = 'value of objective function: -loglikelihood',
 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
-4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
+4 ='- loglikelihood Prior',  5 = 'percentage of failed iterations' and
+6 = 'percentage of iterations with parameters outside range',
+if NULL (default) the columns with entries != 0 are selected.
 Check Initial Values for Project Configuration
 
 This function evaluates initial values for a given project configuration by running simulations for specified scenarios.
@@ -574,6 +576,7 @@ Internally, the function \code{optim} is used, so please check the help for more
   control = list(),
   simulationRunOptions = NULL,
   failValue = 1e+10,
+  scalingMethod = unlist(SCALINGMETHOD),
   lastStatusSavingIntervalInSecs = 60,
   withInternalOptimization = FALSE,
   startInBackground = TRUE,
@@ -594,6 +597,8 @@ Internally, the function \code{optim} is used, so please check the help for more
 
 \item{\code{failValue}}{A numeric value to set if evaluation of the objective function fails (default is 1e+10).}
 
+\item{\code{scalingMethod}}{A character string specifying the scaling method.}
+
 \item{\code{lastStatusSavingIntervalInSecs}}{An integer specifying the interval for saving the last status (default is 60 seconds).}
 
 \item{\code{withInternalOptimization}}{A logical indicating whether to perform internal optimization (default is FALSE).}
@@ -606,7 +611,7 @@ Internally, the function \code{optim} is used, so please check the help for more
 }
 \subsection{Returns}{
 An invisible reference to the BMLMOptimization object.
-Oepns logfile of the BMLMOptimization object
+Opens logfile of the BMLMOptimization object
 }
 }
 \if{html}{\out{<hr>}}

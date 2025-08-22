@@ -1,4 +1,3 @@
-
 #' Optimize Parameters
 #'
 #' Performs the optimization of parameters using the specified method and control settings.
@@ -12,6 +11,7 @@
 #' @param lastStatusSavingIntervalInSecs An integer specifying the interval for saving the last status in seconds.
 #' @param startTime A POSIXct object representing the start time of the optimization process.
 #' @param failValue A numeric value to set if evaluation of the objective function fails.
+#' @param scalingMethod A character string specifying the scaling method.
 #' @param withInternalOptimization A logical indicating whether to perform internal optimization.
 #' @param ... Additional arguments passed to the optimization function.
 #'
@@ -29,20 +29,25 @@ optimizeParameters <-
            startTime,
            failValue,
            ...) {
-
     initialValues <- getParams(
       dtPrior = dtList$prior,
       dtStartValues = dtList$startValues,
-      optimizationGroup = ifelse (withInternalOptimization, 'external', 'both')
+      optimizationGroup = ifelse(withInternalOptimization, "external", "both"),
+      scalingMethod = dtList$scalingMethod
     )
 
     # Create the optim environment
-    optimEnv <- initializeOptimEnv(dtList = dtList,
-                                   failValue = failValue,
-                                   bestValue = dtList$bestValue,
-                                   NAcounter = dtList$NAcounter,
-                                   iteration = dtList$iteration,
-                                   params = initialValues)
+    optimEnv <- initializeOptimEnv(
+      dtList = dtList,
+      failValue = failValue,
+      bestValue = dtList$bestValue,
+      NAcounter = dtList$NAcounter,
+      outsideRangeCounter = dtList$outsideRangeCounter,
+      iteration = dtList$iteration,
+      scalingMethod = dtList$scalingMethod,
+      params = initialValues
+    )
+
 
     # Run optimization
     result <- optim(
@@ -64,8 +69,9 @@ optimizeParameters <-
     # Save the result
     saveRDS(result, file = file.path(outputDir, "result.RDS"))
 
+    logResult(result, startTime, outputDir, optimEnv)
 
-    return(result)  # Return result instead of invisible
+    return(result) # Return result instead of invisible
   }
 
 
@@ -82,57 +88,74 @@ optimizeParameters <-
 #' @export
 evaluateInitialValues <- function(dtList,
                                   outputDir,
-                                  scenarioList){
-
-  logAndPrintOptimization('Start modelevaluation at initial values:',outputDir = outputDir)
+                                  scenarioList) {
+  logAndDisplayOptimization("Start modelevaluation at initial values:", outputDir = outputDir)
 
   optimEnv <- initializeOptimEnv(dtList)
 
   initialValues <- getParams(
     dtPrior = dtList$prior,
     dtStartValues = dtList$startValues,
-    optimizationGroup = 'both'
+    optimizationGroup = "both",
+    scalingMethod = optimEnv$scalingMethod
   )
 
-  dtList <- setParameterToTables(dtList = dtList, params = initialValues)
+  dtList <- setParameterToTables(
+    dtList = dtList,
+    params = initialValues,
+    scalingMethod = optimEnv$scalingMethod
+  )
 
-  evaluateTimeprofiles(optimEnv = optimEnv,
-                       scenarioList = scenarioList,
-                       dtList = dtList,
-                       simulationRunOptions = SimulationRunOptions$new(showProgress = TRUE),
-                       withProtocol = TRUE,
-                       outputDir = outputDir)
-
+  evaluateTimeprofiles(
+    optimEnv = optimEnv,
+    scenarioList = scenarioList,
+    dtList = dtList,
+    simulationRunOptions = SimulationRunOptions$new(showProgress = TRUE),
+    withProtocol = TRUE,
+    outputDir = outputDir
+  )
 
   loglikelihoods <- getLogLikelihood(
     dtPrior = dtList$prior,
     dtStartValues = dtList$startValues,
     dtRes = rbindlist(optimEnv$dtResList)
   )
-  logAndPrintOptimization(c('\n','Initial loglikelihood:'),outputDir = outputDir,quiet = FALSE,asNew = FALSE)
-  logAndPrintOptimization(paste(paste0(names(loglikelihoods),': ',signif(loglikelihoods,3)),collapse = ', '),
-              outputDir = outputDir,quiet = FALSE,asNew = FALSE)
+  logAndDisplayOptimization(c("\n", "Initial loglikelihood:"),
+    outputDir = outputDir,
+    prependTimestamp = FALSE
+  )
+  logAndDisplayOptimization(paste(paste0(names(loglikelihoods), ": ", signif(loglikelihoods, 3)), collapse = ", "),
+    outputDir = outputDir,
+    prependTimestamp = FALSE
+  )
 
   analyseInitalSimulationFailures(dtList, optimEnv, loglikelihoods, outputDir)
 
-  if (any(!is.finite(dtList$prior$logLikelihood))){
-    logAndPrintOptimization('Priors with likelihood 0:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
-    logAndPrintOptimization(utils::capture.output(print(dtList$prior[!is.finite(logLikelihood),
-                                                                     c('name','hyperParameter','categoricCovariate')])),
-                            outputDir = outputDir, quiet = FALSE, asNew = FALSE)
-
-
+  if (any(!is.finite(dtList$prior$logLikelihood))) {
+    logAndDisplayOptimization("Priors with likelihood 0:",
+      outputDir = outputDir,
+      prependTimestamp = FALSE
+    )
+    logAndDisplayOptimization(
+      utils::capture.output(print(dtList$prior[
+        !is.finite(logLikelihood),
+        c("name", "hyperParameter", "categoricCovariate")
+      ])),
+      outputDir = outputDir,
+      prependTimestamp = FALSE
+    )
   }
 
 
-  if (!file.exists(file = file.path(outputDir, "optimStatus.RDS"))){
-
-    optimStatus <- updateOptimStatus(dtPrior = dtList$prior,
-                                     dtStartValues = dtList$startValues,
-                                     optimEnv)
+  if (!file.exists(file = file.path(outputDir, "optimStatus.RDS"))) {
+    optimStatus <- updateOptimStatus(
+      dtPrior = dtList$prior,
+      dtStartValues = dtList$startValues,
+      optimEnv
+    )
     currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
 
-    if (is.finite(currentValue)){
+    if (is.finite(currentValue)) {
       optimStatus[["loglikelihoods"]] <- loglikelihoods
 
       saveRDS(optimStatus, file = file.path(outputDir, "optimStatus.RDS"))
@@ -142,7 +165,6 @@ evaluateInitialValues <- function(dtList,
   }
 
   return(invisible())
-
 }
 #' Analyze Initial Simulation Failures
 #'
@@ -161,28 +183,43 @@ evaluateInitialValues <- function(dtList,
 #'
 #' @keywords internal
 analyseInitalSimulationFailures <- function(dtList, optimEnv, loglikelihoods, outputDir) {
-  if (is.na(loglikelihoods['logTimeProfile'])) {
+  if (is.na(loglikelihoods["logTimeProfile"])) {
     dtRes <- rbindlist(optimEnv$dtResList)
     dtResNA <- dtRes[is.na(predicted), c("scenario", "individualId")] %>% unique()
 
     if (nrow(dtResNA) == 0) {
-      logAndPrintOptimization('No simulation failures.', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndDisplayOptimization("No simulation failures.",
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
     } else {
-      logAndPrintOptimization('Individuals with simulation failures:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
-      logAndPrintOptimization(utils::capture.output(print(dtResNA)), outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndDisplayOptimization("Individuals with simulation failures:",
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
+      logAndDisplayOptimization(utils::capture.output(print(dtResNA)),
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
     }
 
     dtResUpdated <- updateModelError(dtPrior = dtList$prior, dtRes = dtRes)
     dtResUpdated[, isCensored := !is.na(lloq) & lloq > yValues]
 
     dtResUpdated[, logLikelihood := mapply(calculateLogLikelihood, yValues, predicted, errorModel, sigma, isCensored, lloq, lowerBound)]
-    dtResUpdated <- dtResUpdated[!is.na(predicted) & is.infinite(logLikelihood), c("scenario", "individualId", 'outputPathId', 'errorModel', 'yValues', 'predicted', 'lloq', 'lowerBound', 'sigma', 'logLikelihood')]
+    dtResUpdated <- dtResUpdated[!is.na(predicted) & is.infinite(logLikelihood), c("scenario", "individualId", "outputPathId", "errorModel", "yValues", "predicted", "lloq", "lowerBound", "sigma", "logLikelihood")]
 
     if (nrow(dtResUpdated) == 0) {
-      logAndPrint('No infinite loglikelihoods.', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndPrint("No infinite loglikelihoods.", outputDir = outputDir, quiet = FALSE, asNew = FALSE)
     } else {
-      logAndPrintOptimization('Rows with infinite loglikelihood:', outputDir = outputDir, quiet = FALSE, asNew = FALSE)
-      logAndPrintOptimization(utils::capture.output(print(dtResUpdated)), outputDir = outputDir, quiet = FALSE, asNew = FALSE)
+      logAndDisplayOptimization("Rows with infinite loglikelihood:",
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
+      logAndDisplayOptimization(utils::capture.output(print(dtResUpdated)),
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
     }
   }
   return(invisible())
@@ -205,7 +242,9 @@ initializeOptimEnv <- function(dtList,
                                failValue = Inf,
                                bestValue = Inf,
                                NAcounter = 0,
+                               outsideRangeCounter = 0,
                                iteration = 0,
+                               scalingMethod = SCALINGMETHOD$hardBounds,
                                params = c()) {
   optimEnv <- new.env()
 
@@ -214,8 +253,10 @@ initializeOptimEnv <- function(dtList,
   optimEnv$lastSaveTime <- Sys.time()
   optimEnv$failValue <- failValue
   optimEnv$NAcounter <- NAcounter
+  optimEnv$outsideRangeCounter <- outsideRangeCounter
   optimEnv$dtResList <- list()
   optimEnv$scenarioResults <- list()
+  optimEnv$scalingMethod <- scalingMethod
   optimEnv$currentParams <- params
 
   return(optimEnv)
@@ -252,63 +293,75 @@ createObjectiveFunction <-
            lastStatusSavingIntervalInSecs,
            withInternalOptimization) {
     return(function(params) {
+      optimEnv$iteration <- optimEnv$iteration + 1
+      optimEnv$currentParams <- params
 
-    optimEnv$iteration <- optimEnv$iteration + 1
-    optimEnv$currentParams <- params
-
-    tryCatch({
-      dtList <- setParameterToTables(dtList = dtList, params = params)
-      optimStatus <-
-        updateOptimStatus(
-          dtPrior = dtList$prior,
-          dtStartValues = dtList$startValues,
-          optimEnv = optimEnv
-        )
-      # Evaluate time profiles
-      evaluateTimeprofiles(
-        optimEnv = optimEnv,
-        scenarioList = scenarioList,
-        dtList = dtList,
-        simulationRunOptions = simulationRunOptions
-      )
-      # Internal optimization
-      if (withInternalOptimization){
-        resultInternal <- runInternalOptimization(dtList, optimEnv,outputDir)
-
-        #Update status and log likelihoods
-        dtList <- setParameterToTables(
-          dtList = dtList,
-          params = resultInternal$par
-        )
-        optimStatus <- updateOptimStatus(dtPrior = dtList$prior,
-                                         dtStartValues = dtList$startValues,
-                                         optimEnv)
-
+      if (optimEnv$scalingMethod == SCALINGMETHOD$hardBounds &&
+        any(params <= 0 | params >= 1)) {
+        optimEnv$outsideRangeCounter <- optimEnv$outsideRangeCounter + 1
+        return(optimEnv$failValue)
       }
+      tryCatch(
+        {
+          dtList <- setParameterToTables(
+            dtList = dtList,
+            params = params,
+            scalingMethod = optimEnv$scalingMethod
+          )
+          optimStatus <-
+            updateOptimStatus(
+              dtPrior = dtList$prior,
+              dtStartValues = dtList$startValues,
+              optimEnv = optimEnv
+            )
+          # Evaluate time profiles
+          evaluateTimeprofiles(
+            optimEnv = optimEnv,
+            scenarioList = scenarioList,
+            dtList = dtList,
+            simulationRunOptions = simulationRunOptions
+          )
+          # Internal optimization
+          if (withInternalOptimization) {
+            resultInternal <- runInternalOptimization(dtList, optimEnv, outputDir)
 
-      loglikelihoods <- getLogLikelihood(
-        dtPrior = dtList$prior,
-        dtStartValues = dtList$startValues,
-        dtRes = rbindlist(optimEnv$dtResList)
+            # Update status and log likelihoods
+            dtList <- setParameterToTables(
+              dtList = dtList,
+              params = resultInternal$par,
+              scalingMethod = optimEnv$scalingMethod
+            )
+            optimStatus <- updateOptimStatus(
+              dtPrior = dtList$prior,
+              dtStartValues = dtList$startValues,
+              optimEnv
+            )
+          }
+
+          loglikelihoods <- getLogLikelihood(
+            dtPrior = dtList$prior,
+            dtStartValues = dtList$startValues,
+            dtRes = rbindlist(optimEnv$dtResList)
+          )
+          optimStatus[["loglikelihoods"]] <- loglikelihoods
+
+          currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
+
+          # Save status if enough time has passed
+          saveOptimStatusIfNeeded(optimStatus, optimEnv, outputDir, lastStatusSavingIntervalInSecs)
+
+          # Check if objective function value has improved
+          updateBestValueIfImproved(currentValue, optimEnv, optimStatus, outputDir, loglikelihoods)
+        },
+        error = function(err) {
+          saveRDS(optimStatus, file = file.path(outputDir, "failedOptimStatus.RDS"))
+          stop(conditionMessage(err))
+        }
       )
-      optimStatus[["loglikelihoods"]] <- loglikelihoods
 
-      currentValue <- evaluateLogLikelihood(loglikelihoods, optimEnv, outputDir)
-
-      # Save status if enough time has passed
-      saveOptimStatusIfNeeded(optimStatus, optimEnv, outputDir, lastStatusSavingIntervalInSecs)
-
-      # Check if objective function value has improved
-      updateBestValueIfImproved(currentValue, optimEnv, optimStatus, outputDir, loglikelihoods)
-
-    }, error = function(err) {
-      saveRDS(optimStatus, file = file.path(outputDir, "failedOptimStatus.RDS"))
-      stop(conditionMessage(err))
+      return(currentValue)
     })
-
-    return(currentValue)
-  })
-}
+  }
 
 #' Run Internal Optimization
 #'
@@ -329,18 +382,23 @@ createObjectiveFunction <-
 #'          evaluates the log likelihood to determine the best fit.
 #'
 #' @keywords internal
-runInternalOptimization <- function(dtList, optimEnv,outputDir) {
+runInternalOptimization <- function(dtList, optimEnv, outputDir) {
   initialValuesInternal <-
     getParams(
       dtPrior = dtList$prior,
       dtStartValues = dtList$startValues,
-      optimizationGroup = c('internal')
+      optimizationGroup = c("internal"),
+      scalingMethod = optimEnv$scalingMethod
     )
 
   resultInternal <- optim(
     par = initialValuesInternal,
     fn = function(params) {
-      dtList <- setParameterToTables(dtList = dtList, params = params)
+      dtList <- setParameterToTables(
+        dtList = dtList,
+        params = params,
+        scalingMethod = optimEnv$scalingMethod
+      )
 
       loglikelihoods <-
         getLogLikelihood(
@@ -368,10 +426,15 @@ runInternalOptimization <- function(dtList, optimEnv,outputDir) {
 updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
   return(list(
     iteration = optimEnv$iteration,
-    params = getParams(dtPrior = dtPrior,
-                       dtStartValues = dtStartValues,
-                       optimizationGroup = c('both')),
-    NAcounter = optimEnv$NAcounter
+    params = getParams(
+      dtPrior = dtPrior,
+      dtStartValues = dtStartValues,
+      optimizationGroup = c("both"),
+      scalingMethod = optimEnv$scalingMethod
+    ),
+    scalingMethod = optimEnv$scalingMethod,
+    NAcounter = optimEnv$NAcounter,
+    outsideRangeCounter = optimEnv$outsideRangeCounter
   ))
 }
 
@@ -388,26 +451,32 @@ updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
 #' @keywords internal
 evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
   if (is.null(loglikelihoods) || length(loglikelihoods) < 3) {
-    stop('strange loglikelihood')
+    stop("strange loglikelihood")
   }
   if (any(is.na(loglikelihoods))) {
     optimEnv$NAcounter <- optimEnv$NAcounter + 1
-    fileFailedValues <- file.path(outputDir,'failedValues.RDS')
-    if (file.exists(fileFailedValues)){
+    fileFailedValues <- file.path(outputDir, "failedValues.RDS")
+    if (file.exists(fileFailedValues)) {
       failedValues <- readRDS(fileFailedValues)
     } else {
       failedValues <- data.table()
     }
-    failedValues <- rbind(failedValues,
-      cbind(data.table(iteration = optimEnv$iteration),
-           as.data.table(as.list(optimEnv$currentParams))
-      ))
-    saveRDS(failedValues,fileFailedValues)
-    if (optimEnv$iteration == 1) stop('First likelihood evaluation must not fail')
+    failedValues <- rbind(
+      failedValues,
+      cbind(
+        data.table(iteration = optimEnv$iteration),
+        as.data.table(as.list(optimEnv$currentParams))
+      )
+    )
+    saveRDS(
+      object = failedValues,
+      file = fileFailedValues
+    )
+    if (optimEnv$iteration == 1) stop("First likelihood evaluation must not fail")
 
     return(optimEnv$failValue)
   } else {
-    return(min(-1 * sum(loglikelihoods),optimEnv$failValue))
+    return(min(-1 * sum(loglikelihoods), optimEnv$failValue))
   }
 }
 
@@ -448,7 +517,8 @@ updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outpu
           iteration = optimEnv$iteration,
           loglikelihoods,
           NAcounter = optimEnv$NAcounter,
-          event = 'best'
+          outsideRangeCounter = optimEnv$outsideRangeCounter,
+          event = "best"
         )
       )),
       file = file.path(outputDir, "convergence.csv"),
@@ -473,28 +543,30 @@ updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outpu
 #'
 #' @return NULL (invisible).
 #' @keywords internal
-evaluateTimeprofiles <-  function(optimEnv,
-                                  scenarioList,
-                                  dtList,
-                                  simulationRunOptions,
-                                  withProtocol = FALSE,
-                                  outputDir = NULL) {
-
-
+evaluateTimeprofiles <- function(optimEnv,
+                                 scenarioList,
+                                 dtList,
+                                 simulationRunOptions,
+                                 withProtocol = FALSE,
+                                 outputDir = NULL) {
   results <- lapply(scenarioList, function(scenario) {
     scenarioName <- scenario$scenarioConfiguration$scenarioName
-    if (withProtocol){
-      logAndPrintOptimization(message = paste('scenario:', scenarioName),
-                              outputDir = outputDir,
-                              quiet = FALSE,asNew = FALSE)
-      logAndPrintOptimization(
-        message = paste('Individual count:', scenarioList[[scenarioName]]$population$count),
+    if (withProtocol) {
+      logAndDisplayOptimization(
+        message = paste("scenario:", scenarioName),
         outputDir = outputDir,
-        quiet = FALSE,asNew = FALSE
+        prependTimestamp = FALSE
       )
-      logAndPrintOptimization(message = 'Simulate:',
-                              outputDir = outputDir,
-                              quiet = FALSE,asNew = FALSE)
+      logAndDisplayOptimization(
+        message = paste("Individual count:", scenarioList[[scenarioName]]$population$count),
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
+      logAndDisplayOptimization(
+        message = "Simulate:",
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
       tictoc::tic()
     }
 
@@ -505,10 +577,12 @@ evaluateTimeprofiles <-  function(optimEnv,
       simulationRunOptions = simulationRunOptions
     )
 
-    if (withProtocol){
-      logAndPrintOptimization(message = utils::capture.output(tictoc::toc()),
-                              outputDir = outputDir,
-                              quiet = FALSE,asNew = FALSE)
+    if (withProtocol) {
+      logAndDisplayOptimization(
+        message = utils::capture.output(tictoc::toc()),
+        outputDir = outputDir,
+        prependTimestamp = FALSE
+      )
     }
 
     return(results)
@@ -522,7 +596,6 @@ evaluateTimeprofiles <-  function(optimEnv,
   }
 
   return(invisible())
-
 }
 
 #' Process a Scenario
@@ -546,7 +619,7 @@ evaluateTimeprofiles <-  function(optimEnv,
 #'   \item{predictions}{A data frame or list of predictions generated from the scenario results.}
 #'
 #' @export
-processScenario <- function(scenarioName, scenario, dtList,  simulationRunOptions) {
+processScenario <- function(scenarioName, scenario, dtList, simulationRunOptions) {
   # Update parameter values and run result
   updateParameterValues(
     scenarioName = scenarioName,
@@ -556,12 +629,14 @@ processScenario <- function(scenarioName, scenario, dtList,  simulationRunOption
     dtMappedPaths = dtList$mappedPaths
   )
 
-  scenarioResult <- esqlabsR::runScenarios(scenarios = list(scenarioName = scenario),
-                                            simulationRunOptions = simulationRunOptions)[[1]]
+  scenarioResult <- esqlabsR::runScenarios(
+    scenarios = list(scenarioName = scenario),
+    simulationRunOptions = simulationRunOptions
+  )[[1]]
 
   predictions <- getPredictionsForScenario(scenarioResult, scenarioName, dtList$data)
 
-  return(list(scenarioResult = scenarioResult, predictions = predictions,scenarioName = scenarioName))
+  return(list(scenarioResult = scenarioResult, predictions = predictions, scenarioName = scenarioName))
 }
 
 
@@ -584,12 +659,11 @@ processScenario <- function(scenarioName, scenario, dtList,  simulationRunOption
 #' @export
 getPredictionsForScenario <- function(scenarioResult,
                                       scenarioName,
-                                       dataObservedForMatch,
-                                       aggregationFun = NULL,
-                                       identifier = c("outputPath", "individualId")) {
-
+                                      dataObservedForMatch,
+                                      aggregationFun = NULL,
+                                      identifier = c("outputPath", "individualId")) {
   # Validate input names
-  checkmate::assertNames(names(dataObservedForMatch), must.include = c('scenario', 'unitFactorX','unitFactorY',identifier))
+  checkmate::assertNames(names(dataObservedForMatch), must.include = c("scenario", "unitFactorX", "unitFactorY", identifier))
   # Initialize a list to store results for each scenario
   resultsList <- list()
 
@@ -598,33 +672,35 @@ getPredictionsForScenario <- function(scenarioResult,
   if ("ObservedIndividualId" %in% scenarioResult$population$allCovariateNames) {
     individualMatch <- data.table(
       individualId = scenarioResult$population$allIndividualIds,
-      observedIndividualId = scenarioResult$population$getCovariateValues('ObservedIndividualId')
+      observedIndividualId = scenarioResult$population$getCovariateValues("ObservedIndividualId")
     )
   }
 
   # Get simulated time profile
   dtSimulated <- getSimulatedTimeprofile(
     simulatedResult = scenarioResult,
-    outputPaths = unique(dataObservedForMatch[scenario == scenarioName,]$outputPath),
+    outputPaths = unique(dataObservedForMatch[scenario == scenarioName, ]$outputPath),
     aggregationFun = aggregationFun,
     individualMatch = individualMatch
   ) %>%
     dplyr::mutate(scenario = scenarioName) %>%
-    data.table::setnames('paths', 'outputPath') %>%
-    merge( dataObservedForMatch[scenario == scenarioName,] %>%
-             dplyr::select(all_of(c(identifier,'unitFactorX','unitFactorY'))) %>%
-             unique(),
-           by = identifier) %>%
-    .[,xValues := xValues*unitFactorX] %>%
-    .[,yValues := yValues*unitFactorY]
-
-    # Add predicted values and store in the results list
-  dtResult <- addPredictedValues(
-      dtObserved = dataObservedForMatch[scenario == scenarioName],
-      dtSimulated = dtSimulated,
-      identifier = identifier
+    data.table::setnames("paths", "outputPath") %>%
+    merge(
+      dataObservedForMatch[scenario == scenarioName, ] %>%
+        dplyr::select(all_of(c(identifier, "unitFactorX", "unitFactorY"))) %>%
+        unique(),
+      by = identifier
     ) %>%
-      dplyr::mutate(scenarioName = scenarioName)
+    .[, xValues := xValues * unitFactorX] %>%
+    .[, yValues := yValues * unitFactorY]
+
+  # Add predicted values and store in the results list
+  dtResult <- addPredictedValues(
+    dtObserved = dataObservedForMatch[scenario == scenarioName],
+    dtSimulated = dtSimulated,
+    identifier = identifier
+  ) %>%
+    dplyr::mutate(scenarioName = scenarioName)
 
 
   return(dtResult)
@@ -639,18 +715,17 @@ getPredictionsForScenario <- function(scenarioResult,
 #'
 #' @return A data.table containing updated results.
 #' @keywords internal
-updateModelError <- function(dtPrior,dtRes){
+updateModelError <- function(dtPrior, dtRes) {
+  dtRes <- dtRes %>%
+    dplyr::select(!any_of("sigma")) %>%
+    merge(
+      dtPrior[valueMode == PARAMETERTYPE$outputError, c("name", "value")] %>%
+        data.table::setnames("value", "sigma"),
+      by.x = "modelErrorId",
+      by.y = "name"
+    )
 
-dtRes <- dtRes %>%
-  dplyr::select(!any_of('sigma'))  %>%
-  merge(
-    dtPrior[valueMode == PARAMETERTYPE$outputError, c("name", "value")] %>%
-      data.table::setnames("value", "sigma"),
-    by.x = "modelErrorId",
-    by.y = "name"
-  )
-
-return(dtRes)
+  return(dtRes)
 }
 
 
@@ -697,7 +772,9 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
   }
 
   # individual parameter
-  if (nrow(dtStartValues) == 0) return(invisible())
+  if (nrow(dtStartValues) == 0) {
+    return(invisible())
+  }
   individualIds <-
     scenario$population$getCovariateValues("ObservedIndividualId")
 
@@ -709,9 +786,10 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
     for (dp in split(dtCustomParams, by = "linkedParameters")) {
       pt <- dp$linkedParameters[1]
       # make sure to use default value for individuals where no fit parameter exist
-      currentValue = scenario$population$getParameterValues(pt)
-      if (is.null(currentValue))
-        currentValue <- getParameter(path = pt,container = scenario$simulation)$value
+      currentValue <- scenario$population$getParameterValues(pt)
+      if (is.null(currentValue)) {
+        currentValue <- getParameter(path = pt, container = scenario$simulation)$value
+      }
 
       tmp <-
         data.table(
@@ -719,9 +797,9 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
           currentValue = currentValue
         ) %>%
         merge(dp,
-              by = "individualId",
-              all.x = TRUE,
-              sort = FALSE
+          by = "individualId",
+          all.x = TRUE,
+          sort = FALSE
         )
       tmp[, newValue := ifelse(is.na(value), currentValue, value * factor)]
 
@@ -736,20 +814,74 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
 }
 
 
-logAndPrintOptimization <- function(message,outputDir,quiet = TRUE,asNew = TRUE) {
-
+#' Log and Display Optimization Messages
+#'
+#' This function logs messages related to the optimization process to a specified file and optionally prints them to the console.
+#'
+#' @param message A character string containing the message to log.
+#' @param outputDir A character string specifying the directory where the log file will be saved.
+#' @param quiet A logical value indicating whether to suppress console output. Defaults to TRUE.
+#' @param prependTimestamp A logical value indicating whether to prepend the current timestamp to the message. Defaults to TRUE.
+#'
+#' @return NULL (invisible) This function is called for its side effects (logging and printing).
+#'
+#' @keywords internal
+logAndDisplayOptimization <- function(message, outputDir, quiet = TRUE, prependTimestamp = TRUE) {
   cat(
-    ifelse(asNew,format(Sys.time(), "%Y-%m-%d %H:%M:%S"),"     "),
+    ifelse(prependTimestamp, format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "     "),
     message,
     "\n",
     file = file.path(outputDir, "optimization_log.txt"),
     append = TRUE
   )
 
-  # Print to console
-  if (!quiet)  cat(message, "\n")
+  # Console output
+  cat(message, "\n")
 
   return(invisible())
-
 }
+#' Log the Result of an Optimization
+#'
+#' This function logs the result of an optimization process, including the duration of the optimization,
+#' the number of iterations, and other relevant metrics. The log is saved to the specified output directory.
+#'
+#' @param result A list containing the result of the optimization, including the convergence status and message.
+#' @param startTime The time at which the optimization started, as returned by `Sys.time()`.
+#' @param outputDir The directory where the log file will be saved.
+#' @param optimEnv The optimization environment containing current state variables.
+#'
+#' @return NULL (invisible) This function is called for its side effects (logging).
+#' @keywords internal
+logResult <- function(result, startTime, outputDir, optimEnv) {
+  endTime <- Sys.time()
+  # Convert duration to numeric value in seconds
+  durationInSeconds <- as.numeric(endTime - startTime, units = "secs")
 
+  # Determine appropriate unit for logging
+  if (durationInSeconds < 60) {
+    durationLog <- paste(signif(durationInSeconds, 3), "seconds")
+  } else if (durationInSeconds < 3600) {
+    durationLog <- paste(signif(durationInSeconds / 60, 3), "minutes")
+  } else if (durationInSeconds < 86400) {
+    durationLog <- paste(signif(durationInSeconds / 3600, 3), "hours")
+  } else {
+    durationLog <- paste(signif(durationInSeconds / 86400, 3), "days")
+  }
+
+  # Log the duration
+  finalMessage <- paste("Optimization finalized.\n",
+    "      duration: ", durationLog, "\n",
+    "      iterations : \n",
+    "        total : ", optimEnv$iteration, "\n",
+    "        with return value NA: ", optimEnv$NAcounter, "\n",
+    "        with parameter outside limits: ", optimEnv$outsideRangeCounter, "\n",
+    "      return value: (see ?optim): ", "\n",
+    "         value: ", result$value, "\n",
+    "         convergence: ", result$convergence, "\n",
+    "         message: ", ifelse(is.null(result$message), "-", "result$message"), "\n",
+    sep = ""
+  )
+  logAndDisplayOptimization(finalMessage, outputDir = outputDir)
+
+  return(invisible())
+}

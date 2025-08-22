@@ -9,7 +9,7 @@
 projectConfiguration <-
   addBMLMPConfiguration(projectConfiguration,
                         snapshotFile = file.path(projectConfiguration$modelFolder, 'mySnaphot.json'),
-                        nameOfParameterIdentfication = 'myParameterIdentification',
+                        nameOfParameterIdentification = 'myParameterIdentification',
                         overwrite = FALSE)
 
 # Manual adjust sheets ParameterDefinition, ParameterMappedPaths, ModelError
@@ -26,7 +26,7 @@ myRun <- BMLMOptimization$new(projectConfiguration = projectConfiguration,
                                 scenarioList =  scenarioList,
                                 dataObserved = dataObserved)
 
-# runs the model at the iitial Values and prints information on simulation time
+# runs the model at the initial Values and prints information on simulation time
 # and initial loglikelihood at the console and to the logfile
 myRun$evaluateInitialValues()
 

@@ -6,7 +6,7 @@
 \usage{
 plotConvergence(
   dtConvergence,
-  displayVariablesIndx = seq(1, 5),
+  displayVariablesIndx = NULL,
   titletxt = NULL,
   nPoints = 200,
   selectionMode = c("last", "random", "first")

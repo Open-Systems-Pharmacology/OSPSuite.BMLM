@@ -3,8 +3,9 @@
 #' @description An object storing configuration used project-wide
 #' This class encapsulates the functionality for performing BMLM optimization.
 #' It manages the configuration, output directories, logging, and optimization processes.
+#'
 #' @export
-BMLMOptimization <-  R6::R6Class(
+BMLMOptimization <- R6::R6Class(
   "BMLMOptimization",
   inherit = ospsuite.utils::Printable,
   cloneable = FALSE,
@@ -12,7 +13,7 @@ BMLMOptimization <-  R6::R6Class(
   active = list(
     #' @field runName Identifier of optimization run.
     runName = function() {
-        return(private$.runName)
+      return(private$.runName)
     },
     #' @field outputDir Identifier of optimization run.
     outputDir = function(value) {
@@ -43,7 +44,6 @@ BMLMOptimization <-  R6::R6Class(
                           scenarioList,
                           dataObserved,
                           seed = 1234) {
-
       # Check BMLM Configuration
       if (is.null(projectConfiguration$addOns$bMLMConfigurationFile)) {
         stop("Project configuration has no BMLM Configuration attached!")
@@ -60,78 +60,76 @@ BMLMOptimization <-  R6::R6Class(
 
       # Initialize data list
       private$scenarioList <- scenarioList
-      if (any(lapply(scenarioList,'getElement','scenarioType') == 'Individual')){
-        stop(paste('Please use only scenarios for virtual twin populations! Check',
-                   paste(names(scenarioList)[lapply(scenarioList,'getElement','scenarioType') == 'Individual']),
-                   collapse = ', '))
+      if (any(lapply(scenarioList, "getElement", "scenarioType") == "Individual")) {
+        stop(paste("Please use only scenarios for virtual twin populations! Check",
+          paste(names(scenarioList)[lapply(scenarioList, "getElement", "scenarioType") == "Individual"]),
+          collapse = ", "
+        ))
       }
 
 
-      if (asReload){
-        dtList <- loadListsForRun(self$outputDir,self$runName)
-
+      if (asReload) {
+        dtList <- loadListsForRun(self$outputDir, self$runName)
       } else {
-
         callDetails <- paste("Configuration Call:\n",
-                             "      BMLM Configuration file: ", basename(projectConfiguration$addOns$bMLMConfigurationFile), "\n",
-                             "      scenarios: ", paste(names(scenarioList), collapse = ", "), "\n",
-                             "      dataObserved: ", deparse(substitute(dataObserved)), "\n",
-                             "      seed: ", seed, "\n",
-                             sep = ""
+          "      BMLM Configuration file: ", basename(projectConfiguration$addOns$bMLMConfigurationFile), "\n",
+          "      scenarios: ", paste(names(scenarioList), collapse = ", "), "\n",
+          "      dataObserved: ", deparse(substitute(dataObserved)), "\n",
+          "      seed: ", seed, "\n",
+          sep = ""
         )
-        logAndPrintOptimization(message = callDetails,outputDir = self$outputDir)
+        logAndDisplayOptimization(message = callDetails, outputDir = self$outputDir)
 
         dtList <- createDtList(projectConfiguration, scenarioList, dataObserved, seed)
-        saveDataTablesAsCSV(dtList = dtList,outputDir = self$outputDir)
+        saveDataTablesAsCSV(dtList = dtList, outputDir = self$outputDir)
 
         private$setStatus(RUNSTATUS$initialized)
       }
 
-      for (iList in names(dtList)){
-        if ('categoricCovariate' %in% names(dtList[[iList]])){
-          dtList[[iList]][,categoricCovariate := as.character(categoricCovariate)]
-          dtList[[iList]][is.na(categoricCovariate),categoricCovariate := '']
+      for (iList in names(dtList)) {
+        if ("categoricCovariate" %in% names(dtList[[iList]])) {
+          dtList[[iList]][, categoricCovariate := as.character(categoricCovariate)]
+          dtList[[iList]][is.na(categoricCovariate), categoricCovariate := ""]
         }
       }
       private$dtList <- dtList
-
     },
     #' Clean up the status of the optimization run
     #'
     #' This method checks the status of the optimization run and updates it accordingly.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
-    cleanUpStatus = function(){
+    cleanUpStatus = function() {
       # initialized ?
-      necessaryFiles <- c("data.csv","mappedPaths.csv","prior.csv","startValues.csv")
-      if (any(!file.exists(file.path(self$outputDir,necessaryFiles)))){
-        message('Run is corrupt, as configuration is incomplete!')
-        private$setStatus('corrupt')
+      necessaryFiles <- c("data.csv", "mappedPaths.csv", "prior.csv", "startValues.csv")
+      if (any(!file.exists(file.path(self$outputDir, necessaryFiles)))) {
+        message("Run is corrupt, as configuration is incomplete!")
+        private$setStatus("corrupt")
         return(invisible())
       }
 
       # does it run in the background ?
       if (!is.null(private$jobId)) {
         jobStatus <- rstudioapi::jobGetState(private$jobId)
-        if (jobStatus %in% c('running','queued')){
-          message('Run is running as background job')
+        if (jobStatus %in% c("running", "queued")) {
+          message("Run is running as background job")
           private$setStatus(RUNSTATUS$running)
           return(invisible())
         }
       }
 
       # check if final result exist
-      if (file.exists(file.path(self$outputDir,'result.RDS'))){
+      if (file.exists(file.path(self$outputDir, "result.RDS"))) {
         message('Status of run is "finalized".')
-        private$setStatus('finalized')
+        private$setStatus("finalized")
         return(invisible())
       }
 
 
       # check if temporary result exist
-      if (file.exists(file.path(self$outputDir,'convergence.csv'))){
-        message('Run has temporary results but was not finalized!')
-        message('Before restarting the optimization please ensure that the job is not still running.')
+      if (file.exists(file.path(self$outputDir, "convergence.csv"))) {
+        message("Run has temporary results but was not finalized!")
+        message("Before restarting the optimization please ensure that the job is not still running.")
         private$setStatus(RUNSTATUS$stopped)
         return(invisible())
       }
@@ -140,49 +138,54 @@ BMLMOptimization <-  R6::R6Class(
       message('Status of run is "initialized".')
       private$setStatus(RUNSTATUS$initialized)
       return(invisible())
-
     },
     #' Print properties and status of the BMLMOptimization object
     #'
     #' @description  This method prints the current properties and status of the BMLMOptimization object to the console.
     print = function() {
-        private$printClass()
-        private$printLine("runName", self$runName)
-        private$printLine("status", self$status)
-        invisible(self)
+      private$printClass()
+      private$printLine("runName", self$runName)
+      private$printLine("status", self$status)
+      invisible(self)
     },
     #' This function exports individual results to a PKML file for a specified individual ID across scenarios.
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths for saving PKML files.
     #' @param individualId A string representing the ID of the individual whose results will be exported.
-    exportIndividualResultsToPkml = function(projectConfiguration,individualId){
-
+    exportIndividualResultsToPkml = function(projectConfiguration, individualId) {
       individualId <- as.character(individualId)
-      checkmate::assertCharacter(individualId,len = 1)
-      checkmate::assertNames(individualId,subset.of = unique(private$dtList$data$individualId))
+      checkmate::assertCharacter(individualId, len = 1)
+      checkmate::assertNames(individualId, subset.of = unique(private$dtList$data$individualId))
 
 
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)){
-        message('Export is doen with initial values.')
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        message("Export is done with initial values.")
+        scalingMethod <- SCALINGMETHOD$hardBounds
         params <- getParams(
           dtPrior = private$dtList$prior,
           dtStartValues = private$dtList$startValues,
-          optimizationGroup = 'both'
+          optimizationGroup = "both",
+          scalingMethod = scalingMethod
         )
-
       } else {
         params <- statusList$best$params
+        scalingMethod <- statusList$best$scalingMethod
       }
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = params,
+        scalingMethod = scalingMethod
+      )
 
 
-      exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
-                                    scenarioList = private$scenarioList,
-                                    dtList = private$dtList,
-                                    outputDir = self$outputDir,
-                                    individualId = individualId)
+      exportIndividualResultsToPkml(
+        projectConfiguration = projectConfiguration,
+        scenarioList = private$scenarioList,
+        dtList = private$dtList,
+        outputDir = self$outputDir,
+        individualId = individualId
+      )
 
       return(invisible())
     },
@@ -191,36 +194,48 @@ BMLMOptimization <-  R6::R6Class(
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths for saving population files.
     #' @param addAsNewScenarios A boolean indicating whether to add new scenarios to the workbook.
     #' @param overwrite A boolean indicating whether to overwrite existing files.
-    exportResultAsPopulation = function(projectConfiguration,addAsNewScenarios = TRUE,overwrite = FALSE){
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
+    exportResultAsPopulation = function(projectConfiguration, addAsNewScenarios = TRUE, overwrite = FALSE) {
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        return(invisible())
+      }
 
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = statusList$best$params,
+        scalingMethod = statusList$best$scalingMethod
+      )
 
-      exportOptimizedPopulation(projectConfiguration = projectConfiguration,
-                                dtList = private$dtList,
-                                scenarioList = private$scenarioList,
-                                runName = self$runName,
-                                addAsNewScenarios = addAsNewScenarios,
-                                overwrite = overwrite)
-
+      exportOptimizedPopulation(
+        projectConfiguration = projectConfiguration,
+        dtList = private$dtList,
+        scenarioList = private$scenarioList,
+        runName = self$runName,
+        addAsNewScenarios = addAsNewScenarios,
+        overwrite = overwrite
+      )
     },
     #' This function exports individual values from a given data table to a specified
     #' configuration table in an Excel workbook.
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including the path to the Excel file.
-    exportIndividualValuesToConfigTable = function(projectConfiguration){
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
+    exportIndividualValuesToConfigTable = function(projectConfiguration) {
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        return(invisible())
+      }
 
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = statusList$best$params,
+        scalingMethod = statusList$best$scalingMethod
+      )
 
-      exportIndividualValuesToConfigTable(projectConfiguration = projectConfiguration,
-                                          scenarioList = private$scenarioList,
-                                          dtList = private$dtList)
-
+      exportIndividualValuesToConfigTable(
+        projectConfiguration = projectConfiguration,
+        scenarioList = private$scenarioList,
+        dtList = private$dtList
+      )
     },
     #' This function exports global parameters from the provided data table to a new sheet in the model parameters Excel file.
     #'
@@ -228,50 +243,70 @@ BMLMOptimization <-  R6::R6Class(
     #' @param dtList A list of data.tables containing the prior values.
     #' @param runName A string representing the name of the run.
     #' @param overwrite A boolean indicating whether to overwrite an existing sheet.
-    exportGlobalsParametersToConfigTables = function(projectConfiguration, overwrite = FALSE){
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
+    exportGlobalsParametersToConfigTables = function(projectConfiguration, overwrite = FALSE) {
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        return(invisible())
+      }
 
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = statusList$best$params,
+        scalingMethod = statusList$best$scalingMethod
+      )
 
-      exportGlobalsParametersToConfigTables(projectConfiguration = projectConfiguration,
-                                            dtList = private$dtList,
-                                            runName = self$runName,
-                                            overwrite = overwrite)
+      exportGlobalsParametersToConfigTables(
+        projectConfiguration = projectConfiguration,
+        dtList = private$dtList,
+        runName = self$runName,
+        overwrite = overwrite
+      )
     },
     #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths to Excel files.
-    exportFinalValuesToBMLConfigTable = function(projectConfiguration){
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
+    exportFinalValuesToBMLConfigTable = function(projectConfiguration) {
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        return(invisible())
+      }
 
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = statusList$best$params,
+        scalingMethod = statusList$best$scalingMethod
+      )
 
-      saveFinalValuesToTables(projectConfiguration = projectConfiguration,
-                                          dtList = private$dtList)
+      saveFinalValuesToTables(
+        projectConfiguration = projectConfiguration,
+        dtList = private$dtList
+      )
     },
     #' This function retrieves the configuration table from the specified sheet in the Excel workbook and add the finalValues
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths to Excel files.
     #' @param sheetName A character string specifying the name of the sheet to retrieve data from. Options are 'Prior' or 'IndividualStartValues'.
-    getCurrentConfigTable = function(projectConfiguration,sheetName = c('Prior','IndividualStartValues')){
+    getCurrentConfigTable = function(projectConfiguration, sheetName = c("Prior", "IndividualStartValues")) {
       sheetName <- match.arg(sheetName)
 
-      statusList <- private$loadOptimStatusList(statusTypes = 'best')
-      if (is.null(statusList)) return(invisible())
+      statusList <- private$loadOptimStatusList(statusTypes = "best")
+      if (is.null(statusList)) {
+        return(invisible())
+      }
 
-      private$dtList <- setParameterToTables(dtList = private$dtList,
-                                             params = statusList$best$params)
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = statusList$best$params,
+        scalingMethod = statusList$best$scalingMethod
+      )
 
-      dt <- getCurrentConfigTable(projectConfiguration = projectConfiguration,
-                                          dtList = private$dtList,
-                                  sheetName = sheetName)
+      dt <- getCurrentConfigTable(
+        projectConfiguration = projectConfiguration,
+        dtList = private$dtList,
+        sheetName = sheetName
+      )
 
       return(dt)
-
     },
     #' Check Residuals as QQ Plot
     #'
@@ -288,15 +323,18 @@ BMLMOptimization <-  R6::R6Class(
                                   filterScenarioName = NULL,
                                   ...) {
       dtRes <-
-        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
-                                      filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible(list()))
+        private$updatePredictedValues(
+          filteroutputPathId = filteroutputPathId,
+          filterScenarioName = filterScenarioName
+        )
+      if (is.null(dtRes)) {
+        return(invisible(list()))
+      }
 
-      plotList <- plotResidualsAsQQ(dtRes, nCols = nCols,titeltxt = self$runName,...)
+      plotList <- plotResidualsAsQQ(dtRes, nCols = nCols, titeltxt = self$runName, ...)
 
       print(plotList)
       return(invisible(plotList))
-
     },
     #' Check Residuals vs Time
     #'
@@ -313,15 +351,18 @@ BMLMOptimization <-  R6::R6Class(
                                     filterScenarioName = NULL,
                                     ...) {
       dtRes <-
-        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
-                                      filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible(list()))
+        private$updatePredictedValues(
+          filteroutputPathId = filteroutputPathId,
+          filterScenarioName = filterScenarioName
+        )
+      if (is.null(dtRes)) {
+        return(invisible(list()))
+      }
 
       plotList <- plotResidualsVsTime(dtRes, nCols = nCols, titeltxt = self$runName, ...)
 
       print(plotList)
       return(invisible(plotList))
-
     },
     #' Check Residuals as Histogram
     #'
@@ -338,15 +379,18 @@ BMLMOptimization <-  R6::R6Class(
                                          filterScenarioName = NULL,
                                          ...) {
       dtRes <-
-        private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
-                                      filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible(list()))
+        private$updatePredictedValues(
+          filteroutputPathId = filteroutputPathId,
+          filterScenarioName = filterScenarioName
+        )
+      if (is.null(dtRes)) {
+        return(invisible(list()))
+      }
 
-      plotList <- plotResidualsAsHistogram(dtRes, nCols = nCols,titeltxt = self$runName,...)
+      plotList <- plotResidualsAsHistogram(dtRes, nCols = nCols, titeltxt = self$runName, ...)
 
       print(plotList)
       return(invisible(plotList))
-
     },
     #' Create and Print Predicted vs Observed of best result
     #'
@@ -362,10 +406,14 @@ BMLMOptimization <-  R6::R6Class(
     checkPredictedVsObserved = function(addRegression = TRUE, xyScale = unlist(SCALING), nCols = 2,
                                         filteroutputPathId = NULL,
                                         filterScenarioName = NULL,
-                                        ...){
-      dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
-                                             filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible(list()))
+                                        ...) {
+      dtRes <- private$updatePredictedValues(
+        filteroutputPathId = filteroutputPathId,
+        filterScenarioName = filterScenarioName
+      )
+      if (is.null(dtRes)) {
+        return(invisible(list()))
+      }
 
       plotList <- plotPredictedVsObserved(
         dtRes = dtRes,
@@ -395,10 +443,14 @@ BMLMOptimization <-  R6::R6Class(
                                     nCols = 4,
                                     filteroutputPathId = NULL,
                                     filterScenarioName = NULL,
-                                    ...){
-      dtRes <- private$updatePredictedValues(filteroutputPathId = filteroutputPathId,
-                                             filterScenarioName = filterScenarioName)
-      if (is.null(dtRes)) return(invisible(list()))
+                                    ...) {
+      dtRes <- private$updatePredictedValues(
+        filteroutputPathId = filteroutputPathId,
+        filterScenarioName = filterScenarioName
+      )
+      if (is.null(dtRes)) {
+        return(invisible(list()))
+      }
       plotList <- plotPredictedVsTime(
         dtRes = dtRes,
         yScale = yScale,
@@ -424,14 +476,15 @@ BMLMOptimization <-  R6::R6Class(
     #' @param corCut A numeric value for the correlation cutoff threshold. Default is 0.5.
     #' @param pValueCut A numeric value for the Kruskal-Wallis test cutoff threshold. Default is 0.1.
     #' @param nPlotsPopulation Number of plots in one figure for correlations with population
-    checkCorrelations = function(method = 'spearman',
-                                 statusToShow = c('best', 'current', 'start'),
+    checkCorrelations = function(method = "spearman",
+                                 statusToShow = c("best", "current", "start"),
                                  corCut = 0.5,
                                  pValueCut = 0.1,
                                  nPlotsPopulation = 12) {
-
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible(list()))
+      if (is.null(statusList)) {
+        return(invisible(list()))
+      }
 
       plotList <- plotCorrelations(
         dtList = private$dtList,
@@ -440,19 +493,19 @@ BMLMOptimization <-  R6::R6Class(
         statusToShow = statusToShow,
         scenarioList = private$scenarioList,
         corCut = corCut,
-        pValueCut = pValueCut)
+        pValueCut = pValueCut
+      )
 
       if (is.null(sys.call(-1))) {
         print(plotList[[1]])
         iPlot <- 2
-        while(iPlot <= length(plotList)){
-          maxPlot <- min(length(plotList),iPlot + nPlotsPopulation -1)
-          print(cowplot::plot_grid(plotlist = plotList[seq(iPlot,maxPlot)]))
+        while (iPlot <= length(plotList)) {
+          maxPlot <- min(length(plotList), iPlot + nPlotsPopulation - 1)
+          print(cowplot::plot_grid(plotlist = plotList[seq(iPlot, maxPlot)]))
           iPlot <- iPlot + nPlotsPopulation
         }
       }
       return(invisible(plotList))
-
     },
     #' This function creates ggplot objects to display the current best and start values of the fitted parameter.
     #' all values a display as relative between min and max value using defined scaling
@@ -460,16 +513,20 @@ BMLMOptimization <-  R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the plot layout.
     #' @param nRows An integer specifying the number of rows for the plot layout.
     #' @param ...  arguments passed on to function plotParameterLimits
-    checkParameterLimits = function(nCols = 2, nRows = 3,...){
+    checkParameterLimits = function(nCols = 2, nRows = 3, ...) {
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible(list()))
+      if (is.null(statusList)) {
+        return(invisible(list()))
+      }
 
-      plotList <- plotParameterLimits(dtList = private$dtList,
-                          statusList = statusList,
-                          titeltxt = self$runName,
-                          nCols = nCols,
-                          nRows = nRows,
-                          ...)
+      plotList <- plotParameterLimits(
+        dtList = private$dtList,
+        statusList = statusList,
+        titeltxt = self$runName,
+        nCols = nCols,
+        nRows = nRows,
+        ...
+      )
 
       print(plotList)
       return(invisible(plotList))
@@ -480,12 +537,13 @@ BMLMOptimization <-  R6::R6Class(
     #' @param nRows An integer specifying the number of rows for the plot layout.
     #' @param xScale character 'linear' or 'log', scale of x axis
     #' @param ... additional arguments passed on to plotDistributions
-    checkDistributions = function(nCols = 2, nRows = 3,xScale = unlist(SCALING),...){
-
+    checkDistributions = function(nCols = 2, nRows = 3, xScale = unlist(SCALING), ...) {
       xScale <- match.arg(xScale)
 
       statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) return(invisible(list()))
+      if (is.null(statusList)) {
+        return(invisible(list()))
+      }
 
       plotList <- plotDistributions(
         dtList = private$dtList,
@@ -500,7 +558,6 @@ BMLMOptimization <-  R6::R6Class(
 
       print(plotList[[1]])
       return(invisible(plotList))
-
     },
     #' Check Convergence of Model Parameters
     #'
@@ -512,28 +569,30 @@ BMLMOptimization <-  R6::R6Class(
     #' @param selectionMode A character string indicating the mode of selection for points.
     #' Options are 'last'  'random', and 'first' (the first nPoints). Default is 'last'.
     #' @param displayVariablesIndx An integer vector specifying which variables to display.
-    #' default c(1,2,3,4,5), 1 = 'value of objective function: -loglikelihood',
+    #' 1 = 'value of objective function: -loglikelihood',
     #' 2 = '- loglikelihood TimeProfile', 3 = '- loglikelihood HyperParameter',
-    #' 4 ='- loglikelihood Prior' and 5 = 'percentage of failed iterations'
-    checkConvergence = function(displayVariablesIndx = seq(1,5),
+    #' 4 ='- loglikelihood Prior',  5 = 'percentage of failed iterations' and
+    #' 6 = 'percentage of iterations with parameters outside range',
+    #' if NULL (default) the columns with entries != 0 are selected.
+    checkConvergence = function(displayVariablesIndx = NULL,
                                 nPoints = 200,
-                                selectionMode = c('last','random','first')){
-
+                                selectionMode = c("last", "random", "first")) {
       # Check if the convergence CSV file exists
-      if (!file.exists(file.path(self$outputDir,'convergence.csv'))) {
-        message(paste('convergence.csv does not exist yet, please wait'))
+      if (!file.exists(file.path(self$outputDir, "convergence.csv"))) {
+        message(paste("convergence.csv does not exist yet, please wait"))
         return(invisible(list()))
       }
 
       # Read the convergence data from the CSV file
-      dtConvergence <- fread(file.path(self$outputDir,'convergence.csv'),
-                             colClasses = c('integer','double','double','double','double','character'))
+      dtConvergence <- fread(file.path(self$outputDir, "convergence.csv"),
+        colClasses = c("integer", "double", "double", "double", "integer", "integer", "character")
+      )
 
       # Print the first few rows of the sorted convergence data
-      nPointsAvailable <- nrow(dtConvergence[event == 'best'])
-      setorderv(dtConvergence,'iteration',-1)
-      print(head(dtConvergence[event == 'best'] %>%
-                   dplyr::select(!any_of('event')), 5))
+      nPointsAvailable <- nrow(dtConvergence[event == "best"])
+      setorderv(dtConvergence, "iteration", -1)
+      print(head(dtConvergence[event == "best"] %>%
+        dplyr::select(!any_of("event")), 5))
 
       plotList <- plotConvergence(
         dtConvergence,
@@ -554,12 +613,12 @@ BMLMOptimization <-  R6::R6Class(
     #' @param failValue A numeric value to set if evaluation of the objective function fails.
     #'
     #' @return NULL This function does not return any value but logs information to the console and a log file.
-    evaluateInitialValues = function(){
-
-      evaluateInitialValues(dtList = private$dtList,
-                         outputDir = self$outputDir,
-                         scenarioList = private$scenarioList)
-
+    evaluateInitialValues = function() {
+      evaluateInitialValues(
+        dtList = private$dtList,
+        outputDir = self$outputDir,
+        scenarioList = private$scenarioList
+      )
     },
     #' This method initiates the optimization process using the specified method and control parameters.
     #' Internally, the function `optim` is used, so please check the help for more details.
@@ -567,6 +626,7 @@ BMLMOptimization <-  R6::R6Class(
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details.
     #' @param method A character string specifying the optimization method to be used (default is "BFGS").
     #' @param control A list of control parameters for the optimization process.
+    #' @param scalingMethod A character string specifying the scaling method.
     #' @param simulationRunOptions Optional additional simulation run options.
     #' @param failValue A numeric value to set if evaluation of the objective function fails (default is 1e+10).
     #' @param lastStatusSavingIntervalInSecs An integer specifying the interval for saving the last status (default is 60 seconds).
@@ -580,28 +640,38 @@ BMLMOptimization <-  R6::R6Class(
                                  control = list(),
                                  simulationRunOptions = NULL,
                                  failValue = 1e+10,
+                                 scalingMethod = unlist(SCALINGMETHOD),
                                  lastStatusSavingIntervalInSecs = 60,
                                  withInternalOptimization = FALSE,
                                  startInBackground = TRUE,
-                                 ...){
-      if (private$status == RUNSTATUS$running)
+                                 ...) {
+      if (private$status == RUNSTATUS$running) {
         stop("Status is running!
              Please check if a background job is still running, otherwise reset status with 'cleanUpStatus()'")
+      }
+      scalingMethod <- match.arg(scalingMethod)
+      scalingMethod <- unname(unlist(scalingMethod))
 
       # Log start time
       startTime <- Sys.time()
-      logAndPrintOptimization("Optimization started.",outputDir = self$outputDir)
+      logAndDisplayOptimization("Optimization started.", outputDir = self$outputDir)
 
       private$dtList[["iteration"]] <- 0
       private$dtList[["bestValue"]] <- Inf
       private$dtList[["NAcounter"]] <- 0
-      if (private$status %in% c('stopped','finalized')) {
+      private$dtList[["outsideRangeCounter"]] <- 0
+      private$dtList$scalingMethod <- scalingMethod
+      if (private$status %in% c("stopped", "finalized")) {
         private$archivePreviousResults()
-
         optimStatus <- readRDS(file = file.path(self$outputDir, "bestOptimStatus.RDS"))
-        private$dtList <- setParameterToTables(private$dtList, optimStatus$params)
+        private$dtList <- setParameterToTables(
+          dtList = private$dtList,
+          params = optimStatus$params,
+          scalingMethod = optimStatus$scalingMethod
+        )
         private$dtList$iteration <- optimStatus$iteration
         private$dtList$NAcounter <- optimStatus$NAcounter
+        private$dtList$outsideRangeCounter <- optimStatus$outsideRangeCounter
         private$dtList$bestValue <- -1 * sum(optimStatus$loglikelihoods)
 
         fwrite(
@@ -614,15 +684,16 @@ BMLMOptimization <-  R6::R6Class(
                 logPrior = NA
               ),
               NAcounter = NA,
-              event = 'restart'
+              outsideRangeCounter = NA,
+              event = "restart"
             )
           )),
           file = file.path(self$outputDir, "convergence.csv"),
           append = TRUE
         )
-        logAndPrintOptimization(paste("Restart at best Result at iteration",optimStatus$iteration),
-                                outputDir = self$outputDir)
-
+        logAndDisplayOptimization(paste("Restart at best Result at iteration", optimStatus$iteration),
+          outputDir = self$outputDir
+        )
       }
       private$setStatus(RUNSTATUS$running)
 
@@ -637,15 +708,27 @@ BMLMOptimization <-  R6::R6Class(
         }
       })
 
-      callDetails <- paste("Function call:\n",
-                           "      method: ", method, "\n",
-                           "      control: ", deparse(substitute(control)), "\n",
-                           "      failValue: ", failValue, "\n",
-                           "      Additional arguments: ", paste(additionalArgsExpr, collapse = ", "), "\n",
-                           sep = ""
+      logAndDisplayOptimization(
+        paste("Function call:\n",
+          "      method: ", method, "\n",
+          "      control: ", deparse(substitute(control)), "\n",
+          "      failValue: ", failValue, "\n",
+          "      scalingMethod: ", scalingMethod,
+          sep = ""
+        ),
+        outputDir = self$outputDir
       )
-      logAndPrintOptimization(callDetails,
-                              outputDir = self$outputDir)
+      logAndDisplayOptimization(
+        ifelse(length(additionalArgsExpr) > 0,
+          paste("      Additional arguments: ", paste(additionalArgsExpr, collapse = ", "), "\n",
+            sep = ""
+          ),
+          "\n"
+        ),
+        outputDir = self$outputDir,
+        prependTimestamp = FALSE
+      )
+
 
 
       # Perform optimization
@@ -681,31 +764,30 @@ BMLMOptimization <-  R6::R6Class(
           importEnv = TRUE
         )
         # cleanup
-        rm(argListForJob,envir = .GlobalEnv)
-
+        rm(argListForJob, envir = .GlobalEnv)
       } else {
         private$setStatus(RUNSTATUS$running)
         # execute local
         do.call(what = optimizeParameters, args = argListForJob)
 
-        private$cleanUpStatus()
+        self$cleanUpStatus()
       }
 
       return(invisible(self))
     },
-    #' Oepns logfile of the BMLMOptimization object
+    #' Opens logfile of the BMLMOptimization object
     #'
     #' @description  This method opens the current logfile
-    openLogFile = function(){
-      logfile = file.path(self$outputDir, "optimization_log.txt")
-      if (file.exists(logfile)){
+    openLogFile = function() {
+      logfile <- file.path(self$outputDir, "optimization_log.txt")
+      if (file.exists(logfile)) {
         file.edit(logfile)
       } else {
-        message('no Log file exists')
+        message("no Log file exists")
       }
     }
   ),
-  #private-----------------
+  # private-----------------
   private = list(
     dtList = NULL,
     scenarioList = NULL,
@@ -715,140 +797,140 @@ BMLMOptimization <-  R6::R6Class(
     .outputDir = NULL,
     jobId = NULL,
     manageOutputDirectory = function(projectConfiguration) {
-      self$outputDir <- file.path(projectConfiguration$outputFolder, 'BMLM',self$runName)
+      self$outputDir <- file.path(projectConfiguration$outputFolder, "BMLM", self$runName)
 
-      if (dir.exists( self$outputDir)) {
-
-        if (!file.exists(file.path(self$outputDir, 'status.RDS'))) {
+      if (dir.exists(self$outputDir)) {
+        if (!file.exists(file.path(self$outputDir, "status.RDS"))) {
           # Prompt the user for confirmation to reset the run directory
-          response <- readline(prompt = paste("Output directory exists already but does not contain all mandatory files.",
-                  "\nDid it crash during the last initialisation?",
-                  "\nDo you want to reset everything in the run directory? (Yes/No): "))
+          response <- readline(prompt = paste(
+            "Output directory exists already but does not contain all mandatory files.",
+            "\nDid it crash during the last initialisation?",
+            "\nDo you want to reset everything in the run directory? (Yes/No): "
+          ))
           if (tolower(response) == "yes") {
-            logAndPrintOptimization(paste('Reset Run', self$runName),
-                                    outputDir = self$outputDir)
+            logAndDisplayOptimization(paste("Reset Run", self$runName),
+              outputDir = self$outputDir
+            )
             asReload <- FALSE
             return(asReload)
           } else {
-            stop('Execution stopped by user.')
+            stop("Execution stopped by user.")
           }
         }
 
         private$loadStatus()
 
-        message("Alert: The output folder for ", self$runName, " already exists! Status: ",private$status)
-        if (private$status == RUNSTATUS$running){
+        message("Alert: The output folder for ", self$runName, " already exists! Status: ", private$status)
+        if (private$status == RUNSTATUS$running) {
           message("Please check if a background job is still running, otherwise reset status with 'cleanUpStatus()'")
         }
-        asReload = TRUE
-
+        asReload <- TRUE
       } else {
-        dir.create( self$outputDir, recursive = TRUE)
-        message("Output directory created: ",  self$outputDir)
-        asReload = FALSE
-        logAndPrintOptimization(message = paste('Initialize Run',self$runName),outputDir = self$outputDir)
+        dir.create(self$outputDir, recursive = TRUE)
+        message("Output directory created: ", self$outputDir)
+        asReload <- FALSE
+        logAndDisplayOptimization(message = paste("Initialize Run", self$runName), outputDir = self$outputDir)
       }
 
       return(asReload)
     },
-    setStatus = function(status){
-      private$status = status
-      saveRDS(object = status,file = file.path(self$outputDir,'status.RDS'))
-
+    setStatus = function(status) {
+      private$status <- status
+      saveRDS(object = status, file = file.path(self$outputDir, "status.RDS"))
     },
-    loadStatus = function(status){
-      status = readRDS(file = file.path(self$outputDir,'status.RDS'))
-      private$status = status
+    loadStatus = function(status) {
+      status <- readRDS(file = file.path(self$outputDir, "status.RDS"))
+      private$status <- status
     },
-    archivePreviousResults = function(){
-      archiveDir <- file.path(self$outputDir,paste0('archive_',format(Sys.time(), "%Y-%m-%d_%H-%M-%S")))
+    archivePreviousResults = function() {
+      archiveDir <- file.path(self$outputDir, paste0("archive_", format(Sys.time(), "%Y-%m-%d_%H-%M-%S")))
 
-      filesToCopy <- c('result.RDS','bestOptimStatus.RDS','convergence.csv')
-      if (any(file.exists(file.path(self$outputDir,filesToCopy))))
+      filesToCopy <- c("result.RDS", "bestOptimStatus.RDS", "convergence.csv")
+      if (any(file.exists(file.path(self$outputDir, filesToCopy)))) {
         dir.create(archiveDir)
-
-      for (fileToCopy in filesToCopy){
-        if (file.exists(file.path(self$outputDir,fileToCopy)))
-          file.copy(from = file.path(self$outputDir,fileToCopy),
-                    to = file.path(archiveDir,fileToCopy))
       }
 
+      for (fileToCopy in filesToCopy) {
+        if (file.exists(file.path(self$outputDir, fileToCopy))) {
+          file.copy(
+            from = file.path(self$outputDir, fileToCopy),
+            to = file.path(archiveDir, fileToCopy)
+          )
+        }
+      }
     },
-    loadOptimStatusList = function(statusTypes = c('best','current')){
+    loadOptimStatusList = function(statusTypes = c("best", "current")) {
+      cat("load results for ", self$runName, "\n")
 
-      cat('load results for ',self$runName,'\n')
+      statusTypes <- match.arg(statusTypes, several.ok = TRUE)
 
-      statusTypes = match.arg(statusTypes,several.ok = TRUE)
+      statusFiles <- c(best = "bestOptimStatus.RDS", current = "optimStatus.RDS")
 
-      statusFiles = c(best = 'bestOptimStatus.RDS',current = 'optimStatus.RDS')
-
-      if (any(!file.exists(file.path(self$outputDir, statusFiles[statusTypes])))){
-        message('No results yet, did you start the job?')
+      if (any(!file.exists(file.path(self$outputDir, statusFiles[statusTypes])))) {
+        message("No results yet, did you start the job?")
         return(invisible())
       }
 
       statusList <- list()
 
-      for  (type in statusTypes){
+      for  (type in statusTypes) {
         statusList[[type]] <- readRDS(file.path(self$outputDir, statusFiles[type]))
-        private$printStatus(statusList[[type]],type)
-
+        private$printStatus(statusList[[type]], type)
       }
 
       return(statusList)
-
     },
     updatePredictedValues = function(filteroutputPathId = NULL,
-                                     filterScenarioName = NULL){
-
-      if (!file.exists(file.path(self$outputDir, c('bestPrediction.RDS')))){
-        message('No results yet.')
+                                     filterScenarioName = NULL) {
+      if (!file.exists(file.path(self$outputDir, c("bestPrediction.RDS")))) {
+        message("No results yet.")
         return(invisible())
       }
-      bestStatus <- readRDS(file.path(self$outputDir, 'bestOptimStatus.RDS'))
-      private$printStatus(bestStatus,'best')
+      bestStatus <- readRDS(file.path(self$outputDir, "bestOptimStatus.RDS"))
+      private$printStatus(bestStatus, "best")
 
-      private$dtList <- setParameterToTables(private$dtList, bestStatus$params)
-      dtRes <- readRDS(file.path(self$outputDir, 'bestPrediction.RDS'))
-      if (!is.data.frame(dtRes)){
+      private$dtList <- setParameterToTables(
+        dtList = private$dtList,
+        params = bestStatus$params,
+        scalingMethod = bestStatus$scalingMethod
+      )
+      dtRes <- readRDS(file.path(self$outputDir, "bestPrediction.RDS"))
+      if (!is.data.frame(dtRes)) {
         dtRes <- rbindlist(dtRes)
       }
-      dtRes <- updateModelError(dtPrior = private$dtList$prior,dtRes = dtRes)
+      dtRes <- updateModelError(dtPrior = private$dtList$prior, dtRes = dtRes)
 
       dtRes[, isCensored := !is.na(lloq) & lloq > yValues]
 
       # Apply the function to calculate likelihood
       dtRes[, resNorm := mapply(calculateResidual, yValues, predicted, errorModel, sigma, isCensored, lloq)]
 
-      if (!is.null(filteroutputPathId)){
+      if (!is.null(filteroutputPathId)) {
         checkmate::assertNames(filteroutputPathId, subset.of = dtRes$outputPathId)
       }
-      if (!is.null(filterScenarioName)){
+      if (!is.null(filterScenarioName)) {
         checkmate::assertNames(filterScenarioName, subset.of = dtRes$scenarioName)
-        dtRes <- dtRes[scenarioName %in%   filterScenarioName]
+        dtRes <- dtRes[scenarioName %in% filterScenarioName]
       }
-      if (!is.null(filteroutputPathId)){
-        dtRes <- dtRes[outputPathId %in%   filteroutputPathId]
+      if (!is.null(filteroutputPathId)) {
+        dtRes <- dtRes[outputPathId %in% filteroutputPathId]
       }
 
       return(dtRes)
-
     },
-    printStatus = function(statusObject,statusName){
+    printStatus = function(statusObject, statusName) {
       cat(
         sprintf(
-          '%s:\n    iteration: %d\n    objective function value: %.2f\n    percentage of failed function evaluations: %.2f\n',
+          "%s:\n    iteration: %d\n    objective function value: %.2f\n    percentage of failed function evaluations: %.2f\n",
           statusName,
           statusObject$iteration,
           -sum(
-            statusObject$loglikelihood),
+            statusObject$loglikelihood
+          ),
           statusObject$NAcounter /
             statusObject$iteration * 100
-
         )
       )
     }
   )
 )
-
-

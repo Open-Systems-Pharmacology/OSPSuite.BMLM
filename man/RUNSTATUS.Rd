@@ -17,7 +17,8 @@ Status of optimization Runs
 Other enum helpers: 
 \code{\link{ERRORMODEL}},
 \code{\link{PARAMETERTYPE}},
-\code{\link{SCALING}}
+\code{\link{SCALING}},
+\code{\link{SCALINGMETHOD}}
 }
 \concept{enum helpers}
 \keyword{datasets}
