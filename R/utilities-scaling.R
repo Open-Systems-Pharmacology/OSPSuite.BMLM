@@ -133,6 +133,7 @@ setParameterToTables <- function(dtList, params, scalingMethod) {
 
   return(dtList)
 }
+
 #' Scale to Unbounded Values
 #'
 #' This function scales input values to an unbounded range using the specified scaling method.
@@ -144,11 +145,11 @@ setParameterToTables <- function(dtList, params, scalingMethod) {
 #' @return A numeric vector of scaled values.
 #' @keywords internal
 scaleToLogSig <- function(value, minValue, maxValue, scaling) {
-  param <- if (tolower(scaling) == SCALING$log) {
-    qlogis((log(value) - log(minValue)) / (log(maxValue) - log(minValue)))
-  } else {
-    qlogis((value - minValue) / (maxValue - minValue))
-  }
+  param <-
+    qlogis(scaleWithinBounds(value = value,
+                                  minValue = minValue,
+                                  maxValue = maxValue,
+                                  scaling = scaling))
 
   param <- pmax(-20, pmin(20, param))
   return(param)
@@ -165,11 +166,10 @@ scaleToLogSig <- function(value, minValue, maxValue, scaling) {
 #' @return A numeric vector of unscaled values.
 #' @keywords internal
 unscaleFromLogSig <- function(param, minValue, maxValue, scaling) {
-  if (tolower(scaling) == SCALING$log) {
-    exp(plogis(param) * (log(maxValue) - log(minValue)) + log(minValue))
-  } else {
-    plogis(param) * (maxValue - minValue) + minValue
-  }
+  unscaleFromBounds(param = plogis(param),
+                    minValue = minValue,
+                    maxValue = maxValue,
+                    scaling = scaling)
 }
 
 #' Scale Within Specified Limits

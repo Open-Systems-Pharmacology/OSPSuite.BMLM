@@ -677,8 +677,47 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
 
 
 
-# Input transformation -----------
+# get Tables -----------
 
+#' Get Current Configuration Table
+#'
+#' This function retrieves the current configuration table from the specified sheet in the Excel workbook.
+#'
+#' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including paths to Excel files.
+#' @param dtList A list of data.tables containing the values.
+#' @param sheetName A character string specifying the name of the sheet to retrieve data from. Options are 'Prior' or 'IndividualStartValues'.
+#'
+#' @return A data.table containing the current configuration values.
+#' @export
+getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("Prior", "IndividualStartValues")) {
+  sheetName <- match.arg(sheetName)
+
+  if (sheetName == "IndividualStartValues" & nrow(dtList$startValues) == 0) {
+    warning("No individual start values available")
+    return(data.table())
+  }
+
+  identifier <- switch(sheetName,
+                       Prior = c("name", "hyperParameter", "categoricCovariate"),
+                       IndividualStartValues = c("name", "individualId", "categoricCovariate")
+  )
+
+  dtOld <- switch(sheetName,
+                  Prior = dtList$prior,
+                  IndividualStartValues = dtList$startValues
+  )
+
+
+  wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
+
+  dtNew <- addFinalValue(wb,
+                         sheetName = sheetName,
+                         identifier = identifier,
+                         newTable = dtOld
+  )
+
+  return(dtNew)
+}
 
 # auxiliaries --------------
 checkConsistencyWithDefinition <- function(dtDefinition,

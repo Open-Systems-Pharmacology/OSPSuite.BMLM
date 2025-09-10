@@ -1,5 +1,6 @@
 buildTestData <- function(rootDirectory = NULL,
                           writeTestData = FALSE) {
+
   # Initialize class to build test project
   pBuilder <- TestProjectBuilder$new()
 
@@ -25,7 +26,7 @@ buildTestData <- function(rootDirectory = NULL,
     ontogeny = "CYP3A4,UGT1A4"
   )
   pBuilder$mockManualEditingsPopulation(projectConfiguration,
-    randomPops = randomPops
+                                        randomPops = randomPops
   )
 
   modelFiles <- list.files(file.path(system.file(
@@ -120,10 +121,21 @@ buildTestData <- function(rootDirectory = NULL,
   )
   mockManualEditingsUpdatePriorDefinition(projectConfiguration)
 
+
+  myTestRun <- BMLMOptimization$new(
+    projectConfiguration = projectConfiguration,
+    runName = "myTestRun",
+    scenarioList = scenarioList,
+    dataObserved = dataObserved
+  )
+
+  myTestRun$evaluateInitialValues()
+
   return(invisible(list(
     projectConfiguration = projectConfiguration,
     dataObserved = dataObserved,
-    scenarioList = scenarioList
+    scenarioList = scenarioList,
+    myTestRun = myTestRun
   )))
 }
 

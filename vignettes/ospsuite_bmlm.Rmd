@@ -20,11 +20,23 @@ knitr::opts_chunk$set(
 library(ospsuite.bmlm)
 ```
 
-# Introduction
+## Introduction
 
 The `ospsuite.bmlm` package provides tools for fitting Bayesian multilevel models within the OSPSuite framework. This package leverages the capabilities of the `ospsuite.reportingframework` package for project configuration, allowing users to efficiently set up their modeling environment.
 
-Bayesian multilevel models are particularly useful for analyzing hierarchical data structures, such as repeated measurements or nested data, where variability exists at multiple levels. For example, they can be applied in clinical trials where patients are nested within clinics, allowing for a nuanced understanding of treatment effects across different contexts. This vignette will guide you through the process of configuring your project, initiating an optimization, and monitoring the progress of your model fitting.
+Bayesian multilevel models are intended for parameter identification using individual study data. They are particularly useful for analyzing hierarchical data structures, where parameters of interest include global parameters, such as compound properties, and distribution parameters of individual parameters, such as clearance or absorption rates.
+
+The modeling process employs a virtual twin population, where for each study individual, a virtual individual is generated based on anthropometric data.
+
+The fitting process for Bayesian multilevel models in this package is based on maximum likelihood estimation (MLE). The optimization is performed using the R function `optim`, which efficiently estimates parameters by maximizing the likelihood of the observed data.
+
+## Available Vignettes
+
+To help you get started and make the most of the OSPSuite Reporting Framework, we provide several vignettes that cover different aspects of the package. Below is a list of available vignettes along with a brief description of each:
+
+
+
+This vignette will guide you through the process of configuring your project, initiating an optimization, and monitoring the progress of your model fitting.
 
 # Algorithm and Objective Function
 

@@ -128,8 +128,8 @@ calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, 
   checkmate::assertNumeric(lowerBound, len = 1) # lowerBound should be a single numeric value
 
   # If predicted value is NA or below the lower bound, return log(0) (indicating a very low likelihood)
-  if (is.na(predicted) || predicted < lowerBound) {
-    return(log(0))
+  if (is.na(predicted) || predicted <= lowerBound) {
+    return(-Inf)
   }
 
   # Calculate the probability of being below the lower bound based on the selected model
@@ -142,7 +142,7 @@ calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, 
   # If the data is censored, calculate the probability of being above the lower limit of quantification (lloq)
   if (isCensored) {
     p <- switch(model,
-      absolute = pnorm(q = clloq, mean = predicted, sd = sigma, log = FALSE),
+      absolute = pnorm(q = lloq, mean = predicted, sd = sigma, log = FALSE),
       proportional = pnorm(q = lloq, mean = predicted, sd = sigma * predicted, log = FALSE),
       log_absolute = plnorm(q = lloq, meanlog = log(predicted), sdlog = sigma, log = FALSE)
     )
@@ -313,3 +313,52 @@ getLikelihoodForIndividualGroup <-
 
     return(sum(logLikelihood))
   }
+#' Calculate Residuals from Observed and Predicted Values
+#'
+#' This function calculates the residuals based on the observed and predicted values,
+#' applying different models for the calculation depending on whether the data is censored.
+#'
+#' @param yValue A numeric value representing the observed value.
+#' @param predicted A numeric value representing the predicted value.
+#' @param model A character string specifying the model to use for calculating the residuals
+#'               (options are "absolute", "proportional", "log_absolute").
+#' @param sigma A numeric value representing the standard deviation of the residuals.
+#' @param isCensored A logical value indicating whether the data is censored.
+#' @param lloq A numeric value representing the lower limit of quantification.
+#'
+#' @return A numeric value representing the calculated residual.
+#' @keywords internal
+calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq) {
+  # Validate that all inputs are of the correct type and length
+  checkmate::assertNumeric(yValue, len = 1) # yValue should be a single numeric value
+  checkmate::assertNumeric(predicted, len = 1) # predicted should be a single numeric value
+  checkmate::assertChoice(model, c("absolute", "proportional", "log_absolute")) # model must be one of the specified choices
+  checkmate::assertNumeric(sigma, len = 1) # sigma should be a single numeric value
+  checkmate::assertLogical(isCensored, len = 1) # isCensored should be a single logical value
+  checkmate::assertNumeric(lloq, len = 1) # lloq should be a single numeric value
+
+  # If predicted value is NA or below the lower bound, return log(0) (indicating a very low likelihood)
+  if (is.na(predicted)) {
+    return(NA)
+  }
+
+
+  # If the data is censored, calculate the probability of being above the lower limit of quantification (lloq)
+  if (isCensored) {
+    res <- switch(model,
+                  absolute = (lloq - predicted) / sigma,
+                  proportional = (lloq - predicted) / (sigma * predicted),
+                  log_absolute = (log(lloq) - log(predicted)) / sigma
+    )
+  } else {
+    # If the data is notored, calculate the log likelihood based on the chosen model
+    res <- switch(model,
+                  absolute = (yValue - predicted) / sigma,
+                  proportional = (yValue - predicted) / (sigma * predicted),
+                  log_absolute = (log(yValue) - log(predicted)) / sigma
+    )
+  }
+
+
+  return(res) # Return the final log likelihood value
+}

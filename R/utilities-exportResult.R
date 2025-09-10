@@ -131,10 +131,45 @@ exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList, 
     wb = wb, sheetName = sheetName,
     dt = dtAdd,
     templateSheet = "Template",
-    templateXlsx = "ModelParameters.xslx"
+    templateXlsx = "ModelParameters.xlsx"
   )
 
   openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$modelParamsFile, overwrite = TRUE)
+}
+exportHyperParametersToConfigTables <- function(projectConfiguration,
+                                                dtList,
+                                                runName,
+                                                overwrite){
+  checkmate::assertClass(projectConfiguration,'ProjectConfiguration')
+  checkmate::assertList(dtList,types = 'data.table')
+  checkmate::assertCharacter(runName, len = 1)
+  checkmate::assertLogical(overwrite)
+  browser()
+  if (!any(dtList$prior$valueMode == PARAMETERTYPE$hyperParameter)) {
+    message("no hyperparameters available")
+    return(invisible())
+  }
+
+  wb <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
+  sheetName <- paste0(runName, "_hyperDistributions")
+  if (sheetName %in% wb$sheet_names & !overwrite) {
+    stop(paste(sheetName, "already exists"))
+  }
+
+  message("export hyper parameters")
+  dtAdd <- extractParameterValues(
+    dtNew = dtList$prior[valueMode == PARAMETERTYPE$hyperParameter, c("name", "value", "hyperParameter")],
+    dtList = dtList,
+    scenarioList = scenarioList
+  )
+
+  saveDataToWorkbook(
+    wb = wb, sheetName = sheetName,
+    dt = dtAdd,
+    templateSheet = "Template",
+    templateXlsx = "Populations.xlsx"
+  )
+
 }
 #' Export Individual Values to Configuration Table
 #'
@@ -242,7 +277,9 @@ exportIndividualResultsToPkml <- function(projectConfiguration,
 #'
 #' @return A data.table containing extracted parameter values along with their container paths and names.
 #' @keywords internal
-extractParameterValues <- function(dtNew, dtList, scenarioList) {
+extractParameterValues <- function(dtNew, dtList, scenarioList,
+                                   relevantColumns = c("container Path", "parameter Name", "value", "units"),
+                                   parametertype = 'global') {
   # Merge the mapped paths with the individual data, excluding the 'useAsFactor' column
   dtAdd <- merge(dtList$mappedPaths, dtNew, by = "name")
 
@@ -264,11 +301,6 @@ extractParameterValues <- function(dtNew, dtList, scenarioList) {
     # Remove rows with NA factors
     tmp <- tmp[!is.na(factor)]
 
-    # Check for consistency in factors; stop if any are duplicated
-    if (any(duplicated(tmp$factor))) {
-      stop(paste(tmp$linkedParameters[1], "factors are not consistent for scenarios"))
-    }
-
     # Keep only the first row (since factors should be consistent)
     tmp <- tmp[1]
 
@@ -276,12 +308,15 @@ extractParameterValues <- function(dtNew, dtList, scenarioList) {
     p <- ospsuite::getParameter(tmp$linkedParameters, container = scenarioList[[tmp$scenario]]$simulation)
 
     # Update the value and units in dtAdd based on the retrieved parameter
-    dtAdd$value[iRow] <- dtAdd$value[iRow] * tmp$factor
+    dtAdd$value[iRow] <- switch(parametertype,
+           'global' =  dtAdd$value[iRow] * tmp$factor,
+           'hyperParameter' =  dtAdd$value[iRow] <-  tmp$factor
+    )
     dtAdd$units[iRow] <- p$unit
   }
 
   # Return the relevant columns for further processing
-  return(dtAdd[, c("container Path", "parameter Name", "value", "units")])
+  return(dtAdd[, relevantColumns, with = FALSE ])
 }
 addFinalValue <- function(wb, sheetName, identifier, newTable) {
   dt <- xlsxReadData(wb, sheetName = sheetName)

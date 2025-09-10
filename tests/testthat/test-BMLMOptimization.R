@@ -54,7 +54,7 @@ test_that("BMLM optimization starts", {
 })
 
 
-test_that("checkConvergence works", {
+test_that("check functions produces gg plots", {
   myRun <- suppressMessages(BMLMOptimization$new(
     projectConfiguration = projectConfiguration,
     runName = "myRun",
@@ -63,6 +63,78 @@ test_that("checkConvergence works", {
   ))
 
   # todo copy results
+  invisible(lapply(list.files(system.file("extdata","BMLMTestResult", package = "ospsuite.bmlm")),
+                   function(f)file.copy(from = file.path(system.file("extdata","BMLMTestResult", package = "ospsuite.bmlm"),f),
+                                        to = file.path(myRun$outputDir,f),
+                                        overwrite = TRUE)))
 
-  myRun$checkConvergence()
+  p <- myRun$checkConvergence()
+  expect_s3_class(p$convergence,'ggplot')
+
+  p <- myRun$checkCorrelations()
+  expect_s3_class(p$correlation_fitparameter,'gg')
+
+  p <- myRun$checkDistributions()
+  expect_s3_class(p$distributions_1,'gg')
+
+  p <- myRun$checkParameterLimits()
+  expect_s3_class(p$parameterLimits_global,'gg')
+
+  p <- myRun$checkPredictedVsObserved()
+  expect_s3_class(p$Plasma,'gg')
+
+  p <- myRun$checkPredictedVsTime()
+  expect_s3_class(p$Plasma,'gg')
+
+  p <- myRun$checkResidualsAsHistogram()
+  expect_s3_class(p$Plasma,'gg')
+
+  p <- myRun$checkResidualsAsQQ()
+  expect_s3_class(p$Plasma,'gg')
+
+  p <- myRun$checkResidualsVsTime()
+  expect_s3_class(p$Plasma,'gg')
+
+  p <- myRun$getCurrentConfigTable(projectConfiguration)
+  expect_s3_class(p,'data.table')
+})
+
+
+test_that("export functions creates output", {
+  myRun <- suppressMessages(BMLMOptimization$new(
+    projectConfiguration = projectConfiguration,
+    runName = "myRun",
+    scenarioList = scenarioList,
+    dataObserved = dataObserved
+  ))
+
+  # copy results
+  invisible(lapply(list.files(system.file("extdata","BMLMTestResult", package = "ospsuite.bmlm")),
+                   function(f)file.copy(from = file.path(system.file("extdata","BMLMTestResult", package = "ospsuite.bmlm"),f),
+                                        to = file.path(myRun$outputDir,f),
+                                        overwrite = TRUE)))
+
+  myRun$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration)
+
+  wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
+  dt <- xlsxReadData(wb = wb, sheetName = "Prior", skipDescriptionRow = FALSE)
+  expect_contains(names(dt),'finalValue')
+
+  myRun$exportGlobalsParametersToConfigTables(projectConfiguration,overwrite = TRUE)
+  wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
+  expect_contains(wb$sheet_names,"myRun_global")
+  dt <- xlsxReadData(wb = wb, sheetName = "myRun_global", skipDescriptionRow = FALSE)
+  expect_equal(nrow(dt),expected = 2)
+
+  myRun$exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
+                                      individualId = dataObserved$individualId[1])
+  expect_length(list.files(myRun$outputDir,pattern = dataObserved$individualId[1]),n = 1)
+
+  myRun$exportIndividualValuesToConfigTable(projectConfiguration)
+  wb <- openxlsx::loadWorkbook(projectConfiguration$individualsFile)
+  dt <- xlsxReadData(wb = wb, sheetName = dataObserved$individualId[1], skipDescriptionRow = FALSE)
+  expect_equal(nrow(dt),expected = 3)
+
+  myRun$exportResultAsPopulation(projectConfiguration)
+  expect_true(file.exists(file.path(projectConfiguration$populationsFolder,'1234_adults_iv_myRun.csv')))
 })

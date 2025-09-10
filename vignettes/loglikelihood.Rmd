@@ -15,135 +15,122 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup, echo=FALSE,warning=FALSE,message=FALSE}
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
 library(ospsuite.bmlm)
 ```
 
+## Introduction
+
+Maximum likelihood estimation (MLE) is a fundamental method in statistical modeling that seeks to estimate the parameters of a statistical model. By maximizing the likelihood function, MLE provides a way to find the parameter values that make the observed data most probable. This technique is widely used in various fields such as economics, biology, and machine learning.
 
 ## Maximum likelihood estimation
 
-The goal of maximum likelihood estimation is to find the values of the model parameters that maximize the likelihood function
+The goal of maximum likelihood estimation is to find the values of the model parameters that maximize the likelihood function:
 
 $$ \hat {\theta } = \underset {\theta \in \Theta }{\operatorname {arg\;max}\mathcal {L(\theta,\mathbf {y},\mathbf{p})} }$$
 
-$\theta$ is the vector of all adjustable parameters with in the maximum likelihood estimation
+Here, $\theta$ is the vector of all adjustable parameters within the maximum likelihood estimation. Each global model parameter adds one scalar to $\theta$, denoted as $\theta_k$ (where $k$ is the index of the identification parameter). 
 
-For a global parameter identification parameter it is one scalar $\theta_k$, k index of identification parameter 
+For an individual identification parameter with a hyperparameter, a vector consisting of one scalar for each individual, $\theta_{k_i}$, and the distribution parameters for the hyperparameter, $\theta_{k_p}$, are included.
 
-For an individual identification parameter with hyper parameter  $\theta_k$ is a vector consisting of one scalar for each individual and the distribution parameters for the hyperparameter 
+Additionally, $\theta$ may contain one (or several) model errors as adjustable parameters. For all elements of $\theta$ that correspond to a global model parameter or a distribution parameter of a hyperparameter, a prior distribution $\mathbf{p}$ can be defined.
 
-For all elements of $\theta$ which correspond to a global identification parameter or a distribution parameter of a hyperparameter belongs a prior distribution: $\mathbf{p}$
+$\mathbf{y}$ represents the vector of observed data across all individuals and observers.
 
-$\mathbf{y}$ is the vector of observed data over all individuals and observer.
+To use this as an objective function in an optimization algorithm, it is converted to a minimization problem:
 
+$$ \hat {\theta } = \underset {\theta \in \Theta }{\operatorname {arg\;min}\mathcal {-log(L(\theta,\mathbf {y},\mathbf{p}))} }$$
 
-To use this as objective function in an optimization algorithm it is converted :
+## Construction of Log-Likelihood
 
-$$ \hat {\theta } = \underset {\theta \in \Theta }{\operatorname {arg\;min}\mathcal {log(L(\theta,\mathbf {y},\mathbf{p}))} }$$
-
-
-
-## construction of loglikelihood
-
+The log-likelihood can be expressed as:
 
 $$ log(\mathcal{L(\theta,\mathbf {y})}) = log(\mathcal{L}_t(\theta,\mathbf {y}))  + log(\mathcal{L}_h(\theta))  + log(\mathcal{L}_p(\theta,\mathbf{p}))$$ 
 
-- $\mathcal{L}_t$ Likelihood observed data given simulated time profiles
-- $\mathcal{L}_h$ Likelihood of hyper parameter
-- $\mathcal{L}_p$ Likelihood of parameter estimates given prior distribution
+- $\mathcal{L}_t$: Likelihood of observed data given simulated time profiles
+- $\mathcal{L}_h$: Likelihood of hyperparameters
+- $\mathcal{L}_p$: Likelihood of parameter estimates given prior distribution
 
-
-
-## $log(\mathcal{L}_t(\theta,\mathbf {y}))$ likelihood for timeprofiles
-
+## Likelihood for Time Profiles $log(\mathcal{L}_t(\theta,\mathbf {y}))$ 
 
 $$ log(\mathcal{L}_t(\theta,\mathbf {y})) =  \sum_{i,j}(log(\mathcal{L}u_{i,j}(\theta,\mathbf {y}))   + log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})))  $$
 
-- $i$ individual
-- $j$ observer (Metabolite, Parent, fraction excreted Plasma, IV, PO,...)
-- $\mathcal{L}u(\theta,\mathbf {y})$ Likelihood for uncensored  data points(values above lloq)
-- $\mathcal{L}c(\theta,\mathbf {y})$ Likelihood for censored (values below lloq)
+- $i$: individual
+- $j$: observer (Metabolite, Parent, fraction excreted Plasma, IV, PO,...)
+- $\mathcal{L}u(\theta,\mathbf {y})$: Likelihood for uncensored data points (values above LLOQ)
+- $\mathcal{L}c(\theta,\mathbf {y})$: Likelihood for censored data points (values below LLOQ)
 
+### Additive Error Model
 
+<u>Uncensored Data Points</u>
 
-### additive 
+   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2}{\epsilon_j^2} - log(2\pi * \epsilon_j^2)\right) - log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)$$
 
-<u>uncensored data points</u>
-
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2.}{\epsilon_j^2} - log(2\pi * \epsilon_j^2)\right) - log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)\right)$$
-   <u>censored data points</u>
-   
+<u>Censored Data Points</u>
    
    $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{(lloq_{j}(t) - f_{i,j}(\theta,t))}{\epsilon_j}\right) - \Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j}\right)\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)\right)$$    
-  
-- $\mathbf{y}_{i,j}(t)$ observed data point for individual i and output j
-- $f_{i,j}(\theta,t)$ simulated data point for individual i and output j
-- $lloq_{j}(t)$ lower limits of quantification
-- $LB$ physiological possible lower bound 
-- $\epsilon_j$ model error by observer
 
-$$ \Phi(x) = \frac{1}{\sqrt{2*\pi}}\int_{-\inf}^xe^{-\frac{x^2}{2}} $$
+- $\mathbf{y}_{i,j}(t)$: observed data point for individual $i$ and output $j$
+- $f_{i,j}(\theta,t)$: simulated data point for individual $i$ and output $j$
+- $lloq_{j}(t)$: lower limits of quantification
+- $LB$: physiological possible lower bound 
+- $\epsilon_j$: model error by observer
 
+$$ \Phi(x) = \frac{1}{\sqrt{2*\pi}}\int_{-\infty}^xe^{-\frac{x^2}{2}} $$
 
+### Proportional Error Model
 
-#### proportional 
+<u>Uncensored Data Points</u>
 
-<u>uncensored data points</u>
+$$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) = -\frac{1}{2}\left(\frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))^2}{\epsilon_j*f_{i,j}(\theta,t)^2} - log(2\pi *\epsilon_j^2*f_{i,j}(\theta,t)^2 )\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right)$$
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\left( \frac{-(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t_u))^2.}{\epsilon_j*f_{i,j}(\theta,t)^2} - log(2\pi * \epsilon_j^2*f_{i,j}(\theta,t)^2})\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right)\right)$$
-
-   <u>censored data points</u>
-   
+<u>Censored Data Points</u>
    
    $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{lloq_{j}(t) - f_{i,j}(\theta,t)}{\epsilon_j*f_{i,j}(\theta,t)}\right) - \Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right) -log\left(1-\Phi  \left(\frac{(LB - f_{i,j}(\theta,t_u))}{\epsilon_j*f_{i,j}(\theta,t)}\right)\right)\right)$$    
 
-#### logarithmic
+### Logarithmic Model
 
-   <u>uncensored data points</u>
+<u>Uncensored Data Points</u>
 
-   $$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))^2.}{\epsilon_j^2} - log(2\pi*\epsilon_j*d_{i,j}(t)(t_u)^2)\right) -log\left(1-\Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right)\right)$$
+$$log(\mathcal{L}u_{i,j}(\theta,\mathbf {y})) =  -\frac{1}{2}\sum_{t_u}\left( \frac{-(log(\mathbf{y}_{i,j}(t)) - log(f_{i,j}(\theta,t)))^2}{\epsilon_j^2} - log(2\pi*\epsilon_j*d_{i,j}(t)(t_u)^2)\right) -log\left(1-\Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right)$$
 
-
-   <u>censored data points</u>
-   
+<u>Censored Data Points</u>
    
    $$ log(\mathcal{L}c_{i,j}(\theta,\mathbf {y})) = \sum_{t_c}\left(log\left(\Phi\left(\frac{(log(lloq_{j}(t)) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right) - \Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right) -log\left(1-\Phi  \left(\frac{(log(LB) - log(f_{i,j}(\theta,t)))}{\epsilon_j}\right)\right)\right)$$    
 
-
-  
-
-## $log(\mathcal{L}_h(\theta))$ likelihood for hyperparameter 
+## Likelihood for Hyperparameters $log(\mathcal{L}_h(\theta))$ 
 
 $$ log(\mathcal{L}_h(\theta))  = \sum_k log(\mathcal{L}_{h,k}(\theta)) = \sum_{k \in K_h} log(\phi(\theta_{k}))$$
 
-- $K_h$ parameter parameter with hyperparameter
-- $\phi(\theta_k)$ distribution for hyperparameter  
-- $\theta_{k}$ individual parameter values and distribution parameter values for hyperparameter k
+- $K_h$: parameters with hyperparameters
+- $\phi(\theta_k)$: distribution for hyperparameters  
+- $\theta_{k}$: individual parameter values and distribution parameter values for hyperparameter $k$
 
-available distributions are all distributions available in package stats: (https://rdrr.io/r/stats/Distributions.html)
-
-
-example for a multimodal normal distributed hyper parameter p:
+Example for a multimodal normal distributed hyperparameter $p$:
 
 $$log(\mathcal{L}_{h,k}(\theta))  = \sum_g\left(-\frac{1}{2\sigma_{k,g}^2}\sum_{i \in g}(value_{k,i} -\mu_{k,g})^2 -\frac{1}{2}log(2\pi*\sigma_{k,g}^2)\right) $$
-- $i \in g$ individuals belonging to group g
-- $value_{k,i}$ individual value for parameter k
-- $\mu_{k,g}$ hyper parameter mean of mode g   
-- $\sigma_{k,g}$ hyper parameter variance  of mode g 
+- $i \in g$: individuals belonging to group $g$
+- $value_{k,i}$: individual value for parameter $k$
+- $\mu_{k,g}$: hyperparameter mean of mode $g$   
+- $\sigma_{k,g}$: hyperparameter variance of mode $g$ 
 
-
-
-## $log(\mathcal{L}_p(\theta,\mathbf{p}))$ likelihood for prior
+## Likelihood for Prior $log(\mathcal{L}_p(\theta,\mathbf{p}))$ 
 
 $$ log(\mathcal{L}_p(\theta,\mathbf{p}))  = \sum_{k \in K_p} log(\mathcal{L}_{p,k}(\theta,\mathbf{p})) = \sum_k log(\Pi(\theta_{k},\mathbf{p}))$$
 
-- $K_p$ elements of $\theta$ with prior
-- $\Pi(\theta_k)$ distribution of prior
-
-available distributions:
-
-- unif (flat):  $log(\mathcal{L}_{p,k})$ = 0  
-- norm (normal)
-- lnorm (lognormal)
+- $K_p$: elements of $\theta$ with prior
+- $\Pi(\theta_k)$: distribution of prior
 
 
+## Available distributions
+
+Available distributions are all distributions available in the package `stats`: [Distributions Documentation](https://rdrr.io/r/stats/Distributions.html). The package provides a distribution `lnorm_geomean`, which offers an interface to the log-normal distribution using the geometric mean and geometric standard deviation instead of the log mean and log standard deviation. These functions internally call the corresponding base R functions: `dlnorm`, `plnorm`, `qlnorm`, and `rlnorm`. 
+
+For a prior distribution it is also possible to select `flat`:  $log(\mathcal{L}_{p,k}) = 0$  
+
+It is important to exercise caution when selecting a distribution, as not all technically available distributions may be appropriate for your specific data or modeling context. The choice of distribution can significantly impact the results and interpretations of your analysis, so it is essential to ensure that the selected distribution aligns with the underlying characteristics of the data being modeled.
+
+
+## Conclusion
+
+In summary, maximum likelihood estimation is a powerful statistical tool for estimating model parameters. By understanding the construction of the log-likelihood and the role of hyperparameters and prior distributions, practitioners can effectively apply MLE in various modeling scenarios. For further reading, consider exploring additional resources on statistical modeling and MLE techniques.

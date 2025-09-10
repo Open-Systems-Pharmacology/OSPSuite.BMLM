@@ -745,8 +745,6 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
   # initialize variables to avoid linter messages
   currentValue <- value <- newValue <- individualId <- valueMode <- NULL
 
-  scenario <- scenarioList[[scenarioName]]
-
   dtMappedPathsForScenarios <-
     dtMappedPaths[!is.na(get(scenarioName))] %>%
     dplyr::select(dplyr::all_of(c(
