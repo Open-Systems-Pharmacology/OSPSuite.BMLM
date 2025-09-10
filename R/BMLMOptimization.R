@@ -600,7 +600,7 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotList <- plotParameterLimits(
-        dtList = private$dtList,
+        dtList = private$dtList[c('prior','startValues')],
         statusList = statusList,
         titeltxt = self$runName,
         nCols = nCols,
@@ -615,6 +615,8 @@ BMLMOptimization <- R6::R6Class(
     #'
     #' @param nCols An integer specifying the number of columns for the plot layout.
     #' @param nRows An integer specifying the number of rows for the plot layout.
+    #' @param parameterFilter A character vector for filtering parameter names. Default is NULL.
+    #' @param zoomOnData A logical value indicating whether to zoom in on data. Default is FALSE.
     #' @param xScale character 'linear' or 'log', scale of x axis
     #' @param ... additional arguments passed on to plotDistributions
     checkDistributions = function(nCols = 2, nRows = 3, xScale = unlist(SCALING),
@@ -629,9 +631,8 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotList <- plotDistributions(
-        dtList = private$dtList,
-        currentStatus = statusList$current,
-        bestStatus = statusList$best,
+        dtList = private$dtList[c('prior','startValues')],
+        statusList = statusList,
         nCols = nCols,
         nRows = nRows,
         xScale = xScale,
@@ -644,6 +645,10 @@ BMLMOptimization <- R6::R6Class(
       print(plotList[[1]])
       return(invisible(plotList))
     },
+    #' This function creates ggplot objects to display the parameter Values vs the prior distributions.
+    #'
+    #' @param xScale character 'linear' or 'log', scale of x axis
+    #' @param ... additional arguments passed on to plotDistributions
     checkParameterValuesVsPrior = function( xScale = unlist(SCALING), ...) {
       xScale <- match.arg(xScale)
 
@@ -653,9 +658,8 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotObject <- plotParameterValuesVsPrior(
-        dtList = private$dtList,
-        currentStatus = statusList$current,
-        bestStatus = statusList$best,
+        dtList = private$dtList[c('prior','startValues')],
+        statusList,
         xScale = xScale,
         titeltxt = self$runName,
         ...

@@ -28,26 +28,28 @@ plotConvergence <- function(dtConvergence,
 
   setorderv(dtConvergence, "iteration", 1)
 
-  # Calculate metrics
-  dtConvergence <- calculateConvergenceMetrics(dtConvergence)
+  dtConvergenceList = split(dtConvergence,by = 'event')
 
-  nPointsAvailable <- nrow(dtConvergence[event == "best"])
+  # Calculate metrics
+  dtConvergenceList$best <- calculateConvergenceMetrics(dtConvergenceList$best)
+
+  nPointsAvailable <- nrow(dtConvergenceList$best)
   if (nPointsAvailable == 1) {
     message(paste("only one point available, please wait for plots"))
     return(NULL)
   }
 
   columnheaders <- getConvergenceColumnHeaders(
-    dt = dtConvergence,
+    dt = dtConvergenceList$best,
     displayVariablesIndx = displayVariablesIndx
   )
 
   # Select points based on the specified selection mode
   selectionMode <- match.arg(selectionMode)
-  dtConvergence <- selectIterations(dtConvergence, nPointsAvailable, nPoints, selectionMode)
+  dtConvergenceList <- selectIterations(dtConvergenceList, nPointsAvailable, nPoints, selectionMode)
 
   # Reshape the data for plotting
-  plotData <- data.table::melt(dtConvergence[event == "best"],
+  plotData <- data.table::melt(dtConvergenceList$best,
     measure.vars = names(columnheaders),
     variable.name = "summand",
     value.name = "value"
@@ -76,9 +78,9 @@ plotConvergence <- function(dtConvergence,
     layerWatermark()
 
   # Add restart points as vertical lines
-  if (any(dtConvergence$event == "restart")) {
+  if (nrow(dtConvergenceList$restart)>0) {
     plotObject <- plotObject +
-      geom_vline(data = dtConvergence[event == "restart"], mapping = aes(xintercept = iteration)) +
+      geom_vline(data = dtConvergenceList$restart, mapping = aes(xintercept = iteration)) +
       labs(caption = "vertical lines indicate restart of algorithm")
   }
 
@@ -148,9 +150,10 @@ getConvergenceColumnHeaders <- function(dt, displayVariablesIndx) {
 #'
 #' @return A data.table containing the selected points.
 #' @keywords internal
-selectIterations <- function(dt, nPointsAvailable, nPoints, selectionMode) {
+selectIterations <- function(dtConvergenceList, nPointsAvailable, nPoints, selectionMode) {
+
   if (nPointsAvailable > nPoints) {
-    dt <- dt[switch(selectionMode,
+    dtConvergenceList$best <- dtConvergenceList$best[switch(selectionMode,
                     first = seq(1, nPoints) ,
                     random = sort(c(1,
                                     sample(seq(2, nPointsAvailable - 1),
@@ -159,6 +162,9 @@ selectIterations <- function(dt, nPointsAvailable, nPoints, selectionMode) {
                                     nPointsAvailable)),
                     last = seq(1, nPoints) + nPointsAvailable - nPoints,
                     stop('unknown sectionMode'))]
+    dtConvergenceList$restart <- dtConvergenceList$restart[
+                     iteration >= min(dtConvergenceList$best$iteration) &
+                     iteration <= max(dtConvergenceList$best$iteration)]
   }
-  return(dt)
+  return(dtConvergenceList)
 }

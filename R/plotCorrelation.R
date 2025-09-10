@@ -50,13 +50,13 @@ plotCorrelations <- function(dtList,
 
   plotData <- dcast(plotData[, c("statusValue", "label", "individualId")], ... ~ label, value.var = "statusValue")
   pm <- GGally::ggpairs(plotData,
-    columns = labels,
-    switch = "y",
-    diag = list(continuous = GGally::wrap("barDiag", bins = 20, na.rm = TRUE)),
-    upper = list(continuous = GGally::wrap("cor", method = method, use = "complete.obs")),
-    lower = list(continuous = GGally::wrap("points", na.rm = TRUE)),
-    title = titeltxt,
-    mapping = aes(shape = "circle")
+                        columns = labels,
+                        switch = "y",
+                        diag = list(continuous = GGally::wrap("barDiag", bins = 20, na.rm = TRUE)),
+                        upper = list(continuous = GGally::wrap("cor", method = method, use = "complete.obs")),
+                        lower = list(continuous = GGally::wrap("points", na.rm = TRUE)),
+                        title = titeltxt,
+                        mapping = aes(shape = "circle")
   ) +
     theme(strip.placement = "outside")
 
@@ -101,16 +101,27 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
                                                 pValueCut = 0.1,
                                                 method = "spearman",
                                                 dtMappedPaths) {
-  dtPop <- preparePopulationForCorrelationCheck(scenarioList, dtMappedPaths)
-  mergedData <- merge(plotData, dtPop, by.x = "individualId", by.y = "ObservedIndividualId")
-
+  popList <- preparePopulationForCorrelationCheck(scenarioList, dtMappedPaths)
+  mergedData = list()
+  for (columnType in c('numerics','factors')){
+    mergedData[[columnType]] <- merge(plotData, popList[[columnType]],
+                                      by.x = "individualId", by.y = "ObservedIndividualId")
+  }
   plotList <- list()
   maxCorrelation <- 0
   minPvalue <- 1
 
   for (label in labels) {
-    plotList <- c(plotList, analyzeLabelKruskal(mergedData, label, pValueCut, plotList))
-    plotList <- c(plotList, analyzeLabelCorrelations(mergedData, label, corCut, method, plotList))
+    kryskalResults <-
+      analyzeLabelKruskal(mergedData$factors, label, pValueCut,
+                          columnVector = setdiff(names(popList$factors), c("ObservedIndividualId")))
+    plotList <- c(plotList, kryskalResults$plotList)
+    minPvalue <- min(minPvalue,kryskalResults$minPvalue)
+    correlationResults <-
+      analyzeLabelCorrelations(mergedData$numerics, label, corCut, method,
+                               columnVector = setdiff(names(popList$numerics), c("ObservedIndividualId")))
+    plotList <- c(plotList, correlationResults$plotList)
+    maxCorrelation <- max(correlationResults$maxCorrelation,maxCorrelation)
   }
 
   if (length(plotList) == 0) {
@@ -132,21 +143,25 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
 #' @param label A character string representing the label to analyze.
 #' @param corCut A numeric value for the correlation cutoff threshold.
 #' @param method A character string specifying the correlation method to use.
-#' @param plotList A list to store generated plots.
+#' @param columnVector A caharacter vector with column Names to analyse.
 #'
 #' @return A list of correlation plots for the specified label.
-analyzeLabelCorrelations <- function(mergedData, label, corCut, method, plotList) {
-  correlations <- list()
-  for (popCol in setdiff(names(mergedData), c("ObservedIndividualId"))) {
+analyzeLabelCorrelations <- function(mergedData, label, corCut, method,columnVector) {
+  plotList <- list()
+  maxCorrelation = 0
+  for (popCol in columnVector) {
     iNonNans <- which(!is.na(mergedData[[popCol]]) & !is.na(mergedData[[label]]))
-    if (length(iNonNans) > 3 && is.numeric(mergedData[[popCol]])) {
+    if (length(iNonNans) > 3 ) {
       correlationValue <- cor(mergedData[[label]], mergedData[[popCol]], use = "complete.obs", method = method)
+      maxCorrelation <- max(maxCorrelation, abs(correlationValue))
       if (abs(correlationValue) > corCut) {
-        correlations[[paste("cor", label, popCol, sep = "_")]] <- createCorrelationPlot(mergedData, label, popCol, correlationValue)
+        plotObject <- createCorrelationPlot(mergedData, label, popCol, correlationValue)
+        plotObject$correlationValue <- correlationValue
+        plotList[[paste("cor", label, popCol, sep = "_")]] <- plotObject
       }
     }
   }
-  return(correlations)
+  return(list(plotList = plotList,maxCorrelation = maxCorrelation ))
 }
 
 #' Analyze Label Kruskal-Wallis Tests
@@ -156,20 +171,29 @@ analyzeLabelCorrelations <- function(mergedData, label, corCut, method, plotList
 #' @param mergedData A data.table containing merged plot and population data.
 #' @param label A character string representing the label to analyze.
 #' @param pValueCut A numeric value for the Chi-squared cutoff threshold.
-#' @param plotList A list to store generated plots.
+#' @param columnVector A caharacter vector with column Names to analyse.
 #'
 #' @return A list of Kruskal-Wallis test plots for the specified label.
-analyzeLabelKruskal <- function(mergedData, label, pValueCut, plotList) {
-  kruskalPlots <- list()
-  for (popCol in setdiff(names(mergedData), c("ObservedIndividualId"))) {
-    if (is.factor(mergedData[[popCol]])) {
-      kruskalTestResult <- kruskal.test(label ~ popCol, data = mergedData)
-      if (!is.na(kruskalTestResult$p.value) && kruskalTestResult$p.value < pValueCut) {
-        kruskalPlots[[paste("kruskal", label, popCol, sep = "_")]] <- createKruskalPlot(mergedData, label, popCol, kruskalTestResult$p.value)
+analyzeLabelKruskal <- function(mergedData, label, pValueCut,columnVector) {
+  plotList <- list()
+  minPvalue <- 1
+  for (popCol in columnVector) {
+    tmpData <- mergedData[,c(label, popCol),with = FALSE] %>%
+      setnames(
+        old = c(label, popCol),
+        new = c("label", "popCol")
+      )
+
+    kruskalTestResult <- kruskal.test(label ~ popCol, data = tmpData)
+    if (!is.na(kruskalTestResult$p.value)) {
+      minPvalue <- min(minPvalue, kruskalTestResult$p.value)
+      if (kruskalTestResult$p.value < pValueCut) {
+        plotObject <- createKruskalPlot(mergedData, label, popCol, kruskalTestResult$p.value)
+        plotList[[paste("kruskal", label, popCol, sep = "_")]] <- plotObject
       }
     }
   }
-  return(kruskalPlots)
+  return(list(plotList = plotList,minPvalue = minPvalue))
 }
 
 #' Create Correlation Plot
@@ -250,8 +274,8 @@ preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
 
   # Check for identical factors
   dtPop <- excludeIdenticalFactors(dtPop)
-
-  return(dtPop)
+  return(list(numerics = dtPop %>% dplyr::select(c("ObservedIndividualId",numericColumns)),
+              factors = dtPop %>% dplyr::select(c("ObservedIndividualId",!numericColumns))))
 }
 
 
