@@ -168,6 +168,75 @@ plotDistributions <- function(dtList,
 
   return(invisible(plotList))
 }
+#' Plot Best Values vs Start Values
+#'
+#' This function generates a plot comparing the best values against the start values.
+#'
+#' @param dtList A list containing prior and start values data tables.
+#' @param statusList A list containing the current and best parameter values.
+#' @param nCols An integer specifying the number of columns for faceting. Default is 2.
+#' @param nRows An integer specifying the maximum number of rows for faceting. Default is 3.
+#' @param xyScale A character string specifying the scale of the x- and y-axis. Default is 'log'.
+#' @param titeltxt A string to include in the plot title.
+#' @param parameterFilter A character vector for filtering parameter names. Default is NULL.
+#'
+#' @return An invisible ggplot object visualizing the best values vs start values.
+#' @export
+plotBestVsStartParameter <- function(dtList,
+                            statusList,
+                            nCols = 2,
+                            nRows = 3,
+                            xyScale = unlist(SCALING),
+                            parameterFilter = NULL,
+                            titeltxt = NULL,
+                            ...) {
+  # Validate inputs
+  checkmate::assertList(dtList, types = "data.table")
+  checkmate::assertList(statusList, types = 'list', min.len = 1, names = 'named')
+  checkmate::assertNames(names(statusList), subset.of = c('best', 'current'))
+  checkmate::assertCharacter(titeltxt, null.ok = TRUE)
+  checkmate::assertCount(nCols, positive = TRUE)
+  checkmate::assertCount(nRows, positive = TRUE)
+  xyScale <- tolower(match.arg(xyScale))
+
+
+  if (nrow(dtList$startValues) == 0) {
+    stop("No distributed parameters available")
+  }
+
+  # Prepare data
+  plotData <- preparePlotDataParameterValues(dtList = dtList, statusList = statusList)
+  plotData <- plotData[valueMode == PARAMETERTYPE$individual]
+  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior,
+                       unitSep = ' ', identifier = "name")
+
+  facetsToPlotList <- getFacetToPlotList(plotData$label,nCols = nCols,nRows = nRows)
+
+  # build a data table to plot line of identity (use this approach instaed of geom_abline
+  # to generate squareplots)
+  identitylineData <- rbind(plotData[,.(x = min(c(startValue,bestValue))),by = label],
+                    plotData[,.(x = max(c(startValue,bestValue))),by = label]) %>%
+    .[,y:=x]
+
+  plotList <- list()
+  for (facetsToPlot in facetsToPlotList) {
+    # Create the  plot
+    plotObject <- ggplot(data  = plotData[label %in% facetsToPlot],
+                         mapping = aes(x = startValue, y = bestValue)) +
+     geom_point(shape = 'circle') +
+      geom_line(data = identitylineData,mapping = aes(x = x, y = y)) +
+      facet_wrap(vars(label), scales = "free", ncol = nCols) +
+      labs(
+        x = "Start Value",
+        y = "Best Value",
+        title = titeltxt
+      ) +
+      theme(aspect.ratio = 1)
+
+  }
+
+  return(invisible(plotObject))
+}
 #' Create and Print Parameter Values vs Prior Plot
 #'
 #' This function generates a plot comparing parameter values against their prior distributions.
@@ -256,6 +325,7 @@ prepareDataForParameterLimits <- function(dtList,
     dtList = dtList,
     statusList = statusList
   )
+  # label for xlabel (!plot will displayed with coord_flip)
   plotData[, xlabel := ""]
   plotData[valueMode == PARAMETERTYPE$individual, xlabel := individualId]
   plotData[valueMode == PARAMETERTYPE$hyperParameter, xlabel := hyperParameter, by = .I]
@@ -263,10 +333,8 @@ prepareDataForParameterLimits <- function(dtList,
   plotData$xlabel <- factor(plotData$xlabel, levels = unique(plotData$xlabel), ordered = TRUE)
 
   plotData <- reshapePlotDataParameterValues(plotData)
+  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior, unitSep = NULL, identifier = "name")
 
-
-  plotData[, label := ifelse(is.na(categoricCovariate), name, paste0(name, " (", categoricCovariate, ")"))]
-  plotData$label <- factor(plotData$label, levels = unique(plotData$label), ordered = TRUE)
 
   return(list(
     individuals = plotData[!(valueMode %in% c(PARAMETERTYPE$global, PARAMETERTYPE$outputError))],
@@ -324,6 +392,8 @@ prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, 
     statusList = statusList
   )
   plotData <- reshapePlotDataParameterValues(plotData)
+  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior)
+
 
   # Filter parameters based on parameterFilter
   if (!is.null(parameterFilter) && length(parameterFilter) > 0) {
@@ -340,7 +410,6 @@ prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, 
     merge(rangeLimits,by = c("name", "categoricCovariate"))
 
 
-  plotData <- addLabel(plotData = plotData, dtPrior = dtList$prior)
   if (zoomOnData) {
     # Adjust displayMin and displayMax based on statusValue
     plotData[, `:=`(
@@ -781,6 +850,7 @@ reshapePlotDataParameterValues <- function(plotData) {
 #' @param plotData A data.table containing the initial plot data.
 #' @param dtPrior A data.table containing prior values for merging.
 #' @param unitSep A string to separate the name and unit in the label. Default is a space.
+#' If `unitSep` is NULL, unit will be skipped
 #'
 #' @return A data.table with labels added for each parameter.
 #' @keywords internal
@@ -791,7 +861,7 @@ addLabel <- function(plotData, dtPrior, unitSep = " ", identifier = c("name", "c
                     by = identifier
   )
 
-  plotData[, label := ifelse(is.na(unit), name, paste0(name, unitSep, "[", unit, "]"))]
+  plotData[, label := ifelse(is.na(unit) | is.null(unitSep), name, paste0(name, unitSep, "[", unit, "]"))]
   if ("categoricCovariate" %in% identifier) {
     plotData[, label := ifelse(is.na(categoricCovariate) | categoricCovariate == "",
                                label,

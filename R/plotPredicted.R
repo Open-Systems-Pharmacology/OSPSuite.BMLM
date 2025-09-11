@@ -149,7 +149,7 @@ plotPredictedVsObserved <- function(
   checkmate::assertLogical(addRegression,null.ok = FALSE)
   xyScale <- tolower(match.arg(xyScale))
 
-  # Create the base plot
+  # Create the  plot
   plotObject <- ospsuite_plotPredictedVsObserved(
     plotData = filteredData,
     mapping = aes(shape = isCensored),

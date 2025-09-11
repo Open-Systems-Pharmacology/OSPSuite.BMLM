@@ -59,9 +59,12 @@ test_that("plotDistributions works correctly", {
 
 test_that("plotParameterValuesVsPrior works correctly", {
   plotObject <- plotParameterValuesVsPrior(dtList, statusList = statusList)
-
   vdiffr::expect_doppelganger("plotParameterValuesVsPrior", plotObject)
+})
 
+test_that("plotBestVsStartParameter works correctly", {
+  plotObject <- plotBestVsStartParameter(dtList, statusList = statusList)
+  vdiffr::expect_doppelganger("plotBestVsStartParameter", plotObject)
 })
 
 test_that("prepareDataForParameterLimits works correctly", {

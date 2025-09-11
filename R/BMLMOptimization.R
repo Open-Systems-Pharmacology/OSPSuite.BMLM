@@ -587,6 +587,62 @@ BMLMOptimization <- R6::R6Class(
       }
       return(invisible(plotList))
     },
+    #' This function creates ggplot objects to display the parameter Values vs the prior distributions.
+    #'
+    #' @param xScale character 'linear' or 'log', scale of x axis
+    #' @param ... additional arguments passed on to plotDistributions
+    checkParameterValuesVsPrior = function( xScale = unlist(SCALING), ...) {
+      xScale <- match.arg(xScale)
+
+      statusList <- private$loadOptimStatusList()
+      if (is.null(statusList)) {
+        return(invisible(list()))
+      }
+
+      plotObject <- plotParameterValuesVsPrior(
+        dtList = private$dtList[c('prior','startValues')],
+        statusList,
+        xScale = xScale,
+        titeltxt = self$runName,
+        ...
+      )
+
+      print(plotObject)
+      return(invisible(plotObject))
+    },
+    #' This function creates ggplot objects to display the parameter Values vs the prior distributions.
+    #'
+    #' @param nCols An integer specifying the number of columns for faceting. Default is 2.
+    #' @param nRows An integer specifying the maximum number of rows for faceting. Default is 3.
+    #' @param xyScale A character string specifying the scale of the x- and y-axis. Default is 'log'.
+    #' @param parameterFilter A character vector for filtering parameter names. Default is NULL.
+    #' @param ... additional arguments passed on to plotBestVsStartParameter
+    checkBestVsStartParameter = function( xyScale = unlist(SCALING),
+                                          nCols = 2,
+                                          nRows = 3,
+                                          parameterFilter,
+                                          ...) {
+      xyScale <- match.arg(xyScale)
+
+      statusList <- private$loadOptimStatusList()
+      if (is.null(statusList)) {
+        return(invisible(list()))
+      }
+
+      plotObject <- plotBestVsStartParameter(
+        dtList = private$dtList[c('prior','startValues')],
+        statusList,
+        titeltxt = self$runName,
+        nCols = nCols,
+        nRows = nRows,
+        xyScale = xyScale,
+        parameterFilter = parameterFilter,
+        ...
+      )
+
+      print(plotObject)
+      return(invisible(plotObject))
+    },
     #' This function creates ggplot objects to display the current best and start values of the fitted parameter.
     #' all values a display as relative between min and max value using defined scaling
     #'
@@ -645,29 +701,7 @@ BMLMOptimization <- R6::R6Class(
       print(plotList[[1]])
       return(invisible(plotList))
     },
-    #' This function creates ggplot objects to display the parameter Values vs the prior distributions.
-    #'
-    #' @param xScale character 'linear' or 'log', scale of x axis
-    #' @param ... additional arguments passed on to plotDistributions
-    checkParameterValuesVsPrior = function( xScale = unlist(SCALING), ...) {
-      xScale <- match.arg(xScale)
 
-      statusList <- private$loadOptimStatusList()
-      if (is.null(statusList)) {
-        return(invisible(list()))
-      }
-
-      plotObject <- plotParameterValuesVsPrior(
-        dtList = private$dtList[c('prior','startValues')],
-        statusList,
-        xScale = xScale,
-        titeltxt = self$runName,
-        ...
-      )
-
-      print(plotObject)
-      return(invisible(plotObject))
-    },
     #' Check Convergence of Model Parameters
     #'
     #' This function checks the convergence of model parameters by reading a CSV file
