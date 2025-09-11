@@ -344,6 +344,7 @@ BMLMOptimization <- R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
     #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
     #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
+    #' @param excludeCensored A logical value indicating whether to exclude censored data (default is FALSE).
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
@@ -377,6 +378,7 @@ BMLMOptimization <- R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
     #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
     #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
+    #' @param excludeCensored A logical value indicating whether to exclude censored data (default is FALSE).
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
@@ -410,6 +412,7 @@ BMLMOptimization <- R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
     #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
     #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
+    #' @param excludeCensored A logical value indicating whether to exclude censored data (default is FALSE).
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
@@ -443,6 +446,7 @@ BMLMOptimization <- R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
     #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
     #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
+    #' @param excludeCensored A logical value indicating whether to exclude censored data (default is FALSE).
     #' @param ... Additional arguments passed to the plot function.
     #'
     #' @return An invisible reference to the BMLMOptimization object.
@@ -479,6 +483,7 @@ BMLMOptimization <- R6::R6Class(
     #' @param nCols An integer specifying the number of columns for the facet wrap. (Default = 2)
     #' @param filteroutputPathId vector with outputpathsIds to plot, if NULL (default) all are selected
     #' @param filterScenarioName vector with scenarios to plot, if NULL (default) all are selected
+    #' @param excludeCensored A logical value indicating whether to exclude censored data (default is FALSE).
     #' @param ... additional arguments passed on to ospsuite.plots::plotPredVsObs
     checkPredictedVsObserved = function(addRegression = TRUE, xyScale = unlist(SCALING), nCols = 2,
                                         filteroutputPathId = NULL,

@@ -4,7 +4,13 @@
 \alias{extractParameterValues}
 \title{Extract Parameter Values}
 \usage{
-extractParameterValues(dtNew, dtList, scenarioList)
+extractParameterValues(
+  dtNew,
+  dtList,
+  scenarioList,
+  relevantColumns = c("container Path", "parameter Name", "value", "units"),
+  parametertype = "global"
+)
 }
 \arguments{
 \item{dtNew}{A data.table containing new parameter values to be extracted.}

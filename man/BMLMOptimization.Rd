@@ -35,14 +35,18 @@ run name, scenario list, observed data, and random seed.}
 \item \href{#method-BMLMOptimization-exportResultAsPopulation}{\code{BMLMOptimization$exportResultAsPopulation()}}
 \item \href{#method-BMLMOptimization-exportIndividualValuesToConfigTable}{\code{BMLMOptimization$exportIndividualValuesToConfigTable()}}
 \item \href{#method-BMLMOptimization-exportGlobalsParametersToConfigTables}{\code{BMLMOptimization$exportGlobalsParametersToConfigTables()}}
+\item \href{#method-BMLMOptimization-exportHyperParametersToConfigTables}{\code{BMLMOptimization$exportHyperParametersToConfigTables()}}
 \item \href{#method-BMLMOptimization-exportFinalValuesToBMLConfigTable}{\code{BMLMOptimization$exportFinalValuesToBMLConfigTable()}}
 \item \href{#method-BMLMOptimization-getCurrentConfigTable}{\code{BMLMOptimization$getCurrentConfigTable()}}
 \item \href{#method-BMLMOptimization-checkResidualsAsQQ}{\code{BMLMOptimization$checkResidualsAsQQ()}}
 \item \href{#method-BMLMOptimization-checkResidualsVsTime}{\code{BMLMOptimization$checkResidualsVsTime()}}
+\item \href{#method-BMLMOptimization-checkResidualDistribution}{\code{BMLMOptimization$checkResidualDistribution()}}
 \item \href{#method-BMLMOptimization-checkResidualsAsHistogram}{\code{BMLMOptimization$checkResidualsAsHistogram()}}
 \item \href{#method-BMLMOptimization-checkPredictedVsObserved}{\code{BMLMOptimization$checkPredictedVsObserved()}}
 \item \href{#method-BMLMOptimization-checkPredictedVsTime}{\code{BMLMOptimization$checkPredictedVsTime()}}
 \item \href{#method-BMLMOptimization-checkCorrelations}{\code{BMLMOptimization$checkCorrelations()}}
+\item \href{#method-BMLMOptimization-checkParameterValuesVsPrior}{\code{BMLMOptimization$checkParameterValuesVsPrior()}}
+\item \href{#method-BMLMOptimization-checkBestVsStartParameter}{\code{BMLMOptimization$checkBestVsStartParameter()}}
 \item \href{#method-BMLMOptimization-checkParameterLimits}{\code{BMLMOptimization$checkParameterLimits()}}
 \item \href{#method-BMLMOptimization-checkDistributions}{\code{BMLMOptimization$checkDistributions()}}
 \item \href{#method-BMLMOptimization-checkConvergence}{\code{BMLMOptimization$checkConvergence()}}
@@ -193,6 +197,32 @@ This function exports global parameters from the provided data table to a new sh
 \item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including the path to the model parameters file.}
 
 \item{\code{overwrite}}{A boolean indicating whether to overwrite an existing sheet.
+This function exports global parameters from the provided data table to a new sheet in the model parameters Excel file.}
+
+\item{\code{dtList}}{A list of data.tables containing the prior values.}
+
+\item{\code{runName}}{A string representing the name of the run.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-exportHyperParametersToConfigTables"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportHyperParametersToConfigTables}{}}}
+\subsection{Method \code{exportHyperParametersToConfigTables()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportHyperParametersToConfigTables(
+  projectConfiguration,
+  overwrite = FALSE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including the path to the model parameters file.}
+
+\item{\code{overwrite}}{A boolean indicating whether to overwrite an existing sheet.
 This function saves final values from a provided data table to specified sheets in an Excel workbook.}
 
 \item{\code{dtList}}{A list of data.tables containing the prior values.}
@@ -250,6 +280,7 @@ This method generates a QQ plot to assess the normality of the residuals.}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualsAsQQ(
   nCols = 2,
+  excludeCensored = TRUE,
   filteroutputPathId = NULL,
   filterScenarioName = NULL,
   ...
@@ -260,6 +291,8 @@ This method generates a QQ plot to assess the normality of the residuals.}
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{excludeCensored}}{A logical value indicating whether to exclude censored data (default is FALSE).}
 
 \item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
 
@@ -285,6 +318,7 @@ This method generates residuals vs time plots to visualize the residuals over ti
   nCols = 2,
   filteroutputPathId = NULL,
   filterScenarioName = NULL,
+  excludeCensored = TRUE,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -297,6 +331,44 @@ This method generates residuals vs time plots to visualize the residuals over ti
 \item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
 
 \item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
+
+\item{\code{excludeCensored}}{A logical value indicating whether to exclude censored data (default is FALSE).}
+
+\item{\code{...}}{Additional arguments passed to the plot function.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+An invisible reference to the BMLMOptimization object.
+Check Residuals as Distribution
+
+This method generates histogram plots of the residuals to visualize their distribution.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkResidualDistribution"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkResidualDistribution}{}}}
+\subsection{Method \code{checkResidualDistribution()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkResidualDistribution(
+  nCols = 2,
+  filteroutputPathId = NULL,
+  filterScenarioName = NULL,
+  excludeCensored = TRUE,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{nCols}}{An integer specifying the number of columns for the facet wrap. (Default = 2)}
+
+\item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
+
+\item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
+
+\item{\code{excludeCensored}}{A logical value indicating whether to exclude censored data (default is FALSE).}
 
 \item{\code{...}}{Additional arguments passed to the plot function.}
 }
@@ -318,6 +390,7 @@ This method generates histogram plots of the residuals to visualize their distri
   nCols = 2,
   filteroutputPathId = NULL,
   filterScenarioName = NULL,
+  excludeCensored = TRUE,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -330,6 +403,8 @@ This method generates histogram plots of the residuals to visualize their distri
 \item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
 
 \item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
+
+\item{\code{excludeCensored}}{A logical value indicating whether to exclude censored data (default is FALSE).}
 
 \item{\code{...}}{Additional arguments passed to the plot function.}
 }
@@ -354,6 +429,7 @@ Each plot displays predicted vs observed values and includes facets for scenario
   nCols = 2,
   filteroutputPathId = NULL,
   filterScenarioName = NULL,
+  excludeCensored = FALSE,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -370,6 +446,8 @@ Each plot displays predicted vs observed values and includes facets for scenario
 \item{\code{filteroutputPathId}}{vector with outputpathsIds to plot, if NULL (default) all are selected}
 
 \item{\code{filterScenarioName}}{vector with scenarios to plot, if NULL (default) all are selected}
+
+\item{\code{excludeCensored}}{A logical value indicating whether to exclude censored data (default is FALSE).}
 
 \item{\code{...}}{additional arguments passed on to ospsuite.plots::plotPredVsObs
 Check Predicted vs Time
@@ -443,8 +521,7 @@ for relevant columns in the population data.
 \item{\code{pValueCut}}{A numeric value for the Kruskal-Wallis test cutoff threshold. Default is 0.1.}
 
 \item{\code{nPlotsPopulation}}{Number of plots in one figure for correlations with population
-This function creates ggplot objects to display the current best and start values of the fitted parameter.
-all values a display as relative between min and max value using defined scaling}
+This function creates ggplot objects to display the parameter Values vs the prior distributions.}
 
 \item{\code{dtList}}{A list containing prior and start values data tables.}
 
@@ -453,6 +530,57 @@ all values a display as relative between min and max value using defined scaling
 \item{\code{titeltxt}}{A string to include in the plot title.}
 
 \item{\code{scenarioList}}{A list of scenarios to analyze.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkParameterValuesVsPrior"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkParameterValuesVsPrior}{}}}
+\subsection{Method \code{checkParameterValuesVsPrior()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkParameterValuesVsPrior(xScale = unlist(SCALING), ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{xScale}}{character 'linear' or 'log', scale of x axis}
+
+\item{\code{...}}{additional arguments passed on to plotDistributions
+This function creates ggplot objects to display the parameter Values vs the prior distributions.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-BMLMOptimization-checkBestVsStartParameter"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-checkBestVsStartParameter}{}}}
+\subsection{Method \code{checkBestVsStartParameter()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$checkBestVsStartParameter(
+  xyScale = unlist(SCALING),
+  nCols = 2,
+  nRows = 3,
+  parameterFilter,
+  ...
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{xyScale}}{A character string specifying the scale of the x- and y-axis. Default is 'log'.}
+
+\item{\code{nCols}}{An integer specifying the number of columns for faceting. Default is 2.}
+
+\item{\code{nRows}}{An integer specifying the maximum number of rows for faceting. Default is 3.}
+
+\item{\code{parameterFilter}}{A character vector for filtering parameter names. Default is NULL.}
+
+\item{\code{...}}{additional arguments passed on to plotBestVsStartParameter
+This function creates ggplot objects to display the current best and start values of the fitted parameter.
+all values a display as relative between min and max value using defined scaling}
 }
 \if{html}{\out{</div>}}
 }
@@ -487,6 +615,8 @@ This function creates ggplot objects to display the individual Values vs the fit
   nCols = 2,
   nRows = 3,
   xScale = unlist(SCALING),
+  parameterFilter = NULL,
+  zoomOnData = FALSE,
   ...
 )}\if{html}{\out{</div>}}
 }
@@ -499,6 +629,10 @@ This function creates ggplot objects to display the individual Values vs the fit
 \item{\code{nRows}}{An integer specifying the number of rows for the plot layout.}
 
 \item{\code{xScale}}{character 'linear' or 'log', scale of x axis}
+
+\item{\code{parameterFilter}}{A character vector for filtering parameter names. Default is NULL.}
+
+\item{\code{zoomOnData}}{A logical value indicating whether to zoom in on data. Default is FALSE.}
 
 \item{\code{...}}{additional arguments passed on to plotDistributions
 Check Convergence of Model Parameters
