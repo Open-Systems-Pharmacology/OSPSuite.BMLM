@@ -50,6 +50,9 @@ reference:
       - optimizeParameters
       - addBMLMPConfiguration
       - addBMLMWorkflowTemplate
+      - createObjectiveFunction
+      - evaluateLogLikelihood
+      - createStartValues
   - title: "Plot Functions"
     desc: "Functions for visualizing results and diagnostics"
     contents:
@@ -69,14 +72,14 @@ reference:
     contents:
       - getAllDistributions
       - getDistributionParameters
-      - starts_with("dlnorm_")
-      - starts_with("plnorm_")
-      - starts_with("qlnorm_")
-      - starts_with("rlnorm_")
+      - lognormal_geomean
   - title: "Export Functions"
     desc: "Functions for exporting results"
     contents:
       - exportOptimizedPopulation
+      - exportIndividualValuesToConfigTable
+      - exportIndividualResultsToPkml
+      - exportGlobalsParametersToConfigTables
   - title: "Utilities and Templates"
     desc: "Utility functions and template management"
     contents:
