@@ -1,0 +1,90 @@
+url: https://www.open-systems-pharmacology.org/OSPSuite.BMLM/
+
+template:
+  bootstrap: 5
+
+development:
+  mode: auto
+
+authors:
+  Open-Systems-Pharmacology Community:
+    href: https://www.open-systems-pharmacology.org/
+    html: <img src='https://avatars.githubusercontent.com/u/25098323?s=33' alt="Open System Pharmacology Logo">Open Systems Pharmacology
+  Katrin Coboeken:
+    href: https://github.com/KatrinCoboeken
+
+articles:
+  - title: Overview
+    navbar: Overview
+    desc: Introduction to Bayesian Multilevel Models
+    contents:
+      - ospsuite_bmlm
+  - title: Configuration
+    navbar: Configuration
+    desc: Setting up and configuring BMLM optimization
+    contents:
+      - BMLM_configuration
+      - configuringOptimization
+  - title: Optimization & Analysis
+    navbar: Optimization & Analysis
+    desc: Running optimization and analyzing results
+    contents:
+      - Optimizing_with_BMLM
+      - loglikelihood
+
+figures:
+  dev: ragg::agg_png
+  fig.ext: png
+  dev.args: []
+  fig.width: 10
+  fig.asp: 0.618
+  fig.retina: 1
+  bg: NA
+  other.parameters: []
+
+reference:
+  - title: "BMLM Optimization"
+    desc: "Main optimization class and workflow functions"
+    contents:
+      - BMLMOptimization
+      - optimizeParameters
+      - addBMLMPConfiguration
+      - addBMLMWorkflowTemplate
+  - title: "Plot Functions"
+    desc: "Functions for visualizing results and diagnostics"
+    contents:
+      - plotConvergence
+      - plotCorrelations
+      - plotParameterLimits
+      - plotDistributions
+      - plotPredictedVsTime
+      - plotPredictedVsObserved
+  - title: "Data Preparation"
+    desc: "Functions for preparing and processing data"
+    contents:
+      - prepareDataForMatch
+      - preparePopulationForCorrelationCheck
+  - title: "Distribution Functions"
+    desc: "Functions for handling statistical distributions"
+    contents:
+      - getAllDistributions
+      - getDistributionParameters
+      - starts_with("dlnorm_")
+      - starts_with("plnorm_")
+      - starts_with("qlnorm_")
+      - starts_with("rlnorm_")
+  - title: "Export Functions"
+    desc: "Functions for exporting results"
+    contents:
+      - exportOptimizedPopulation
+  - title: "Utilities and Templates"
+    desc: "Utility functions and template management"
+    contents:
+      - convertVersionBMLM
+      - insertTemplateText
+  - title: "Constants and Enumerations"
+    desc: "Enumeration constants for BMLM options"
+    contents:
+      - PARAMETERTYPE
+      - ERRORMODEL
+      - SCALING
