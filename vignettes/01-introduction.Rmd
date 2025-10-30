@@ -1,0 +1,178 @@
+---
+title: "Introduction to ospsuite.bmlm"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to ospsuite.bmlm}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = FALSE,
+  error = FALSE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ospsuite.bmlm)
+```
+
+## What is ospsuite.bmlm?
+
+The `ospsuite.bmlm` package provides tools for fitting Bayesian multilevel models within the OSPSuite framework. This package leverages the capabilities of the `ospsuite.reportingframework` package for project configuration, allowing users to efficiently set up their modeling environment.
+
+Bayesian multilevel models are intended for parameter identification using individual study data. They are particularly useful for analyzing hierarchical data structures, where parameters of interest include:
+
+- **Global parameters**: Such as compound properties (e.g., lipophilicity, molecular weight)
+- **Distribution parameters**: Of individual parameters such as clearance or absorption rates
+- **Individual parameters**: Patient-specific values that vary within the population
+
+The modeling process employs a virtual twin population, where for each study individual, a virtual individual is generated based on anthropometric data. The fitting process uses maximum likelihood estimation (MLE), with optimization performed using the R function `optim`.
+
+## Key Features
+
+- **Integration with OSPSuite**: Seamless workflow integration with the reporting framework
+- **Flexible Configuration**: Excel-based configuration files for easy setup
+- **Multiple Optimization Methods**: Support for various optimization algorithms (BFGS, Nelder-Mead, etc.)
+- **Internal Optimization**: Optional internal optimization for improved efficiency
+- **Comprehensive Diagnostics**: Built-in plotting functions for monitoring optimization progress
+- **Prior Distributions**: Support for various prior distributions on parameters
+- **Hyperparameter Modeling**: Hierarchical structure for population-level parameters
+
+## Workflow Overview
+
+The typical BMLM workflow consists of the following steps:
+
+1. **Configuration**: Set up your project using the reporting framework and configure BMLM-specific settings
+2. **Model Setup**: Define parameters, priors, and model error specifications
+3. **Optimization**: Initialize and run the optimization process
+4. **Monitoring**: Check optimization progress using diagnostic plots
+5. **Export Results**: Transfer optimized parameters back to the reporting framework
+
+## Integration with ospsuite.reportingframework
+
+Before using BMLM, you need to set up your project configuration using the `ospsuite.reportingframework` package. This package allows you to define:
+
+- Data sources
+- Model specifications
+- Simulation scenarios
+- Observed data for parameter estimation
+
+The BMLM package extends this framework by adding parameter identification capabilities through Bayesian multilevel modeling.
+
+## Using the BMLM Add-In
+
+The `ospsuite.bmlm` package includes an RStudio add-in called **Insert BMLM Template** that allows you to easily insert a template for a Bayesian Multilevel Model workflow into your existing reporting framework workflow. This feature saves time and ensures that your code follows a consistent structure.
+
+### Accessing the Add-In
+
+To use the add-in:
+
+1. In RStudio, go to the **Addins** menu in the toolbar
+2. Select **Insert BMLM Template** from the list
+3. The template code will be inserted at your cursor position
+
+### Template Workflow
+
+The template provides a complete BMLM workflow that you can customize for your specific project:
+
+```{r, echo=FALSE}
+templatePath <- system.file("templates/codeTemplate.R", package = "ospsuite.bmlm")
+templateCode <- readLines(templatePath)
+
+cat(templateCode, sep = "\n")
+```
+
+This template includes:
+
+- Configuration setup with snapshot loading
+- Prior configuration
+- Optimization initialization and execution
+- Progress checking with diagnostic plots
+- Results export to various formats
+
+## Available Vignettes
+
+This package provides several vignettes to help you get started and make the most of the BMLM functionality:
+
+### Configuration
+- **BMLM Configuration** ([vignette](02-configuration.html)): Detailed guidance on setting up the BMLM configuration file, including parameter definitions, mappings, model errors, and priors
+
+### Optimization and Analysis
+- **Running Optimization** ([vignette](03-optimization.html)): How to initialize the optimization object, start optimization runs, monitor progress with plotting functions, and export results back to the reporting framework
+
+### Theoretical Background
+- **Theory and Methodology** ([vignette](04-theory.html)): Mathematical formulation of the objective function, maximum likelihood estimation, algorithm overview, and internal optimization concepts
+
+## Quick Start Example
+
+Here's a minimal example to get you started (assumes you have already set up a reporting framework project):
+
+```{r, eval=FALSE}
+# Load your project configuration
+# projectConfiguration <- loadProjectConfiguration("path/to/project")
+# scenarioList <- loadScenarios(projectConfiguration)
+# dataObserved <- loadObservedData(projectConfiguration)
+
+# Add BMLM configuration
+projectConfiguration <- addBMLMPConfiguration(
+  projectConfiguration,
+  snapshotFile = file.path(projectConfiguration$modelFolder, "mySnapshot.json"),
+  nameOfParameterIdentification = "myParameterIdentification"
+)
+
+# Configure priors
+configurePriors(
+  projectConfiguration = projectConfiguration,
+  dataObserved = dataObserved
+)
+
+# Initialize optimization
+myRun <- BMLMOptimization$new(
+  projectConfiguration = projectConfiguration,
+  runName = "myRun",
+  scenarioList = scenarioList,
+  dataObserved = dataObserved
+)
+
+# Evaluate initial values
+myRun$evaluateInitialValues()
+
+# Start optimization
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 1000)
+)
+
+# Check progress
+myRun$checkConvergence()
+myRun$checkPredictedVsObserved()
+
+# Export results
+myRun$exportResultAsPopulation(projectConfiguration)
+```
+
+## Getting Help
+
+For more detailed information on specific topics:
+
+- **Configuration questions**: See the [Configuration vignette](02-configuration.html)
+- **Optimization issues**: See the [Optimization vignette](03-optimization.html)
+- **Theoretical background**: See the [Theory vignette](04-theory.html)
+- **Function documentation**: Use `?BMLMOptimization` or `?configurePriors` in R
+- **Package issues**: Visit the [GitHub repository](https://github.com/Open-Systems-Pharmacology/OSPSuite.BMLM)
+
+## Next Steps
+
+Now that you understand the basics of `ospsuite.bmlm`, we recommend:
+
+1. Reading the [Configuration vignette](02-configuration.html) to learn how to set up your BMLM project
+2. Following the [Optimization vignette](03-optimization.html) to run your first optimization
+3. Consulting the [Theory vignette](04-theory.html) to understand the mathematical foundations
+
+## Conclusion
+
+The `ospsuite.bmlm` package provides a streamlined approach to fitting Bayesian multilevel models within the OSPSuite framework. By integrating with the reporting framework and providing flexible configuration options, it enables efficient parameter identification for pharmacometric models. We encourage you to explore the additional vignettes and consider contributing to the development of the package to enhance its capabilities.

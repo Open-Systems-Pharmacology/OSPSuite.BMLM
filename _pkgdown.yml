@@ -18,19 +18,22 @@ articles:
     navbar: Overview
     desc: Introduction to Bayesian Multilevel Models
     contents:
-      - ospsuite_bmlm
+      - 01-introduction
   - title: Configuration
     navbar: Configuration
     desc: Setting up and configuring BMLM optimization
     contents:
-      - BMLM_configuration
-      - configuringOptimization
-  - title: Optimization & Analysis
-    navbar: Optimization & Analysis
+      - 02-configuration
+  - title: Optimization
+    navbar: Optimization
     desc: Running optimization and analyzing results
     contents:
-      - Optimizing_with_BMLM
-      - loglikelihood
+      - 03-optimization
+  - title: Theory
+    navbar: Theory
+    desc: Theoretical background and methodology
+    contents:
+      - 04-theory
 
 figures:
   dev: ragg::agg_png

@@ -1,0 +1,707 @@
+---
+title: "Running BMLM Optimization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Running BMLM Optimization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  error = FALSE
+)
+```
+
+```{r setup}
+library(ospsuite.bmlm)
+library(ggplot2)
+library(data.table)
+
+options(rmarkdown.html_vignette.check_title = FALSE)
+```
+
+## Introduction
+
+In this vignette, we will explore how to perform optimization runs using the `BMLMOptimization` class from the `ospsuite.bmlm` package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress, and how to transfer the results back to the reporting framework structure.
+
+This vignette assumes you have already completed the configuration steps described in the [Configuration vignette](02-configuration.html).
+
+## The BMLMOptimization Object
+
+The `BMLMOptimization` object encapsulates the functionality for performing Bayesian Multi-Level Modeling (BMLM) optimization. It manages configuration, output directories, logging, and optimization processes. This object allows users to define scenarios, load observed data, and execute optimization routines efficiently.
+
+### Key Components
+
+- **Configuration**: The object requires a project configuration file that contains details about the modeling setup.
+- **Run Name**: Each optimization run is identified by a unique name which corresponds to the output directory.
+- **Scenarios**: Users can define multiple scenarios to be optimized simultaneously.
+- **Observed Data**: The object requires observed data to fit the model during optimization.
+
+### Creating the Optimization Object
+
+To begin, create an instance of the BMLMOptimization class. This involves loading the necessary project configuration, defining scenarios, and providing observed data.
+
+```{r echo=TRUE, eval=FALSE}
+# Create the BMLMOptimization object
+myRun <- BMLMOptimization$new(
+  projectConfiguration = projectConfiguration,
+  runName = "myRun",
+  scenarioList = scenarioList,
+  dataObserved = dataObserved,
+  seed = 1234  # Optional: for reproducibility
+)
+```
+
+**Parameters:**
+- `projectConfiguration`: A `ProjectConfiguration` object from ospsuite.reportingframework
+- `runName`: A unique name for this optimization run
+- `scenarioList`: List of scenarios to optimize
+- `dataObserved`: Data frame containing observed data for fitting
+- `seed`: Optional random seed for reproducibility
+
+## Evaluating Initial Values
+
+Before starting the optimization, it's crucial to evaluate the initial parameter values. The `evaluateInitialValues()` method allows you to assess whether your initial configuration produces reasonable model predictions.
+
+```{r echo=TRUE, eval=FALSE}
+# Evaluate initial values
+myRun$evaluateInitialValues()
+```
+
+This method:
+- Runs simulations using the starting parameter values
+- Calculates the initial log-likelihood
+- Logs the results to both console and log file
+- Reports simulation time for performance assessment
+
+**Why is this important?**
+- Identifies configuration errors before optimization begins
+- Provides baseline metrics for comparison
+- Helps verify that the model runs successfully
+- Gives timing information for estimating optimization duration
+
+## Starting the Optimization
+
+Once the `BMLMOptimization` object is initialized and initial values are evaluated, you can start the optimization process using the `startOptimization` method.
+
+### Basic Usage
+
+```{r echo=TRUE, eval=FALSE}
+# Start the optimization process
+myRun$startOptimization(
+  method = "BFGS",  # Optimization method
+  control = list(maxit = 1000)  # Control parameters
+)
+```
+
+### Available Optimization Methods
+
+The `method` parameter accepts any optimization method supported by R's `optim()` function:
+
+- **"BFGS"** (default): Quasi-Newton method, generally good for smooth objective functions
+- **"Nelder-Mead"**: Simplex method, derivative-free, robust but can be slow
+- **"CG"**: Conjugate gradients, useful for large parameter spaces
+- **"L-BFGS-B"**: Limited-memory BFGS with box constraints
+- **"SANN"**: Simulated annealing, good for rough objective functions
+
+### Control Parameters
+
+The `control` list can include:
+
+```{r echo=TRUE, eval=FALSE}
+control = list(
+  maxit = 1000,        # Maximum number of iterations
+  trace = 1,           # Progress reporting level (0-6)
+  REPORT = 10,         # Frequency of progress reports
+  reltol = 1e-8,       # Relative convergence tolerance
+  abstol = -Inf        # Absolute convergence tolerance
+)
+```
+
+### Advanced Options
+
+```{r echo=TRUE, eval=FALSE}
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 1000),
+  scalingMethod = SCALINGMETHOD$logsig,  # Parameter scaling method
+  withInternalOptimization = TRUE,       # Enable internal optimization
+  startInBackground = TRUE,              # Run as background job
+  lastStatusSavingIntervalInSecs = 60    # Save progress every 60 seconds
+)
+```
+
+**Key Parameters:**
+
+- **scalingMethod**: Controls how parameters are scaled during optimization
+  - `SCALINGMETHOD$hardBounds`: Hard boundaries at min/max values
+  - `SCALINGMETHOD$logsig`: Logistic function allowing exploration beyond bounds
+  
+- **withInternalOptimization**: When `TRUE`, enables a nested optimization strategy
+  - Separates optimization of global/individual parameters from hyperparameters
+  - Can significantly speed up convergence
+  - Particularly useful for complex hierarchical models
+  
+- **startInBackground**: When `TRUE`, runs optimization as an RStudio background job
+  - Allows you to continue working in RStudio
+  - Optimization continues even if you close the R session
+  
+- **failValue**: Value returned when objective function evaluation fails (default: 1e+10)
+
+- **lastStatusSavingIntervalInSecs**: How often to save intermediate results
+
+### Parameter Scaling Methods
+
+Proper scaling of parameters is essential for optimization performance. The package offers two main scaling methods:
+
+#### Step 1: Initial Scaling (0 to 1)
+
+Parameters are first scaled to the range [0, 1] using either:
+
+**Linear Scaling:**
+$$ 
+\text{scaledValue} = \frac{\text{value} - \text{minValue}}{\text{maxValue} - \text{minValue}} 
+$$
+
+**Logarithmic Scaling:** (when parameter scaling is set to "log")
+$$ 
+\text{scaledValue} = \frac{\log(\text{value}) - \log(\text{minValue})}{\log(\text{maxValue}) - \log(\text{minValue})} 
+$$
+
+#### Step 2: Boundary Handling
+
+**Hard Bounds (`SCALINGMETHOD$hardBounds`):**
+- Parameters are strictly constrained within [minValue, maxValue]
+- Values outside bounds are treated as invalid (return NA)
+- Good when you have strong physical constraints
+
+**LogSig Scaling (`SCALINGMETHOD$logsig`):**
+- Uses logistic function to map real numbers to [0, 1]
+- Allows exploration beyond specified bounds during optimization
+- More flexible, can help escape local minima
+- Generally recommended for complex optimization problems
+
+### Internal Optimization
+
+The `withInternalOptimization` parameter enables a powerful nested optimization strategy:
+
+**How it Works:**
+1. **Outer Loop**: Optimizes global parameters and individual parameter values
+2. **Inner Loop**: For each outer iteration, re-optimizes hyperparameters and error parameters
+
+**Benefits:**
+- **Efficiency**: Hyperparameters have simpler objective functions and optimize faster
+- **Improved Convergence**: Separating parameter types can help navigate complex optimization landscapes
+- **Better Solutions**: Allows hyperparameters to adapt continuously during optimization
+
+**When to Use:**
+- Models with hierarchical parameter structure (hyperparameters)
+- Large number of individual parameters
+- When optimization struggles to converge
+- Complex multi-level models
+
+**Example:**
+```{r echo=TRUE, eval=FALSE}
+# With internal optimization (recommended for hierarchical models)
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 500),
+  withInternalOptimization = TRUE
+)
+
+# Without internal optimization (faster per iteration, may need more iterations)
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 1000),
+  withInternalOptimization = FALSE
+)
+```
+
+## Restarting an Optimization
+
+If an optimization is interrupted or you want to refine results with different settings, you can restart from the last saved state.
+
+```{r echo=TRUE, eval=FALSE}
+# Restart with different method
+myRun$startOptimization(
+  method = "Nelder-Mead",  # Try a different method
+  control = list(maxit = 500)
+)
+
+# Or continue with more iterations
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 2000)  # Allow more iterations
+)
+```
+
+**Important Notes:**
+- The configuration and data are not changed when restarting
+- Optimization continues from the best parameters found so far
+- Previous results are preserved in the output directory
+- Useful for trying different optimization strategies
+
+## Output Directory Structure
+
+When you initialize the `BMLMOptimization` object, results are stored in a structured output directory. Understanding this structure helps you manage and interpret results.
+
+### Directory Location
+
+```{r echo=TRUE, eval=FALSE}
+# Access the output directory path
+outputDirectory <- myRun$outputDir
+print(outputDirectory)
+```
+
+The directory is typically located at:
+`<projectConfiguration>/BMLMOptimization/<runName>/`
+
+### Configuration Files (Created at Initialization)
+
+These files define the optimization setup:
+
+- **`data.csv`**: Observed data used for fitting
+- **`prior.csv`**: Prior distribution definitions
+- **`startValues.csv`**: Starting values for parameters
+- **`mappedPaths.csv`**: Parameter to model path mappings
+
+### Log Files
+
+- **`optimization_log.txt`**: Detailed log of optimization progress, warnings, and errors
+
+### Intermediate Results (Updated During Optimization)
+
+- **`convergence.csv`**: Log-likelihood and parameter values at each iteration
+- **`status.RDS`**: Current optimization status ("initialized", "running", or "stopped")
+- **`optimStatus.RDS`**: Current parameter values and log-likelihood
+- **`bestOptimStatus.RDS`**: Best parameter values and log-likelihood found so far
+- **`bestPrediction.RDS`**: Model predictions using best parameters
+
+### Final Results
+
+- **`result.RDS`**: Complete optimization results including final parameters, convergence information, and diagnostics
+
+### Accessing Files Programmatically
+
+```{r echo=TRUE, eval=FALSE}
+# Read convergence data
+convergence <- read.csv(file.path(myRun$outputDir, "convergence.csv"))
+
+# Load best parameters
+bestParams <- readRDS(file.path(myRun$outputDir, "bestOptimStatus.RDS"))
+
+# Load final results
+results <- readRDS(file.path(myRun$outputDir, "result.RDS"))
+```
+
+## Monitoring Optimization Progress
+
+While optimization is running, you can monitor progress using several diagnostic methods. These methods help assess whether the optimization is converging and whether the model is fitting the data well.
+
+### 1. Convergence Monitoring
+
+Check how the log-likelihood evolves over iterations:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkConvergence()
+```
+
+This generates plots showing:
+- Log-likelihood vs. iteration number
+- Individual parameter trajectories
+- Helps identify if optimization has converged or needs more iterations
+
+**What to Look For:**
+- Log-likelihood should generally increase (become less negative)
+- Plateauing indicates convergence
+- Continuing decrease suggests more iterations needed
+- Large fluctuations may indicate optimization difficulties
+
+### 2. Parameter Limit Checking
+
+Visualize where current parameters are relative to their bounds:
+
+```{r echo=TRUE, eval=FALSE}
+plotList <- myRun$checkParameterLimits()
+```
+
+This shows:
+- Current best values vs. starting values
+- Position relative to min and max bounds
+- Helps identify parameters hitting boundaries
+
+**What to Look For:**
+- Parameters at boundaries may need broader bounds
+- Large changes from start values indicate strong data influence
+- Parameters near start values may be weakly identified
+
+### 3. Residual Analysis
+
+Residuals are the differences between observed and predicted values, normalized by the model error. Good residuals should be randomly distributed around zero.
+
+#### QQ Plot
+
+Check if residuals follow a normal distribution:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkResidualsAsQQ()
+```
+
+**What to Look For:**
+- Points should lie along the diagonal line
+- Deviations at tails indicate non-normality
+- Systematic deviations suggest model misspecification
+
+#### Histogram
+
+Visualize the distribution of residuals:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkResidualsAsHistogram()
+```
+
+**What to Look For:**
+- Should be approximately bell-shaped and centered at zero
+- Skewness indicates systematic bias
+- Heavy tails suggest outliers or incorrect error model
+
+#### Residuals vs. Time
+
+Check for time-dependent patterns:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkResidualsVsTime()
+```
+
+**What to Look For:**
+- Random scatter around zero is ideal
+- Trends suggest time-dependent model misspecification
+- Increasing/decreasing spread indicates heteroscedasticity
+
+### 4. Predicted vs. Observed
+
+Assess overall model fit quality:
+
+#### Predicted vs. Observed Scatter
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkPredictedVsObserved()
+```
+
+**What to Look For:**
+- Points should cluster around the line of equality (y = x)
+- Systematic deviations indicate bias
+- Spread indicates precision
+
+#### Time Profiles
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkPredictedVsTime()
+```
+
+Shows predicted and observed values over time, helping identify:
+- Overall fit quality
+- Regions of good/poor fit
+- Individual-level fit variations
+
+### 5. Distribution Checking
+
+For individual parameters, check if fitted distributions match the data:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkDistributions(nCols = 2, nRows = 3, xScale = "log")
+```
+
+**Parameters:**
+- `nCols`, `nRows`: Layout of plots
+- `xScale`: "linear" or "log" scale for x-axis
+
+**What to Look For:**
+- Individual values should align with fitted distribution curves
+- Outliers indicate individuals that don't fit the population model well
+- Distribution shape should match the specified distribution type
+
+### 6. Correlation Analysis
+
+Examine relationships between parameters:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$checkCorrelations(
+  method = "spearman",
+  statusToShow = "best",
+  corCut = 0.5,
+  chiSquaredCut = 0.1
+)
+```
+
+**Parameters:**
+- `method`: "pearson" or "spearman" correlation
+- `statusToShow`: "best" or "current" parameters
+- `corCut`: Threshold for displaying correlations
+- `chiSquaredCut`: P-value threshold for significance
+
+**What to Look For:**
+- High correlations (> 0.8) indicate potential identifiability issues
+- Correlations help understand parameter relationships
+- May suggest model reparameterization
+
+### 7. Accessing Current Configuration
+
+Retrieve current parameter tables:
+
+```{r echo=TRUE, eval=FALSE}
+# Get current prior table
+dtPrior <- myRun$getCurrentConfigTable(
+  projectConfiguration = projectConfiguration,
+  sheetName = "Prior"
+)
+
+# Get current start values
+dtStartValues <- myRun$getCurrentConfigTable(
+  projectConfiguration = projectConfiguration,
+  sheetName = "IndividualStartValues"
+)
+```
+
+## Exporting Results
+
+After completing optimization, export results back to the reporting framework for further analysis and simulation.
+
+### 1. Export to Population Files
+
+Export optimized population data for each scenario:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$exportResultAsPopulation(
+  projectConfiguration = projectConfiguration,
+  addAsNewScenarios = TRUE,  # Create new scenarios with optimized populations
+  overwrite = FALSE
+)
+```
+
+**What It Does:**
+- Creates new population CSV files with optimized parameter values
+- Appends run name to population names
+- Optionally creates new scenarios in the configuration
+- Allows comparison of original vs. optimized populations
+
+**Use Case:**
+- Run simulations with optimized parameters
+- Generate plots comparing pre/post optimization
+- Perform sensitivity analysis with fitted parameters
+
+### 2. Export Individual Results to PKML
+
+Export optimized parameters for a specific individual to PKML format:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$exportIndividualResultsToPkml(
+  projectConfiguration = projectConfiguration,
+  scenarioList = scenarioList,
+  individualId = "Individual_01"
+)
+```
+
+**Use Case:**
+- Load individual-specific parameters into PK-Sim/MoBi
+- Perform detailed analysis of individual fit
+- Share individual models with collaborators
+
+### 3. Export Individual Values to Configuration
+
+Save individual parameter values back to the Individuals table:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$exportIndividualValuesToConfigTable(
+  projectConfiguration = projectConfiguration
+)
+```
+
+**Use Case:**
+- Update individual parameter values in the reporting framework
+- Use optimized values for subsequent analyses
+- Document fitted individual parameters
+
+### 4. Export Global Parameters
+
+Save global parameter values to a new sheet in model parameters configuration:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$exportGlobalsParametersToConfigTables(
+  projectConfiguration = projectConfiguration,
+  overwrite = FALSE
+)
+```
+
+**Use Case:**
+- Apply optimized compound properties across all scenarios
+- Update global parameters for new simulations
+- Document fitted global parameters
+
+### 5. Export Final Values to BMLM Configuration
+
+Save all final values back to the BMLM configuration file:
+
+```{r echo=TRUE, eval=FALSE}
+myRun$exportFinalValuesToBMLConfigTable(
+  projectConfiguration = projectConfiguration
+)
+```
+
+**What It Does:**
+- Updates Prior sheet with fitted values
+- Updates IndividualStartValues with fitted individual parameters
+- Preserves optimization results for future use
+
+**Use Case:**
+- Use fitted values as starting points for future optimizations
+- Document final parameter estimates
+- Share complete configuration with collaborators
+
+## Complete Workflow Example
+
+Here's a complete example showing the entire optimization workflow:
+
+```{r echo=TRUE, eval=FALSE}
+# 1. Create optimization object
+myRun <- BMLMOptimization$new(
+  projectConfiguration = projectConfiguration,
+  runName = "myFirstOptimization",
+  scenarioList = scenarioList,
+  dataObserved = dataObserved,
+  seed = 1234
+)
+
+# 2. Evaluate initial values
+myRun$evaluateInitialValues()
+
+# 3. Start optimization
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 1000, trace = 1),
+  scalingMethod = SCALINGMETHOD$logsig,
+  withInternalOptimization = TRUE,
+  startInBackground = TRUE
+)
+
+# 4. Monitor progress (while optimization runs or after completion)
+myRun$checkConvergence()
+myRun$checkParameterLimits()
+myRun$checkPredictedVsObserved()
+myRun$checkPredictedVsTime()
+myRun$checkResidualsAsQQ()
+myRun$checkResidualsAsHistogram()
+myRun$checkResidualsVsTime()
+myRun$checkDistributions(nCols = 2, nRows = 3)
+myRun$checkCorrelations()
+
+# 5. Export results
+myRun$exportFinalValuesToBMLConfigTable(projectConfiguration)
+myRun$exportResultAsPopulation(projectConfiguration, addAsNewScenarios = TRUE)
+myRun$exportIndividualValuesToConfigTable(projectConfiguration)
+myRun$exportGlobalsParametersToConfigTables(projectConfiguration)
+
+# 6. Optional: Export specific individuals to PKML
+myRun$exportIndividualResultsToPkml(
+  projectConfiguration,
+  individualId = dataObserved$individualId[1]
+)
+```
+
+## Troubleshooting
+
+### Optimization Not Converging
+
+**Symptoms:**
+- Log-likelihood continues to improve slowly
+- Parameter values keep changing
+- No clear plateau in convergence plot
+
+**Solutions:**
+1. Increase `maxit` in control parameters
+2. Try a different optimization method (e.g., Nelder-Mead)
+3. Adjust parameter bounds in configuration
+4. Check starting values are reasonable
+5. Enable internal optimization if not already active
+6. Try different scaling method
+
+### Optimization Fails Immediately
+
+**Symptoms:**
+- Error messages at start
+- Optimization stops in first few iterations
+
+**Solutions:**
+1. Check `evaluateInitialValues()` output for errors
+2. Verify all configuration files are correct
+3. Ensure observed data matches model outputs
+4. Check parameter bounds are valid (min < start < max)
+5. Review log file for detailed error messages
+
+### Poor Fit Quality
+
+**Symptoms:**
+- Large residuals
+- Systematic patterns in residual plots
+- Poor predicted vs. observed agreement
+
+**Solutions:**
+1. Review model appropriateness for the data
+2. Check error model specification
+3. Consider adding or removing parameters
+4. Check for data quality issues
+5. Verify parameter mappings are correct
+
+### Parameters at Boundaries
+
+**Symptoms:**
+- Many parameters at min or max values
+- Parameter limit plot shows values at edges
+
+**Solutions:**
+1. Widen parameter bounds in configuration
+2. Reconsider whether parameters are identifiable
+3. Check if model structure supports the parameters
+4. Consider using informative priors
+
+## Best Practices
+
+1. **Always evaluate initial values** before optimization to catch configuration errors early
+
+2. **Start with shorter runs** (e.g., maxit = 100) to verify everything works, then increase
+
+3. **Monitor progress regularly** during long optimizations using diagnostic plots
+
+4. **Save intermediate results** by setting appropriate `lastStatusSavingIntervalInSecs`
+
+5. **Use background execution** for long optimizations to free up your R session
+
+6. **Try multiple methods** if one doesn't converge (BFGS → Nelder-Mead → CG)
+
+7. **Enable internal optimization** for hierarchical models with hyperparameters
+
+8. **Document your settings** by keeping track of methods and control parameters used
+
+9. **Export results promptly** after successful optimization to preserve findings
+
+10. **Review all diagnostics** before accepting results - convergence alone isn't sufficient
+
+## Next Steps
+
+After completing your optimization:
+
+1. **Review diagnostics thoroughly** using all available plotting functions
+2. **Export results** to the reporting framework for further analysis
+3. **Run simulations** with optimized parameters to validate fit
+4. **Consider the theory** - review the [Theory vignette](04-theory.html) to understand the mathematical foundations
+5. **Document findings** - record optimization settings and results for reproducibility
+
+## Conclusion
+
+The `BMLMOptimization` class provides a comprehensive framework for Bayesian multilevel model optimization within the OSPSuite ecosystem. By understanding the optimization workflow, monitoring tools, and export capabilities, you can effectively estimate parameters and assess model fit. The various diagnostic plots help ensure that optimization has converged appropriately and that the model provides a good fit to the observed data. For theoretical background on the optimization algorithm and objective function, please refer to the [Theory vignette](04-theory.html).
