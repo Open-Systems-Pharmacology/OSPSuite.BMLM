@@ -7,6 +7,7 @@
 #'
 #' @return An updated workbook object.
 #' @keywords internal
+#' @noRd
 saveFinalValuesToTables <- function(projectConfiguration, dtList) {
   wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
 
@@ -41,6 +42,7 @@ saveFinalValuesToTables <- function(projectConfiguration, dtList) {
 #'
 #' @return NULL
 #' @export
+#' @family export
 exportOptimizedPopulation <-
   function(projectConfiguration,
            dtList,
@@ -108,6 +110,7 @@ exportOptimizedPopulation <-
 #'
 #' @return NULL
 #' @export
+#' @family export
 exportGlobalsParametersToConfigTables <- function(projectConfiguration, dtList, runName, overwrite = FALSE) {
   if (!any(dtList$prior$valueMode == PARAMETERTYPE$global)) {
     message("no global parameters available")
@@ -182,6 +185,7 @@ exportHyperParametersToConfigTables <- function(projectConfiguration,
 #'
 #' @return NULL
 #' @export
+#' @family export
 exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioList, dtList) {
   wb <- openxlsx::loadWorkbook(projectConfiguration$individualsFile)
   individualIds <- unique(dtList$startValues$individualId)
@@ -222,6 +226,7 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
 #'
 #' @return NULL
 #' @export
+#' @family export
 exportIndividualResultsToPkml <- function(projectConfiguration,
                                           scenarioList,
                                           dtList,
@@ -277,6 +282,7 @@ exportIndividualResultsToPkml <- function(projectConfiguration,
 #'
 #' @return A data.table containing extracted parameter values along with their container paths and names.
 #' @keywords internal
+#' @noRd
 extractParameterValues <- function(dtNew, dtList, scenarioList,
                                    relevantColumns = c("container Path", "parameter Name", "value", "units"),
                                    parametertype = 'global') {
@@ -352,6 +358,7 @@ addFinalValue <- function(wb, sheetName, identifier, newTable) {
 #'
 #' @return A data.table containing the data from the specified sheet or an empty data.table if the sheet does not exist.
 #' @keywords internal
+#' @noRd
 loadOrCreateSheetData <- function(wb, sheetName) {
   if (sheetName %in% wb$sheet_names) {
     return(xlsxReadData(wb, sheetName = sheetName))

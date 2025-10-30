@@ -12,6 +12,7 @@
 #'
 #' @return A ggplot object visualizing the convergence of model parameters.
 #' @export
+#' @family plotting
 
 # Main function
 plotConvergence <- function(dtConvergence,
@@ -95,6 +96,7 @@ plotConvergence <- function(dtConvergence,
 #'
 #' @return A data.table with additional columns for objective values and percentages of failure and outside range.
 #' @keywords internal
+#' @noRd
 calculateConvergenceMetrics <- function(dt) {
 
   requiredCols <- c("logTimeProfile", "logHyperParameter", "logPrior", "NAcounter", "outsideRangeCounter", "iteration")
@@ -122,6 +124,7 @@ calculateConvergenceMetrics <- function(dt) {
 #'
 #' @return A named character vector of column headers for the display variables.
 #' @keywords internal
+#' @noRd
 getConvergenceColumnHeaders <- function(dt, displayVariablesIndx) {
   columnheaders <- c(
     objectiveValue = "value of objective function: -loglikelihood",
@@ -150,6 +153,7 @@ getConvergenceColumnHeaders <- function(dt, displayVariablesIndx) {
 #'
 #' @return A data.table containing the selected points.
 #' @keywords internal
+#' @noRd
 selectIterations <- function(dtConvergenceList, nPointsAvailable, nPoints, selectionMode) {
 
   if (nPointsAvailable > nPoints) {

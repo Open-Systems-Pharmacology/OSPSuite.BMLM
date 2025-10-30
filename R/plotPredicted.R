@@ -11,6 +11,7 @@
 #'
 #' @return A list of ggplot objects for each unique outputPathId and scenarioName combination.
 #' @export
+#' @family plotting
 plotPredictedVsTime <- function(
     dtRes,
     yScale = unlist(SCALING),
@@ -85,6 +86,7 @@ plotPredictedVsTime <- function(
 #'
 #' @return NULL This function does not return a value; it prints the plots directly.
 #' @keywords internal
+#' @noRd
 plotResidualLoop <- function(dtRes, plotFunction, nCols = 2, titeltxt = NULL,
                              excludeCensored = FALSE, ...) {
   # Input validation
@@ -139,6 +141,7 @@ plotResidualLoop <- function(dtRes, plotFunction, nCols = 2, titeltxt = NULL,
 #'
 #' @return An invisible ggplot object for the predicted vs observed plot.
 #' @export
+#' @family plotting
 plotPredictedVsObserved <- function(
     filteredData,
     addRegression = TRUE,
@@ -173,6 +176,7 @@ plotPredictedVsObserved <- function(
 #'
 #' @return A ggplot object for the residuals vs time plot.
 #' @export
+#' @family plotting
 plotResidualsVsTime <- function(filteredData, ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
@@ -196,6 +200,7 @@ plotResidualsVsTime <- function(filteredData, ...) {
 #'
 #' @return A ggplot object visualizing the residual distribution.
 #' @export
+#' @family plotting
 plotResidualsDistribution <- function(filteredData, ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
@@ -224,6 +229,7 @@ plotResidualsDistribution <- function(filteredData, ...) {
 #'
 #' @return A ggplot object for the histogram plot.
 #' @export
+#' @family plotting
 plotResidualsAsHistogram <- function(filteredData, ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
@@ -257,6 +263,7 @@ plotResidualsAsHistogram <- function(filteredData, ...) {
 #'
 #' @return A ggplot object for the QQ plot.
 #' @export
+#' @family plotting
 plotResidualsAsQQ <- function(filteredData,...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)

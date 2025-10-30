@@ -9,6 +9,7 @@
 #'
 #' @return A numeric value representing the negative log likelihood.
 #' @keywords internal
+#' @noRd
 getLogLikelihood <-
   function(dtPrior,
            dtStartValues,
@@ -41,6 +42,7 @@ getLogLikelihood <-
 #'
 #' @return A numeric value representing the total log likelihood of the time profiles.
 #' @keywords internal
+#' @noRd
 getLikelihoodTimeProfiles <- function(dtPrior,
                                       dtRes) {
   # initialize variables to avoid linter messages
@@ -95,6 +97,7 @@ getLikelihoodTimeProfiles <- function(dtPrior,
 #'         If the predictions are below the lower bound, the function returns negative
 #'         infinity, indicating an invalid scenario.
 #' @export
+#' @family optimization
 #'
 #' @examples
 #' \dontrun{
@@ -171,6 +174,7 @@ calculateLogLikelihood <- function(yValue, predicted, model, sigma, isCensored, 
 #'
 #' @return The updated data.table with calculated probabilities.
 #' @keywords internal
+#' @noRd
 getLikelihoodPriors <- function(dtPrior) {
   # initialize variable to avoid linter message
   logLikelihood <- NULL
@@ -190,6 +194,7 @@ getLikelihoodPriors <- function(dtPrior) {
 #'
 #' @return A numeric value representing the total log likelihood of hyperparameters.
 #' @keywords internal
+#' @noRd
 getLikelihoodHyperParameter <-
   function(dtStartValues, dtPrior) {
     dtHyperParameter <- setlogTruncationOffset(
@@ -225,6 +230,7 @@ getLikelihoodHyperParameter <-
 #' @return A data.table containing the hyperparameters, their values, and the computed log truncation offsets.
 #'
 #' @keywords internal
+#' @noRd
 setlogTruncationOffset <- function(dtPrior, dtStartValues,
                                    identifier = c("name", "categoricCovariate"),
                                    colsToKeep = c(
@@ -286,6 +292,7 @@ setlogTruncationOffset <- function(dtPrior, dtStartValues,
 #'
 #' @return A numeric value representing the total log likelihood for the individual group.
 #' @keywords internal
+#' @noRd
 getLikelihoodForIndividualGroup <-
   function(indGroup, dtHyperParameter) {
     # initialize variable to avoid linter message
@@ -328,6 +335,7 @@ getLikelihoodForIndividualGroup <-
 #'
 #' @return A numeric value representing the calculated residual.
 #' @keywords internal
+#' @noRd
 calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq) {
   # Validate that all inputs are of the correct type and length
   checkmate::assertNumeric(yValue, len = 1) # yValue should be a single numeric value

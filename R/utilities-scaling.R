@@ -6,6 +6,7 @@
 #'                      Must be one of "unbounded" or "bounded".
 #' @return A function that performs the specified scaling operation.
 #' @keywords internal
+#' @noRd
 getScaleFunction <- function(scalingMethod) {
   if (scalingMethod == SCALINGMETHOD$logsig) {
     scaleToLogSig
@@ -23,6 +24,7 @@ getScaleFunction <- function(scalingMethod) {
 #'                      Must be one of "unbounded" or "bounded".
 #' @return A function that performs the specified inverse scaling operation.
 #' @keywords internal
+#' @noRd
 getUnscaleFunction <- function(scalingMethod) {
   if (scalingMethod == SCALINGMETHOD$logsig) {
     unscaleFromLogSig
@@ -46,6 +48,7 @@ getUnscaleFunction <- function(scalingMethod) {
 #'
 #' @return A data.table with combined and transformed input data.
 #' @keywords internal
+#' @noRd
 getParams <-
   function(dtPrior,
            dtStartValues,
@@ -113,6 +116,7 @@ getParams <-
 #'
 #' @return A list containing the updated data.tables.
 #' @keywords internal
+#' @noRd
 setParameterToTables <- function(dtList, params, scalingMethod) {
   unscaleParamToValue <- getUnscaleFunction(scalingMethod)
 
@@ -144,6 +148,7 @@ setParameterToTables <- function(dtList, params, scalingMethod) {
 #' @param scaling A character string indicating the scaling method; currently supports "log".
 #' @return A numeric vector of scaled values.
 #' @keywords internal
+#' @noRd
 scaleToLogSig <- function(value, minValue, maxValue, scaling) {
   param <-
     qlogis(scaleWithinBounds(value = value,
@@ -165,6 +170,7 @@ scaleToLogSig <- function(value, minValue, maxValue, scaling) {
 #' @param scaling A character string indicating the scaling method; currently supports "log".
 #' @return A numeric vector of unscaled values.
 #' @keywords internal
+#' @noRd
 unscaleFromLogSig <- function(param, minValue, maxValue, scaling) {
   unscaleFromBounds(param = plogis(param),
                     minValue = minValue,
@@ -182,6 +188,7 @@ unscaleFromLogSig <- function(param, minValue, maxValue, scaling) {
 #' @param scaling A character string indicating the scaling method; currently supports "log".
 #' @return A numeric vector of scaled values, or NA if the input is out of bounds.
 #' @keywords internal
+#' @noRd
 scaleWithinBounds <- function(value, minValue, maxValue, scaling) {
   if (value <= minValue || value >= maxValue) {
     return(NA_real_)
@@ -204,6 +211,7 @@ scaleWithinBounds <- function(value, minValue, maxValue, scaling) {
 #' @param scaling A character string indicating the scaling method; currently supports "log".
 #' @return A numeric vector of unscaled values, or NA if the input is out of bounds.
 #' @keywords internal
+#' @noRd
 unscaleFromBounds <- function(param, minValue, maxValue, scaling) {
   if (param <= 0 || param >= 1) {
     return(NA_real_)

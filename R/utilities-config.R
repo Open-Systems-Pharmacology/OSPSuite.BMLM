@@ -20,6 +20,7 @@
 #' @return An object of class `ProjectConfiguration`, which includes the updated configuration details after processing.
 #'
 #' @export
+#' @family configuration
 #'
 addBMLMPConfiguration <- function(projectConfiguration,
                                   nameOfParameterIdentification = NULL,
@@ -72,6 +73,7 @@ addBMLMPConfiguration <- function(projectConfiguration,
 #' @return NULL (invisible), as the function performs side effects by modifying the configuration file directly.
 #'
 #' @export
+#' @family configuration
 #'
 readIdentificationParameterFromSnapshot <- function(snapshotFile,
                                                     nameOfParameterIdentification,
@@ -136,6 +138,7 @@ readIdentificationParameterFromSnapshot <- function(snapshotFile,
 #'
 #' @return NULL (invisible), as the function performs side effects by writing to a workbook.
 #' @keywords internal
+#' @noRd
 updateDefinitionDT <- function(linkedParameterDT, definitionDTHeader, wb) {
   # Initialize variables to NULL to avoid linter messages
   isFixed <- useAsFactor <- NULL
@@ -176,6 +179,7 @@ updateDefinitionDT <- function(linkedParameterDT, definitionDTHeader, wb) {
 #' @param projectConfiguration An object of class `ProjectConfigurationBMLM`, which contains configuration details for the project.
 #'
 #' @keywords internal
+#' @noRd
 updateMappedPaths <- function(wb, linkedParameter, projectConfiguration) {
   # Initialize variables to NULL to avoid linter messages
   LinkedParameters <- NULL # nolint object_name
@@ -208,6 +212,7 @@ updateMappedPaths <- function(wb, linkedParameter, projectConfiguration) {
 #' @param wb The workbook object to be updated.
 #'
 #' @keywords internal
+#' @noRd
 updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
   # Initialize variables to NULL to avoid linter messages
   path <- errorModel <- scaling <- modelErrorId <- outputPathId <- NULL
@@ -280,6 +285,7 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
 #' @param nameOfParameterIdentification A string representing the name of the parameter identification.
 #'
 #' @keywords internal
+#' @noRd
 updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameOfParameterIdentification) {
   # Initialize variables to NULL to avoid linter messages
   linkedParameters <- isFixed <- NULL
@@ -329,6 +335,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
 #'
 #' @return A data.table containing the extracted parameters, including columns for parameter names, values, and their configurations.
 #' @keywords internal
+#' @noRd
 extractIdentificationParameter <- function(linkedParameter) {
   # Initialize variables to NULL to avoid linter messages
   Name <- Value <- NULL # nolint object_name
@@ -388,6 +395,7 @@ extractIdentificationParameter <- function(linkedParameter) {
 #'
 #' @return NULL (invisible).
 #' @export
+#' @family configuration
 configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALSE) {
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dtPrior <- loadPriorData(wb, overwrite)
@@ -441,6 +449,7 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
 #'
 #' @return A data.table containing the prior data.
 #' @keywords internal
+#' @noRd
 loadPriorData <- function(wb, overwrite) {
   dtPrior <- xlsxReadData(wb = wb, sheetName = "Prior") # nolint
   if (overwrite & nrow(dtPrior) > 1) {
@@ -460,6 +469,7 @@ loadPriorData <- function(wb, overwrite) {
 #'
 #' @return invisible(NULL). This function is called for its side effects (validation).
 #' @keywords internal
+#' @noRd
 validateParameterDefinition <- function(dtDefinition, dataObserved) {
   checkmate::assertCharacter(
     dtDefinition$name,
@@ -499,6 +509,7 @@ validateParameterDefinition <- function(dtDefinition, dataObserved) {
 #'
 #' @return A data.table containing the updated prior parameters.
 #' @keywords internal
+#' @noRd
 updatePriorParameters <- function(dtPrior, dtDefinition, dataObserved, wb) {
   # Initialize variables to NULL to avoid linter messages
   valueMode <- startValue <- hyperParameter <- NULL
@@ -544,6 +555,7 @@ loadStartValuesHeader <- function(wb, overwrite) {
 #'
 #' @return A data.table containing start values for each individual parameter.
 #' @keywords internal
+#' @noRd
 createStartValues <- function(dtDefinition, dataObserved) {
   dtStartValues <- data.table()
 
@@ -581,6 +593,7 @@ createStartValues <- function(dtDefinition, dataObserved) {
 #'
 #' @return A data.table containing updated prior parameters.
 #' @keywords internal
+#' @noRd
 addGlobalPriorParameter <- function(dtPrior, dtDefinition) {
   # Initialize variables to NULL to avoid linter messages
   valueMode <- startValue <- NULL # nolint camelCase
@@ -609,6 +622,7 @@ addGlobalPriorParameter <- function(dtPrior, dtDefinition) {
 #'
 #' @return A data.table containing updated prior parameters.
 #' @keywords internal
+#' @noRd
 addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
   # Initialize a list to store new rows
   newRows <- list()
@@ -683,6 +697,7 @@ addHyperPriorParameter <- function(dtPrior, dtDefinition, dataObserved) {
 #'
 #' @return A data.table containing updated prior parameters.
 #' @keywords internal
+#' @noRd
 addModelErrorParameter <- function(dtPrior, wb) {
   # Initialize variables to NULL to avoid linter messages
   errorModel <- NULL

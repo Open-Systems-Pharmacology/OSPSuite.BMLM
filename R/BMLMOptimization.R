@@ -5,6 +5,7 @@
 #' It manages the configuration, output directories, logging, and optimization processes.
 #'
 #' @export
+#' @family configuration
 BMLMOptimization <- R6::R6Class(
   "BMLMOptimization",
   inherit = ospsuite.utils::Printable,

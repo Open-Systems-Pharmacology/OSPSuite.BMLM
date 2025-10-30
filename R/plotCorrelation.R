@@ -15,6 +15,7 @@
 #'
 #' @return NULL This function does not return a value; it prints the correlation plot directly.
 #' @export
+#' @family plotting
 plotCorrelations <- function(dtList,
                              statusList,
                              titeltxt = NULL,
@@ -94,6 +95,7 @@ plotCorrelations <- function(dtList,
 #'
 #' @return A list of plots for significant correlations and Kruskal-Wallis test results.
 #' @keywords internal
+#' @noRd
 checkForRelevantColumnsOfPopulation <- function(plotData,
                                                 labels,
                                                 scenarioList,
@@ -246,6 +248,7 @@ createKruskalPlot <- function(data, label, popCol, pValue) {
 #'         and factors prepared for correlation analysis.
 #'
 #' @export
+#' @family data-preparation
 preparePopulationForCorrelationCheck <- function(scenarioList, dtMappedPaths) {
   dtPop <- rbindlist(
     lapply(scenarioList, function(scenario) {
