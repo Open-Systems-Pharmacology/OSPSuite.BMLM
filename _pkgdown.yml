@@ -29,11 +29,11 @@ articles:
     desc: Running optimization and analyzing results
     contents:
       - 03-optimization
-  - title: Theory
-    navbar: Theory
-    desc: Theoretical background and methodology
+  - title: Mathematical Details
+    navbar: Mathematical Details
+    desc: Mathematical formulation and theoretical background
     contents:
-      - 04-theory
+      - 04-mathematical-details
 
 figures:
   dev: ragg::agg_png

@@ -699,9 +699,9 @@ After completing your optimization:
 1. **Review diagnostics thoroughly** using all available plotting functions
 2. **Export results** to the reporting framework for further analysis
 3. **Run simulations** with optimized parameters to validate fit
-4. **Consider the theory** - review the [Theory vignette](04-theory.html) to understand the mathematical foundations
+4. **Consider the mathematical details** - review the [Mathematical Details vignette](04-mathematical-details.html) to understand the mathematical foundations
 5. **Document findings** - record optimization settings and results for reproducibility
 
 ## Conclusion
 
-The `BMLMOptimization` class provides a comprehensive framework for Bayesian multilevel model optimization within the OSPSuite ecosystem. By understanding the optimization workflow, monitoring tools, and export capabilities, you can effectively estimate parameters and assess model fit. The various diagnostic plots help ensure that optimization has converged appropriately and that the model provides a good fit to the observed data. For theoretical background on the optimization algorithm and objective function, please refer to the [Theory vignette](04-theory.html).
+The `BMLMOptimization` class provides a comprehensive framework for Bayesian multilevel model optimization within the OSPSuite ecosystem. By understanding the optimization workflow, monitoring tools, and export capabilities, you can effectively estimate parameters and assess model fit. The various diagnostic plots help ensure that optimization has converged appropriately and that the model provides a good fit to the observed data. For mathematical background on the optimization algorithm and objective function, please refer to the [Mathematical Details vignette](04-mathematical-details.html).

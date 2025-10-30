@@ -1,8 +1,8 @@
 ---
-title: "Theory and Methodology"
+title: "Mathematical Details"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Theory and Methodology}
+  %\VignetteIndexEntry{Mathematical Details}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,9 +21,9 @@ library(ospsuite.bmlm)
 
 ## Introduction
 
-This vignette provides a comprehensive overview of the theoretical foundations underlying the Bayesian multilevel modeling approach implemented in the `ospsuite.bmlm` package. We explain the mathematical formulation of the objective function, the optimization algorithm, and the concepts of internal optimization and parameter scaling.
+This vignette provides a comprehensive overview of the mathematical foundations underlying the Bayesian multilevel modeling approach implemented in the `ospsuite.bmlm` package. We explain the mathematical formulation of the objective function, the optimization algorithm, and the concepts of internal optimization and parameter scaling.
 
-Understanding these theoretical concepts will help you:
+Understanding these mathematical concepts will help you:
 - Make informed decisions about model configuration
 - Interpret optimization results correctly
 - Troubleshoot optimization problems
@@ -200,6 +200,19 @@ This formulation allows for:
 - Different parameter distributions for different subgroups (e.g., by sex, age group)
 - Borrowing strength across individuals within each group
 - Separate characterization of variability in each group
+
+### Truncation Adjustment
+
+In practice, individual parameters are constrained within minimum and maximum bounds (defined in the configuration). The hyperparameter likelihood is adjusted for this truncation:
+
+$$\log(\mathcal{L}_{h,k}(\theta)) = \sum_i \log(d_{dist}(value_{k,i}|\theta_{k_p})) - \log(F_{dist}(max_{k}) - F_{dist}(min_{k}))$$
+
+Where:
+- $d_{dist}$: Probability density function of the hyperparameter distribution
+- $F_{dist}$: Cumulative distribution function of the hyperparameter distribution
+- $max_{k}$, $min_{k}$: Maximum and minimum bounds for parameter $k$
+
+This truncation adjustment ensures that the likelihood properly accounts for the bounded parameter space.
 
 ## Likelihood for Prior Distributions $\log(\mathcal{L}_p(\theta, \mathbf{p}))$
 
