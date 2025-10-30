@@ -9,6 +9,7 @@
 #'
 #' @return A list of data.tables required for the BMLM optimization process.
 #' @keywords internal
+#' @noRd
 createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed) {
   dtList <- list()
 
@@ -71,6 +72,7 @@ createDtList <- function(projectConfiguration, scenarioList, dataObserved, seed)
 #' @details The function checks for valid scenarios, merges data tables, calculates conversion factors, and ensures that the data class matches the expected format.
 #'
 #' @export
+#' @family data-preparation
 prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList) {
   # make sure not to change dataObserved outside function
   dataObservedForMatch <- data.table::copy(dataObserved)
@@ -134,6 +136,7 @@ prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList
 #' and computes the unit factor for time.
 #'
 #' @keywords internal
+#' @noRd
 calculateUnitFactors <- function(dataObserved, dtOutputs, scenarioList) {
   # Get unit conversion factors
   dtUnit <- unique(dataObserved[, c("scenario", "outputPathId", "yUnit")]) %>%
@@ -213,6 +216,7 @@ calculateUnitFactors <- function(dataObserved, dtOutputs, scenarioList) {
 #'
 #' @return The data.table `dataObservedForMatch` with merged error model information.
 #' @keywords internal
+#' @noRd
 addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration, dtPrior, dataObservedForMatch) {
   # initialize variables to avoid linter messages
   lowerBound <- valueMode <- NULL
@@ -262,6 +266,7 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
 #'
 #' @return A data.table with prior definitions.
 #' @keywords internal
+#' @noRd
 validateAndLoadPriorDefinition <- function(projectConfiguration) {
   # initialize variables to avoid linter messages
   probability <- startValue <- NULL
@@ -381,6 +386,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
 #' @return A data.table containing adjusted hyperparameters with calculated log truncation offsets.
 #'
 #' @keywords internal
+#' @noRd
 adjustHyperParameter <- function(dtPrior, dtStartValues) {
   # Keep non-hyperParameter rows
   dtPriorNew <- dtPrior[valueMode != PARAMETERTYPE$hyperParameter]
@@ -404,6 +410,7 @@ adjustHyperParameter <- function(dtPrior, dtStartValues) {
 #'
 #' @return A data.table containing hyperparameters and their distributions.
 #' @keywords internal
+#' @noRd
 getHyperParameter <- function(dtPrior) {
   # initialize variable to avoid linter message
   valueMode <- NULL
@@ -435,6 +442,7 @@ getHyperParameter <- function(dtPrior) {
 #'
 #' @return A data.table with updated start values.
 #' @keywords internal
+#' @noRd
 validateAndLoadIndividualStartValues <-
   function(projectConfiguration,
            dtHyperParameter,
@@ -520,6 +528,7 @@ validateAndLoadIndividualStartValues <-
 #'
 #' @return A data.table with updated start values for the individual group.
 #' @keywords internal
+#' @noRd
 randomizeIndividualStartValues <-
   function(indGroup, dtHyperParameter) {
     # initialize variable to avoid linter message
@@ -589,6 +598,7 @@ randomizeIndividualStartValues <-
 #'
 #' @return A data.table containing mapped paths for parameters.
 #' @keywords internal
+#' @noRd
 validateAndLoadMappedPaths <- # nolint cyclocomp
   function(projectConfiguration,
            dtPrior,
@@ -689,6 +699,7 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
 #'
 #' @return A data.table containing the current configuration values.
 #' @export
+#' @family configuration
 getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("Prior", "IndividualStartValues")) {
   sheetName <- match.arg(sheetName)
 
@@ -765,6 +776,7 @@ checkConsistencyWithDefinition <- function(dtDefinition,
 #'
 #' @return A data.table with minValue and maxValue added.
 #' @keywords internal
+#' @noRd
 checkMinMaxValues <- function(dt) {
   # initialize variables to avoid linter messages
   minValue <- value <- maxValue <- valueMode <- scaling <- startValue <- NULL
@@ -802,6 +814,7 @@ checkMinMaxValues <- function(dt) {
 #' @return NULL. The function stops execution if duplicates are found.
 #'
 #' @keywords internal
+#' @noRd
 checkDuplicates <- function(dt, identifierCols, sheetName) {
   if (any(duplicated(dt[, ..identifierCols]))) {
     stop(paste0(
@@ -822,6 +835,7 @@ checkDuplicates <- function(dt, identifierCols, sheetName) {
 #' @param outputDir A character string representing the path to the output directory.
 #'
 #' @keywords internal
+#' @noRd
 saveDataTablesAsCSV <- function(dtList, outputDir) {
   for (name in csvFiles <-
     c("data", "mappedPaths", "prior", "startValues")) {
@@ -850,6 +864,7 @@ saveDataTablesAsCSV <- function(dtList, outputDir) {
 #'         list elements are named after the CSV files (without the '.csv' extension).
 #'
 #' @export
+#' @family configuration
 loadListsForRun <- function(outputDir, runName) {
   csvFiles <- c("data.csv", "mappedPaths.csv", "prior.csv", "startValues.csv")
 

@@ -5,6 +5,7 @@
 #'
 #' @return A vector of unique distribution names.
 #' @export
+#' @family distribution
 getAllDistributions <- function() {
   unique(distributionTable$distribution)
 }
@@ -18,6 +19,7 @@ getAllDistributions <- function() {
 #'
 #' @return A vector of parameters for the specified distribution.
 #' @export
+#' @family distribution
 getDistributionParameters <- function(distributionName) {
   distributionTable[distributionTable$distribution == distributionName, ]$parameter
 }
@@ -32,6 +34,7 @@ getDistributionParameters <- function(distributionName) {
 #'
 #' @return A data.table containing the distribution row.
 #' @keywords internal
+#' @noRd
 getDistributionRow <-
   function(distributionName, distributionParameter) {
     distribution <- parameter <- NULL
@@ -75,6 +78,7 @@ getDistributionRow <-
 #' )
 #'
 #' @export
+#' @family distribution
 computeStatFunction <- function(values, parameters, distribution, v, type = c("D", "P", "Q", "R"), log = FALSE,
                                 normalisationFactor = 1) {
   type <- match.arg(type)
@@ -161,6 +165,7 @@ calculateProbability <- function(row, log = FALSE) {
 #'   \item{\code{rlnorm_geomean(n, geomean, geosd, ...)}}{Random generation from the log-normal distribution.}
 #' }
 #' @export
+#' @family distribution
 #' @export dlnorm_geomean
 #' @export plnorm_geomean
 #' @export qlnorm_geomean

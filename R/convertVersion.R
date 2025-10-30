@@ -8,6 +8,7 @@
 #' @param projectConfiguration A list containing configuration settings for the project.
 #' @return None
 #' @export
+#' @family configuration
 convertVersionBMLM <- function(projectConfiguration){
 
   runFolders <- list.dirs(path = file.path(projectConfiguration$outputFolder,'BMLM'),

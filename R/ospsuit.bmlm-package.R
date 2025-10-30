@@ -1,4 +1,5 @@
 #' @keywords internal
+#' @noRd
 "_PACKAGE"
 
 # try to avoid warning in R cmd check Notes

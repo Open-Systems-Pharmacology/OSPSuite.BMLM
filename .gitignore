@@ -6,3 +6,6 @@ inst/doc
 /doc/
 /Meta/
 tests/testthat/Rplots.pdf
+
+# Website output folder
+docs

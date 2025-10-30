@@ -1,0 +1,77 @@
+url: https://www.open-systems-pharmacology.org/OSPSuite.BMLM/
+
+template:
+  bootstrap: 5
+
+development:
+  mode: auto
+
+authors:
+  Open-Systems-Pharmacology Community:
+    href: https://www.open-systems-pharmacology.org/
+    html: <img src='https://avatars.githubusercontent.com/u/25098323?s=33' alt="Open System Pharmacology Logo">Open Systems Pharmacology
+  Katrin Coboeken:
+    href: https://github.com/KatrinCoboeken
+
+articles:
+  - title: Overview
+    navbar: Overview
+    desc: Introduction to Bayesian Multilevel Models
+    contents:
+      - ospsuite_bmlm
+  - title: Configuration
+    navbar: Configuration
+    desc: Setting up and configuring BMLM optimization
+    contents:
+      - BMLM_configuration
+      - configuringOptimization
+  - title: Optimization & Analysis
+    navbar: Optimization & Analysis
+    desc: Running optimization and analyzing results
+    contents:
+      - Optimizing_with_BMLM
+      - loglikelihood
+
+figures:
+  dev: ragg::agg_png
+  fig.ext: png
+  dev.args: []
+  fig.width: 10
+  fig.asp: 0.618
+  fig.retina: 1
+  bg: NA
+  other.parameters: []
+
+reference:
+  - title: "BMLM Optimization Class"
+    desc: "Main R6 class for BMLM optimization"
+    contents:
+      - BMLMOptimization
+  - title: "Configuration Functions"
+    desc: "Functions for configuring BMLM optimization"
+    contents:
+      - '`configuration`'
+  - title: "Plotting Functions"
+    desc: "Functions for visualizing results and diagnostics"
+    contents:
+      - '`plotting`'
+  - title: "Export Functions"
+    desc: "Functions for exporting results"
+    contents:
+      - '`export`'
+  - title: "Optimization Functions"
+    desc: "Functions for running optimization"
+    contents:
+      - '`optimization`'
+  - title: "Data Preparation Functions"
+    desc: "Functions for preparing and processing data"
+    contents:
+      - '`data-preparation`'
+  - title: "Distribution Functions"
+    desc: "Functions for handling statistical distributions"
+    contents:
+      - '`distribution`'
+  - title: "Constants and Enumerations"
+    desc: "Enumeration constants for BMLM options"
+    contents:
+      - '`enum helpers`'

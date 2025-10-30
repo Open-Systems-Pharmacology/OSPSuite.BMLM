@@ -5,6 +5,7 @@
 #' set the path to the template via option `options(OSPSuite.RF.PathForWorkflowTemplate = 'myTemplateDirectory'`)
 #'
 #' @export
+#' @family configuration
 addBMLMWorkflowTemplate <- function() {
   rstudioapi::callFun("sendToConsole", "insertTemplateText()")
 }

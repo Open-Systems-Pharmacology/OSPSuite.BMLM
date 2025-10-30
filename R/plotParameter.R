@@ -13,6 +13,7 @@
 #'
 #' @return invisible list of ggplot objects.
 #' @export
+#' @family plotting
 plotParameterLimits <-
   function(dtList,
            statusList,
@@ -86,6 +87,7 @@ plotParameterLimits <-
 #'
 #' @return Returns an invisible NULL after printing the plots.
 #' @export
+#' @family plotting
 plotDistributions <- function(dtList,
                               statusList,
                               nCols = 2,
@@ -182,6 +184,7 @@ plotDistributions <- function(dtList,
 #'
 #' @return An invisible ggplot object visualizing the best values vs start values.
 #' @export
+#' @family plotting
 plotBestVsStartParameter <- function(dtList,
                             statusList,
                             nCols = 2,
@@ -250,6 +253,7 @@ plotBestVsStartParameter <- function(dtList,
 #'
 #' @return An invisible ggplot object visualizing the parameter values vs prior.
 #' @export
+#' @family plotting
 plotParameterValuesVsPrior <- function(dtList,
                                        statusList,
                                        xScale = unlist(SCALING),
@@ -319,6 +323,7 @@ plotParameterValuesVsPrior <- function(dtList,
 #'
 #' @return A list containing processed data for individuals and globals.
 #' @keywords internal
+#' @noRd
 prepareDataForParameterLimits <- function(dtList,
                                           statusList) {
   plotData <- preparePlotDataParameterValues(
@@ -353,6 +358,7 @@ prepareDataForParameterLimits <- function(dtList,
 #'
 #' @return A modified ggplot object with adjusted limits, colors, and labels.
 #' @keywords internal
+#' @noRd
 adjustLimitsPlot <- function(plotObject,colorScalingVector,titeltxt){
   plotObject <-
     plotObject +
@@ -386,6 +392,7 @@ adjustLimitsPlot <- function(plotObject,colorScalingVector,titeltxt){
 #'
 #' @return A data.table containing prepared data for distribution plots.
 #' @keywords internal
+#' @noRd
 prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, zoomOnData,xScale) {
   plotData <- preparePlotDataParameterValues(
     dtList = dtList,
@@ -448,6 +455,7 @@ prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, 
 #'
 #' @return A ggplot object representing the parameter distribution.
 #' @keywords internal
+#' @noRd
 generateParameterDistributionPlot <- function(dtValuesSubset, hyperParameterSubset,
                                               titeltxt, xScale, colorScalingVector,nCols) {
   lineData <- createLineData(
@@ -488,6 +496,7 @@ generateParameterDistributionPlot <- function(dtValuesSubset, hyperParameterSubs
 #'
 #' @return A data.table containing the line data for hyperparameters.
 #' @keywords internal
+#' @noRd
 createLineData <- function(hyperParameter, xScale, dtValues = NULL) {
   lineData <- data.table()
 
@@ -534,6 +543,7 @@ createLineData <- function(hyperParameter, xScale, dtValues = NULL) {
 #'
 #' @return A list of distribution tables.
 #' @keywords internal
+#' @noRd
 createDistributionTables <- function(dtPrior, hyperParameter, plotList,dtValues) {
   dtPrior <- copy(dtPrior)
   dtPrior[, priorDescription :=
@@ -600,6 +610,7 @@ createDistributionTables <- function(dtPrior, hyperParameter, plotList,dtValues)
 #'
 #' @return A data.table containing the line data for prior distributions.
 #' @keywords internal
+#' @noRd
 createPriorLineData <- function(dtPrior) {
   dtPrior[, label := paste(
     name,
@@ -640,6 +651,7 @@ createPriorLineData <- function(dtPrior) {
 #'
 #' @return A ggplot object with a customized legend.
 #' @keywords internal
+#' @noRd
 customizeLegend <- function(plotObject, colorScalingVector,
                             aesthetics = c("color", "fill", "shape", "linetype")) {
   legendTitleShape <- "Individual Values"
@@ -706,6 +718,7 @@ customizeLegend <- function(plotObject, colorScalingVector,
 #' print(customColors)
 #' }
 #' @export
+#' @family plotting
 defaultColorsParameterPlots <- function() {
   return(getOption("ospsuite.BMLM.defaultColors", default =
                      c(current = "darkgreen", start = "lightblue", best = "orange")))
@@ -722,6 +735,7 @@ defaultColorsParameterPlots <- function() {
 #' @return A list where each element is a vector of facets that should be plotted
 #'         together in a single plot.
 #' @keywords internal
+#' @noRd
 getFacetToPlotList <- function(labelVector, nCols, nRows) {
   # Determine unique facets
   uniqueFacets <- unique(labelVector)
@@ -750,6 +764,7 @@ getFacetToPlotList <- function(labelVector, nCols, nRows) {
 #'
 #' @return A data.table containing the prepared plot data.
 #' @keywords internal
+#' @noRd
 preparePlotDataParameterValues <- function(dtList, statusList) {
   # startValue
   columnsToSelect <- c("id","name","categoricCovariate",
@@ -819,6 +834,7 @@ preparePlotDataParameterValues <- function(dtList, statusList) {
 #'
 #' @return A data.table with enhanced plot data suitable for visualization.
 #' @keywords internal
+#' @noRd
 reshapePlotDataParameterValues <- function(plotData) {
   # reshapes the plot data for visualization by melting the data.table.
   plotData[, param := NULL]
@@ -854,6 +870,7 @@ reshapePlotDataParameterValues <- function(plotData) {
 #'
 #' @return A data.table with labels added for each parameter.
 #' @keywords internal
+#' @noRd
 addLabel <- function(plotData, dtPrior, unitSep = " ", identifier = c("name", "categoricCovariate")) {
   plotData <- merge(plotData,
                     dtPrior[, c(..identifier, "unit")] %>%

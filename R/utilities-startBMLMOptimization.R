@@ -17,6 +17,7 @@
 #'
 #' @return A list containing the result of the optimization process.
 #' @export
+#' @family optimization
 optimizeParameters <-
   function(dtList,
            scenarioList,
@@ -86,6 +87,7 @@ optimizeParameters <-
 #' @return NULL This function does not return any value but logs information to the console and a log file.
 #'
 #' @export
+#' @family optimization
 evaluateInitialValues <- function(dtList,
                                   outputDir,
                                   scenarioList) {
@@ -182,6 +184,7 @@ evaluateInitialValues <- function(dtList,
 #'   the model error in the provided data tables.
 #'
 #' @keywords internal
+#' @noRd
 analyseInitalSimulationFailures <- function(dtList, optimEnv, loglikelihoods, outputDir) {
   if (is.na(loglikelihoods["logTimeProfile"])) {
     dtRes <- rbindlist(optimEnv$dtResList)
@@ -238,6 +241,7 @@ analyseInitalSimulationFailures <- function(dtList, optimEnv, loglikelihoods, ou
 #'
 #' @return A new environment containing initialized optimization variables.
 #' @keywords internal
+#' @noRd
 initializeOptimEnv <- function(dtList,
                                failValue = Inf,
                                bestValue = Inf,
@@ -284,6 +288,7 @@ initializeOptimEnv <- function(dtList,
 #' during the optimization process.
 #'
 #' @keywords internal
+#' @noRd
 createObjectiveFunction <-
   function(optimEnv,
            dtList,
@@ -382,6 +387,7 @@ createObjectiveFunction <-
 #'          evaluates the log likelihood to determine the best fit.
 #'
 #' @keywords internal
+#' @noRd
 runInternalOptimization <- function(dtList, optimEnv, outputDir) {
   initialValuesInternal <-
     getParams(
@@ -423,6 +429,7 @@ runInternalOptimization <- function(dtList, optimEnv, outputDir) {
 #'
 #' @return A list containing the current optimization status.
 #' @keywords internal
+#' @noRd
 updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
   return(list(
     iteration = optimEnv$iteration,
@@ -449,6 +456,7 @@ updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
 #'
 #' @return A numeric value representing the current evaluation of the objective function.
 #' @keywords internal
+#' @noRd
 evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
   if (is.null(loglikelihoods) || length(loglikelihoods) < 3) {
     stop("strange loglikelihood")
@@ -490,6 +498,7 @@ evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
 #' @param outputDir A character string representing the path to the output directory.
 #' @param interval An integer specifying the interval for saving the status in seconds.
 #' @keywords internal
+#' @noRd
 saveOptimStatusIfNeeded <- function(optimStatus, optimEnv, outputDir, interval) {
   if (difftime(Sys.time(), optimEnv$lastSaveTime, units = "secs") >= interval) {
     saveRDS(optimStatus, file = file.path(outputDir, "optimStatus.RDS"))
@@ -508,6 +517,7 @@ saveOptimStatusIfNeeded <- function(optimStatus, optimEnv, outputDir, interval) 
 #' @param outputDir A character string representing the path to the output directory.
 #' @param loglikelihoods A vector of log likelihood values.
 #' @keywords internal
+#' @noRd
 updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outputDir, loglikelihoods) {
   if (currentValue < optimEnv$bestValue & is.finite(currentValue)) {
     optimEnv$bestValue <- currentValue
@@ -543,6 +553,7 @@ updateBestValueIfImproved <- function(currentValue, optimEnv, optimStatus, outpu
 #'
 #' @return NULL (invisible).
 #' @keywords internal
+#' @noRd
 evaluateTimeprofiles <- function(optimEnv,
                                  scenarioList,
                                  dtList,
@@ -619,6 +630,7 @@ evaluateTimeprofiles <- function(optimEnv,
 #'   \item{predictions}{A data frame or list of predictions generated from the scenario results.}
 #'
 #' @export
+#' @family optimization
 processScenario <- function(scenarioName, scenario, dtList, simulationRunOptions) {
   # Update parameter values and run result
   updateParameterValues(
@@ -657,6 +669,7 @@ processScenario <- function(scenarioName, scenario, dtList, simulationRunOptions
 #' It also handles individual matching if 'ObservedIndividualId' is present in the scenario results.
 #'
 #' @export
+#' @family data-preparation
 getPredictionsForScenario <- function(scenarioResult,
                                       scenarioName,
                                       dataObservedForMatch,
@@ -715,6 +728,7 @@ getPredictionsForScenario <- function(scenarioResult,
 #'
 #' @return A data.table containing updated results.
 #' @keywords internal
+#' @noRd
 updateModelError <- function(dtPrior, dtRes) {
   dtRes <- dtRes %>%
     dplyr::select(!any_of("sigma")) %>%
@@ -741,6 +755,7 @@ updateModelError <- function(dtPrior, dtRes) {
 #'
 #' @return NULL (invisible).
 #' @keywords internal
+#' @noRd
 updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues, dtMappedPaths) {
   # initialize variables to avoid linter messages
   currentValue <- value <- newValue <- individualId <- valueMode <- NULL
@@ -824,6 +839,7 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
 #' @return NULL (invisible) This function is called for its side effects (logging and printing).
 #'
 #' @keywords internal
+#' @noRd
 logAndDisplayOptimization <- function(message, outputDir, quiet = TRUE, prependTimestamp = TRUE) {
   cat(
     ifelse(prependTimestamp, format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "     "),
@@ -850,6 +866,7 @@ logAndDisplayOptimization <- function(message, outputDir, quiet = TRUE, prependT
 #'
 #' @return NULL (invisible) This function is called for its side effects (logging).
 #' @keywords internal
+#' @noRd
 logResult <- function(result, startTime, outputDir, optimEnv) {
   endTime <- Sys.time()
   # Convert duration to numeric value in seconds
