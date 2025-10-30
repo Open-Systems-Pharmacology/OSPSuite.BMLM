@@ -43,51 +43,35 @@ figures:
   other.parameters: []
 
 reference:
-  - title: "BMLM Optimization"
-    desc: "Main optimization class and workflow functions"
+  - title: "BMLM Optimization Class"
+    desc: "Main R6 class for BMLM optimization"
     contents:
       - BMLMOptimization
-      - optimizeParameters
-      - addBMLMPConfiguration
-      - addBMLMWorkflowTemplate
-      - createObjectiveFunction
-      - evaluateLogLikelihood
-      - createStartValues
-  - title: "Plot Functions"
+  - title: "Configuration Functions"
+    desc: "Functions for configuring BMLM optimization"
+    contents:
+      - '`configuration`'
+  - title: "Plotting Functions"
     desc: "Functions for visualizing results and diagnostics"
     contents:
-      - plotConvergence
-      - plotCorrelations
-      - plotParameterLimits
-      - plotDistributions
-      - plotPredictedVsTime
-      - plotPredictedVsObserved
-  - title: "Data Preparation"
-    desc: "Functions for preparing and processing data"
-    contents:
-      - prepareDataForMatch
-      - preparePopulationForCorrelationCheck
-  - title: "Distribution Functions"
-    desc: "Functions for handling statistical distributions"
-    contents:
-      - getAllDistributions
-      - getDistributionParameters
-      - lognormal_geomean
+      - '`plotting`'
   - title: "Export Functions"
     desc: "Functions for exporting results"
     contents:
-      - exportOptimizedPopulation
-      - exportIndividualValuesToConfigTable
-      - exportIndividualResultsToPkml
-      - exportGlobalsParametersToConfigTables
-  - title: "Utilities and Templates"
-    desc: "Utility functions and template management"
+      - '`export`'
+  - title: "Optimization Functions"
+    desc: "Functions for running optimization"
     contents:
-      - convertVersionBMLM
-      - insertTemplateText
+      - '`optimization`'
+  - title: "Data Preparation Functions"
+    desc: "Functions for preparing and processing data"
+    contents:
+      - '`data-preparation`'
+  - title: "Distribution Functions"
+    desc: "Functions for handling statistical distributions"
+    contents:
+      - '`distribution`'
   - title: "Constants and Enumerations"
     desc: "Enumeration constants for BMLM options"
     contents:
-      - PARAMETERTYPE
-      - ERRORMODEL
-      - SCALING
+      - '`enum helpers`'
