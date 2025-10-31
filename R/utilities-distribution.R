@@ -123,20 +123,40 @@ calculateProbability <- function(row, log = FALSE) {
   }
   value <- as.numeric(row["value"])
 
+  prob <- calculateValueOfDistributionRow(row,"D",value,log)
+
+  return(prob)
+}
+#' Calculate Probability Based on Distribution
+#'
+#' This function calculates the probability for a given distribution using specified parameters.
+#' It extracts the distribution type and its parameters from a data frame row, constructs the
+#' appropriate function call, and returns the calculated probability. If an error occurs during
+#' calculation, it returns NA and prints an error message.
+#'
+#' @param row A named vector representing a row from a data frame. It must contain:
+#'   - `Distribution`: A string that specifies the distribution type (e.g., "norm" for normal distribution).
+#'   - `StartValue`: A numeric value representing the starting point for the probability calculation.
+#'   - Additional parameters with names ending in `_type` and `_value` that specify the distribution parameters.
+#'
+#' @return A numeric value representing the calculated probability. Returns NA in case of an error.
+calculateValueOfDistributionRow <- function(row,type,value,log) {
+  distribution <- row["distribution"]
+
   # Extract parameters
   paramTypes <-
     row[grepl("_type$", names(row))] # Get all type columns
   paramValues <-
     row[grepl("_value$", names(row))] # Get all value columns
 
-  prob <- tryCatch(
+  result <- tryCatch(
     {
       computeStatFunction(
         values = paramValues,
         parameters = paramTypes,
         distribution = distribution,
         v = value,
-        type = "D",
+        type = type,
         log = log
       )
     },
@@ -145,9 +165,8 @@ calculateProbability <- function(row, log = FALSE) {
     }
   )
 
-  return(prob)
+  return(result)
 }
-
 #' Log-Normal Functions with Geometric Mean
 #'
 #' These functions provide an interface to the log-normal distribution using

@@ -7,7 +7,6 @@
 #' @export
 BMLMOptimization <- R6::R6Class(
   "BMLMOptimization",
-  inherit = ospsuite.utils::Printable,
   cloneable = FALSE,
   # active---------------
   active = list(
@@ -143,9 +142,11 @@ BMLMOptimization <- R6::R6Class(
     #'
     #' @description  This method prints the current properties and status of the BMLMOptimization object to the console.
     print = function() {
-      private$printClass()
-      private$printLine("runName", self$runName)
-      private$printLine("status", self$status)
+        ospsuite.utils::ospPrintClass(self)
+        ospsuite.utils::ospPrintItems(list(
+          Run = self$runName,
+          Status = self$status
+        ))
       invisible(self)
     },
     #' This function exports individual results to a PKML file for a specified individual ID across scenarios.
@@ -240,10 +241,11 @@ BMLMOptimization <- R6::R6Class(
     #' This function exports global parameters from the provided data table to a new sheet in the model parameters Excel file.
     #'
     #' @param projectConfiguration A ProjectConfiguration object containing project configuration details, including the path to the model parameters file.
-    #' @param dtList A list of data.tables containing the prior values.
-    #' @param runName A string representing the name of the run.
+    #' @param sheetName A string representing the name of the exported sheets. If NULL The name of the run (myRun$runName) is sued
     #' @param overwrite A boolean indicating whether to overwrite an existing sheet.
-    exportGlobalsParametersToConfigTables = function(projectConfiguration, overwrite = FALSE) {
+    exportModelParametersToConfigTables = function(projectConfiguration,
+                                                   sheetName = NULL,
+                                                   overwrite = FALSE) {
       statusList <- private$loadOptimStatusList(statusTypes = "best")
       if (is.null(statusList)) {
         return(invisible())
@@ -255,10 +257,10 @@ BMLMOptimization <- R6::R6Class(
         scalingMethod = statusList$best$scalingMethod
       )
 
-      exportGlobalsParametersToConfigTables(
+      exportModelParametersToConfigTables(
         projectConfiguration = projectConfiguration,
         dtList = private$dtList,
-        runName = self$runName,
+        sheetName = ifelse(is.null(sheetName),self$runName,sheetName),
         overwrite = overwrite
       )
 
@@ -586,7 +588,7 @@ BMLMOptimization <- R6::R6Class(
         iPlot <- 2
         while (iPlot <= length(plotList)) {
           maxPlot <- min(length(plotList), iPlot + nPlotsPopulation - 1)
-          print(cowplot::plot_grid(plotlist = plotList[seq(iPlot, maxPlot)]))
+          print(addWatermark(cowplot::plot_grid(plotlist = plotList[seq(iPlot, maxPlot)])))
           iPlot <- iPlot + nPlotsPopulation
         }
       }

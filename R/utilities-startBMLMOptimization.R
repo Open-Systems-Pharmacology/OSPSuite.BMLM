@@ -690,7 +690,7 @@ getPredictionsForScenario <- function(scenarioResult,
   }
 
   # Get simulated time profile
-  dtSimulated <- getSimulatedTimeprofile(
+  dtSimulated <- ospsuite.reportingframework:::getSimulatedTimeprofile(
     simulatedResult = scenarioResult,
     outputPaths = unique(dataObservedForMatch[scenario == scenarioName, ]$outputPath),
     aggregationFun = aggregationFun,
@@ -765,7 +765,7 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
     dplyr::select(dplyr::all_of(c(
       "name", "linkedParameters", "useAsFactor", scenarioName
     ))) %>%
-    data.table::setnames(scenarioName, "factor")
+    data.table::setnames(scenarioName, "multiplicator")
 
   # global parameter
   dtCustomParams <- dtPrior[valueMode == PARAMETERTYPE$global] %>%
@@ -777,7 +777,7 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
       scenario$population$setParameterValues(
         parameterOrPath = dp$linkedParameters,
         values = rep(
-          dp$value * dp$factor,
+          dp$value * dp$multiplicator,
           scenario$population$count
         )
       )
@@ -814,7 +814,7 @@ updateParameterValues <- function(scenarioName, scenario, dtPrior, dtStartValues
           all.x = TRUE,
           sort = FALSE
         )
-      tmp[, newValue := ifelse(is.na(value), currentValue, value * factor)]
+      tmp[, newValue := ifelse(is.na(value), currentValue, value * multiplicator)]
 
       scenario$population$setParameterValues(
         parameterOrPath = pt,

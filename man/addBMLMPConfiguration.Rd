@@ -31,3 +31,13 @@ An object of class \code{ProjectConfiguration}, which includes the updated confi
 This function creates and initializes a project configuration for BMLM (Biologically-Based Modeling and Learning Model).
 It sets up the necessary configuration table and updates parameters based on a provided snapshot file.
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMWorkflowTemplate}()},
+\code{\link{configurePriors}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{getCurrentConfigTable}()},
+\code{\link{loadListsForRun}()},
+\code{\link{readIdentificationParameterFromSnapshot}()}
+}
+\concept{configuration}

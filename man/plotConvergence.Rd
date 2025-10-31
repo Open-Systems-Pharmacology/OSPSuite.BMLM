@@ -31,3 +31,19 @@ A ggplot object visualizing the convergence of model parameters.
 This function checks the convergence of model parameters by reading a data.table
 containing convergence data and visualizing the results using ggplot2.
 }
+\seealso{
+Other plotting: 
+\code{\link{defaultColorsParameterPlots}()},
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotCorrelations}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotParameterValuesVsPrior}()},
+\code{\link{plotPredictedVsObserved}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsHistogram}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

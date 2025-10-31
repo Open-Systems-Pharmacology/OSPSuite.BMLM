@@ -22,3 +22,9 @@ This function prepares observed data for matching with simulation results based 
 \details{
 The function checks for valid scenarios, merges data tables, calculates conversion factors, and ensures that the data class matches the expected format.
 }
+\seealso{
+Other data-preparation: 
+\code{\link{getPredictionsForScenario}()},
+\code{\link{preparePopulationForCorrelationCheck}()}
+}
+\concept{data-preparation}

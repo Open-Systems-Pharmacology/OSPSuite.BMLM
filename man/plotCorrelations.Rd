@@ -40,3 +40,19 @@ NULL This function does not return a value; it prints the correlation plot direc
 This function generates a correlation matrix plot for the specified status and checks
 for relevant columns in the population data.
 }
+\seealso{
+Other plotting: 
+\code{\link{defaultColorsParameterPlots}()},
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotConvergence}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotParameterValuesVsPrior}()},
+\code{\link{plotPredictedVsObserved}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsHistogram}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

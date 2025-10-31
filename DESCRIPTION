@@ -11,6 +11,7 @@ Authors@R:
              email = "katrin.coboeken@bayer.com"))
 Description: This library provides a toolbox to identify parameters in multi level models.
     It uses a bayesian approach.
+URL: https://www.open-systems-pharmacology.org/OSPSuite.BMLM/
 License: GPL-2 | file LICENSE
 Language: en-US
 Imports: 
@@ -37,4 +38,4 @@ Suggests:
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 LazyData: true
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3

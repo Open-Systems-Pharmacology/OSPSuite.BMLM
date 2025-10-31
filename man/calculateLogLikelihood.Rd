@@ -78,3 +78,10 @@ print(dt)
 }
 
 }
+\seealso{
+Other optimization: 
+\code{\link{evaluateInitialValues}()},
+\code{\link{optimizeParameters}()},
+\code{\link{processScenario}()}
+}
+\concept{optimization}

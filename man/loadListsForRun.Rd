@@ -21,3 +21,13 @@ list elements are named after the CSV files (without the '.csv' extension).
 This function loads various CSV files from a specified output directory for a given name of a BLMLM run,
 processes them into data.tables, and returns them as a list.
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMPConfiguration}()},
+\code{\link{addBMLMWorkflowTemplate}()},
+\code{\link{configurePriors}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{getCurrentConfigTable}()},
+\code{\link{readIdentificationParameterFromSnapshot}()}
+}
+\concept{configuration}

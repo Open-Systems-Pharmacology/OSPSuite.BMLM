@@ -49,3 +49,10 @@ A list containing the result of the optimization process.
 \description{
 Performs the optimization of parameters using the specified method and control settings.
 }
+\seealso{
+Other optimization: 
+\code{\link{calculateLogLikelihood}()},
+\code{\link{evaluateInitialValues}()},
+\code{\link{processScenario}()}
+}
+\concept{optimization}

@@ -23,3 +23,9 @@ to prepare a population dataset for correlation analysis. It combines population
 from multiple scenarios, removes unnecessary columns, converts character columns
 to factors, and excludes identical factor columns that lead to the same patient groups.
 }
+\seealso{
+Other data-preparation: 
+\code{\link{getPredictionsForScenario}()},
+\code{\link{prepareDataForMatch}()}
+}
+\concept{data-preparation}

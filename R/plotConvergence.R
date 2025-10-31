@@ -13,8 +13,6 @@
 #' @return A ggplot object visualizing the convergence of model parameters.
 #' @export
 #' @family plotting
-
-# Main function
 plotConvergence <- function(dtConvergence,
                             displayVariablesIndx = NULL,
                             titletxt = NULL,
@@ -62,7 +60,7 @@ plotConvergence <- function(dtConvergence,
   levels(plotData$summand) <- columnheaders[levels(plotData$summand)]
 
   # Create the plot using ggplot2
-  plotObject <- ggplot(plotData, mapping = aes(x = iteration, y = value)) +
+  plotObject <- ggplotWithWatermark(plotData, mapping = aes(x = iteration, y = value)) +
     geom_step(mapping = aes(color = "current", linetype = "current")) +
     geom_hline(
       mapping = aes(yintercept = value, color = "start", linetype = "start"),
@@ -75,11 +73,10 @@ plotConvergence <- function(dtConvergence,
       y = "", color = "", linetype = "",
       title = titletxt
     ) +
-    theme(legend.position = "none") +
-    layerWatermark()
+    theme(legend.position = "none")
 
   # Add restart points as vertical lines
-  if (nrow(dtConvergenceList$restart)>0) {
+  if (!is.null(dtConvergenceList$restart) && nrow(dtConvergenceList$restart)>0) {
     plotObject <- plotObject +
       geom_vline(data = dtConvergenceList$restart, mapping = aes(xintercept = iteration)) +
       labs(caption = "vertical lines indicate restart of algorithm")
@@ -166,9 +163,11 @@ selectIterations <- function(dtConvergenceList, nPointsAvailable, nPoints, selec
                                     nPointsAvailable)),
                     last = seq(1, nPoints) + nPointsAvailable - nPoints,
                     stop('unknown sectionMode'))]
-    dtConvergenceList$restart <- dtConvergenceList$restart[
-                     iteration >= min(dtConvergenceList$best$iteration) &
-                     iteration <= max(dtConvergenceList$best$iteration)]
+    if (!is.null(dtConvergenceList$restart)){
+      dtConvergenceList$restart <- dtConvergenceList$restart[
+        iteration >= min(dtConvergenceList$best$iteration) &
+          iteration <= max(dtConvergenceList$best$iteration)]
+    }
   }
   return(dtConvergenceList)
 }

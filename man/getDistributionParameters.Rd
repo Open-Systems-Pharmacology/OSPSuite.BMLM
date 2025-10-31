@@ -15,3 +15,10 @@ A vector of parameters for the specified distribution.
 \description{
 This function retrieves the parameters for a specified distribution.
 }
+\seealso{
+Other distribution: 
+\code{\link{computeStatFunction}()},
+\code{\link{getAllDistributions}()},
+\code{\link{lognormal_geomean}}
+}
+\concept{distribution}

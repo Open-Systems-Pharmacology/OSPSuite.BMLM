@@ -77,10 +77,10 @@ The **Parameter Definition** sheet is the primary sheet for configuring the para
 
 | Column Name             | Description                                                                                                          |
 |-------------------------|----------------------------------------------------------------------------------------------------------------------|
-| **Name**                | The identifier and display name of the parameter in reports.  Mus be unique                                                     |
+| **Name**                | The identifier and display name of the parameter in reports.  Must be unique                                                     |
 | **ValueMode**           | Specifies if the parameter is global or individual.                                                                |
 | **Distribution**        | The distribution for parameters with valueMode "individual", which can be selected from various statistical distributions.         |
-| **CategoricCovariate**  | Indicates a categorical covariate e.g. "SEX", if not empty a distinct distribution is fitted for each subgroup defined by the covariate. It make only sense for parameters which valueMode "individual"|
+| **CategoricCovariate**  | Indicates a categorical covariate e.g. "SEX", if not empty a distinct distribution is fitted for each subgroup defined by the covariate.|
 | **Unit**                | The unit of measurement for the parameter. |
 | **StartValue**          | The initial value for the parameter. |
 | **MinValue**            | The minimum allowable value for the parameter (mandatory).|
@@ -88,6 +88,13 @@ The **Parameter Definition** sheet is the primary sheet for configuring the para
 | **Scaling**             | Indicates if the parameter should be log-transformed during optimization (if set to log). |
 | **UseAsFactor**         | If TRUE (1), the fitted value is applied as a factor to all mapped parameters.|
 | **Comment**             | Additional comments or notes regarding the parameter.                                                              |
+
+ToDO when to use a factor and potential problem with export.
+Use if you want to fit the relative change of distributed parameter like bloodflows or organ volumes over different individuals or
+to fit the relative change of a group of similar parameter together. 
+Attention Parameter which are flagged as factor are not exported by `exportModelParametersToConfigTables` of an `BMLMOptimization` object as the generation of populations and individuals with configuration tables is based on absolute values.
+
+
 
 ### Example Configuration
 

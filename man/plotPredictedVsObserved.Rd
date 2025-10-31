@@ -27,3 +27,19 @@ An invisible ggplot object for the predicted vs observed plot.
 \description{
 This function generates a plot to compare predicted values against time for a single outputPathId and scenario.
 }
+\seealso{
+Other plotting: 
+\code{\link{defaultColorsParameterPlots}()},
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotConvergence}()},
+\code{\link{plotCorrelations}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotParameterValuesVsPrior}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsHistogram}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

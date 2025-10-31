@@ -61,7 +61,7 @@ plotCorrelations <- function(dtList,
   ) +
     theme(strip.placement = "outside")
 
-
+  # Check for relevant columns in population
   plotList <- checkForRelevantColumnsOfPopulation(
     plotData = plotData,
     labels = labels,
@@ -148,6 +148,8 @@ checkForRelevantColumnsOfPopulation <- function(plotData,
 #' @param columnVector A caharacter vector with column Names to analyse.
 #'
 #' @return A list of correlation plots for the specified label.
+#' @keywords internal
+#' @noRd
 analyzeLabelCorrelations <- function(mergedData, label, corCut, method,columnVector) {
   plotList <- list()
   maxCorrelation = 0
@@ -176,6 +178,8 @@ analyzeLabelCorrelations <- function(mergedData, label, corCut, method,columnVec
 #' @param columnVector A caharacter vector with column Names to analyse.
 #'
 #' @return A list of Kruskal-Wallis test plots for the specified label.
+#' @keywords internal
+#' @noRd
 analyzeLabelKruskal <- function(mergedData, label, pValueCut,columnVector) {
   plotList <- list()
   minPvalue <- 1
@@ -208,8 +212,10 @@ analyzeLabelKruskal <- function(mergedData, label, pValueCut,columnVector) {
 #' @param correlationValue A numeric value representing the correlation coefficient.
 #'
 #' @return A ggplot object representing the correlation plot.
+#' @keywords internal
+#' @noRd
 createCorrelationPlot <- function(data, label, popCol, correlationValue) {
-  ggplot(data = data, mapping = aes(y = data[[label]], x = data[[popCol]])) +
+  ggplotWithWatermark(data = data, mapping = aes(y = data[[label]], x = data[[popCol]])) +
     geom_point(fill = "black", na.rm = TRUE) +
     geom_smooth(method = "lm", formula = y ~ x, na.rm = TRUE) +
     labs(y = label, x = popCol, title = paste("Cor:", round(correlationValue, 2)))
@@ -225,6 +231,8 @@ createCorrelationPlot <- function(data, label, popCol, correlationValue) {
 #' @param pValue A numeric value representing the p-value from the Kruskal-Wallis test.
 #'
 #' @return A ggplot object representing the Kruskal-Wallis plot.
+#' @keywords internal
+#' @noRd
 createKruskalPlot <- function(data, label, popCol, pValue) {
   ospsuite.plots::plotBoxWhisker(data = data, mapping = aes(y = data[[label]], x = data[[popCol]])) +
     geom_jitter(fill = "black", na.rm = TRUE) +

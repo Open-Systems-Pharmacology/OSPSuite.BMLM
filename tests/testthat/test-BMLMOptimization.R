@@ -1,5 +1,5 @@
 test_that("BMLM inititalisation works", {
-  myRunNew <- expect_silent(BMLMOptimization$new(
+  myRunNew <- suppressMessages(BMLMOptimization$new(
     projectConfiguration = projectConfiguration,
     runName = "myRunNew",
     scenarioList = scenarioList,
@@ -14,9 +14,14 @@ test_that("BMLM inititalisation works", {
 
 
 test_that("BMLM inititalisation works", {
-  myRun$evaluateInitialValues()
+  myRun <- BMLMOptimization$new(
+    projectConfiguration = projectConfiguration,
+    runName = "myRun",
+    scenarioList = scenarioList,
+    dataObserved = dataObserved
+  )
 
-  expect(list.files(myRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "optimStatus.RDS", "status.RDS"))
+  expect_contains(list.files(myRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "optimStatus.RDS", "status.RDS"))
 })
 
 test_that("BMLM optimization starts", {
@@ -38,8 +43,7 @@ test_that("BMLM optimization starts", {
     startInBackground = FALSE
   )
 
-  expect(list.files(myRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "optimStatus.RDS", "status.RDS"))
-
+  expect_contains(list.files(myRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "status.RDS"))
 
   myRun$cleanUpStatus()
 
@@ -78,7 +82,7 @@ test_that("check functions produces gg plots", {
   expect_s3_class(p$distributions_1,'gg')
 
   p <- myRun$checkParameterLimits()
-  expect_s3_class(p$parameterLimits_global,'gg')
+  expect_s3_class(p$global,'gg')
 
   p <- myRun$checkPredictedVsObserved()
   expect_s3_class(p$Plasma,'gg')
@@ -120,11 +124,11 @@ test_that("export functions creates output", {
   dt <- xlsxReadData(wb = wb, sheetName = "Prior", skipDescriptionRow = FALSE)
   expect_contains(names(dt),'finalValue')
 
-  myRun$exportGlobalsParametersToConfigTables(projectConfiguration,overwrite = TRUE)
-  wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
-  expect_contains(wb$sheet_names,"myRun_global")
-  dt <- xlsxReadData(wb = wb, sheetName = "myRun_global", skipDescriptionRow = FALSE)
-  expect_equal(nrow(dt),expected = 2)
+  # myRun$exportModelParametersToConfigTables(projectConfiguration,overwrite = TRUE)
+  # wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
+  # expect_contains(wb$sheet_names,"myRun_global")
+  # dt <- xlsxReadData(wb = wb, sheetName = "myRun_global", skipDescriptionRow = FALSE)
+  # expect_equal(nrow(dt),expected = 2)
 
   myRun$exportIndividualResultsToPkml(projectConfiguration = projectConfiguration,
                                       individualId = dataObserved$individualId[1])

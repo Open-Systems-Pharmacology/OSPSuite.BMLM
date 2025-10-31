@@ -19,3 +19,13 @@ NULL (invisible).
 \description{
 This function configures priors based on the project configuration and observed data.
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMPConfiguration}()},
+\code{\link{addBMLMWorkflowTemplate}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{getCurrentConfigTable}()},
+\code{\link{loadListsForRun}()},
+\code{\link{readIdentificationParameterFromSnapshot}()}
+}
+\concept{configuration}
