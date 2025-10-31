@@ -14,14 +14,14 @@ test_that("BMLM inititalisation works", {
 
 
 test_that("BMLM inititalisation works", {
-  myRun <- BMLMOptimization$new(
+  myTestRun <- BMLMOptimization$new(
     projectConfiguration = projectConfiguration,
-    runName = "myRun",
+    runName = "myTestRun",
     scenarioList = scenarioList,
     dataObserved = dataObserved
   )
 
-  expect_contains(list.files(myRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "optimStatus.RDS", "status.RDS"))
+  expect_contains(list.files(myTestRun$outputDir, ".RDS"), c("bestOptimStatus.RDS", "bestPrediction.RDS", "optimStatus.RDS", "status.RDS"))
 })
 
 test_that("BMLM optimization starts", {

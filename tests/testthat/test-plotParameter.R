@@ -75,7 +75,7 @@ test_that("prepareDataForParameterLimits works correctly", {
 
 test_that("prepareDataForDistributionPlot works correctly", {
   result <- prepareDataForDistributionPlot(dtList = dtList, statusList = statusList,zoomOnData =  FALSE,parameterFilter = NULL,xScale = 'linear')
-  expect_true(c("name","status","statusParam", "statusValue", "rangeMin", "rangeMax") %in% names(result))
+  expect_true(all(c("name","status","statusParam", "statusValue", "rangeMin", "rangeMax") %in% names(result)))
 })
 
 

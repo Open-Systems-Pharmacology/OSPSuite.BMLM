@@ -49,11 +49,10 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
 
 
     dtInd <- dtList$startValues[sheetName == individualId,c("name","categoricCovariate","finalValue")]
-
     dtAdd <- addContainerAndParameterPath(dtExport = dtInd,
                                           dtMappedPaths = dtList$mappedPaths) %>%
-      setnames(old = c('unit','finalValue'),
-               new = c('units','value'))
+      setnames(old = c('unit'),
+               new = c('units'))
 
     scenarios <- unique(dtList$data[individualId == sheetName]$scenario)
 
