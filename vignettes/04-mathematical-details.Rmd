@@ -21,7 +21,7 @@ library(ospsuite.bmlm)
 
 ## Introduction
 
-This vignette provides a comprehensive overview of the mathematical foundations underlying the Bayesian multilevel modeling approach implemented in the `ospsuite.bmlm` package. We explain the mathematical formulation of the objective function, the optimization algorithm, and the concepts of internal optimization and parameter scaling.
+This vignette provides a comprehensive overview of the mathematical foundations underlying the Bayesian multilevel modeling approach implemented in the {ospsuite.bmlm} package. We explain the mathematical formulation of the objective function and the likelihood components.
 
 Understanding these mathematical concepts will help you:
 - Make informed decisions about model configuration
@@ -257,158 +257,61 @@ Additionally, the package provides:
 
 **Caution:** The choice of prior distribution can significantly impact results, especially with limited data. Always check sensitivity to prior specifications.
 
+## Optimization Algorithm
 
-## Internal Optimization
+The package uses R's `optim()` function for parameter optimization, which implements several algorithms for function minimization.
 
-Internal optimization is a key feature that can significantly improve optimization efficiency for hierarchical models.
+### Algorithm Overview
 
-### Concept
+The basic workflow is:
 
-Parameters are divided into two groups with different characteristics:
+1. **Parameter Transformation**: Transform parameters from their natural scale to an unconstrained optimization space
+2. **Objective Function Evaluation**:
+   - Update parameters in simulation models
+   - Run simulations for all scenarios
+   - Calculate log-likelihood components
+   - Return negative log-likelihood
+3. **Parameter Update**: Optimization algorithm updates parameters
+4. **Iteration**: Repeat steps 2-3 until convergence
 
-**Group 1: Global and Individual Parameters**
-- Require full model simulations for evaluation
-- Often have complex, multimodal objective functions
-- Computationally expensive to evaluate
-- May have multiple local minima
+For details on internal optimization and parameter scaling strategies, see the [Optimization vignette](03-optimization.html).
 
-**Group 2: Hyperparameters and Error Parameters**
-- Do not require model simulations (work with simulation output)
-- Have relatively simple, well-behaved objective functions
-- Computationally cheap to evaluate
-- Usually unimodal and smooth
+### Supported Optimization Methods
 
-### How Internal Optimization Works
+**BFGS (Default):**
+- Quasi-Newton method
+- Uses gradient approximations
+- Generally efficient and robust
+- Good for smooth objective functions
 
-When `withInternalOptimization = TRUE`:
+**Nelder-Mead:**
+- Simplex-based method
+- Derivative-free
+- More robust to non-smooth objectives
+- Can be slower than BFGS
 
-1. **Outer Optimization Loop**:
-   - Optimize global parameters and individual parameter values
-   - Each iteration requires full model simulations
-   
-2. **Inner Optimization Loop** (performed within each outer iteration):
-   - Fix global and individual parameters
-   - Optimize only hyperparameters and error parameters
-   - Uses simulation output from outer loop
-   - Quick to converge due to simple objective function
+**CG (Conjugate Gradients):**
+- Useful for large parameter spaces
+- Lower memory requirements than BFGS
+- May be slower to converge
 
-### Benefits
+**L-BFGS-B:**
+- Limited-memory BFGS with box constraints
+- Can explicitly handle parameter bounds
+- Good for large problems
 
-**Efficiency:**
-- Internal optimization is much faster than full model evaluation
-- Allows hyperparameters to quickly find optimal values given current individual parameters
-- Reduces total number of expensive outer iterations needed
+**SANN (Simulated Annealing):**
+- Global optimization method
+- Better at escaping local minima
+- Much slower than gradient-based methods
 
-**Improved Convergence:**
-- Separating parameter types helps navigate complex optimization landscape
-- Prevents hyperparameters from slowing down global/individual parameter optimization
-- Often leads to better final solutions
+### Convergence Criteria
 
-**Practical Impact:**
-- Can reduce total optimization time by 50% or more
-- Particularly beneficial for models with many individuals
-- Essential for complex hierarchical models
+Optimization stops when one of the following is met:
 
-### When to Use
-
-**Recommended:**
-- Models with hyperparameters (individual parameters with population distributions)
-- Large numbers of individuals (> 10)
-- Complex hierarchical structure
-- When standard optimization struggles to converge
-
-**May Not Be Necessary:**
-- Models with only global parameters
-- Very small datasets (< 5 individuals)
-- Simple parameter structures
-
-## Parameter Scaling
-
-Proper parameter scaling is critical for optimization performance. The package implements a two-stage scaling approach.
-
-### Stage 1: Normalization to [0, 1]
-
-Parameters are first scaled to the range [0, 1] based on their defined bounds.
-
-#### Linear Scaling
-
-For parameters with `scaling = "linear"`:
-
-$$\text{scaledValue} = \frac{\text{value} - \text{minValue}}{\text{maxValue} - \text{minValue}}$$
-
-**Properties:**
-- Preserves linear relationships
-- Uniform sensitivity across parameter range
-- Appropriate for parameters that vary linearly
-
-#### Logarithmic Scaling
-
-For parameters with `scaling = "log"`:
-
-$$\text{scaledValue} = \frac{\log(\text{value}) - \log(\text{minValue})}{\log(\text{maxValue}) - \log(\text{minValue})}$$
-
-**Properties:**
-- Appropriate for parameters spanning multiple orders of magnitude
-- Provides equal sensitivity to relative changes
-- Common for pharmacokinetic parameters (clearance, volume, etc.)
-
-### Stage 2: Boundary Handling
-
-After normalization, the package applies one of two methods to handle parameter bounds during optimization.
-
-#### Hard Bounds (`SCALINGMETHOD$hardBounds`)
-
-**Mechanism:**
-- Parameters strictly constrained to [0, 1] after normalization
-- Values outside bounds are invalid and return NA
-
-**Properties:**
-- Enforces strict physical or biological constraints
-- Prevents exploration beyond specified ranges
-- May trap optimization in local minima near boundaries
-
-**When to Use:**
-- Strong physical constraints exist (e.g., fractions between 0 and 1)
-- Parameters absolutely cannot exceed bounds
-- When you have high confidence in bound specifications
-
-#### LogSig Scaling (`SCALINGMETHOD$logsig`)
-
-**Mechanism:**
-- Applies logistic transformation: $\sigma(x) = \frac{1}{1 + e^{-x}}$
-- Maps any real number to (0, 1)
-- Allows optimization to explore beyond nominal bounds
-
-**Properties:**
-- Removes hard boundaries from optimization space
-- Allows temporary excursions beyond specified ranges
-- Can help escape local minima near boundaries
-- Final values are transformed back to original scale
-
-**When to Use (Recommended in most cases):**
-- Complex optimization landscapes
-- Uncertainty about exact bound values
-- When optimization hits boundaries frequently
-- Hierarchical models where flexibility helps convergence
-
-### Impact on Optimization
-
-**Good Scaling:**
-- All parameters have similar sensitivity
-- Optimization converges smoothly
-- Gradient-based methods work efficiently
-
-**Poor Scaling:**
-- Some parameters dominate objective function
-- Slow convergence
-- Optimization may miss optimal values
-- Gradient-based methods struggle
-
-**Recommendations:**
-1. Use log scaling for parameters spanning orders of magnitude
-2. Use LogSig boundary method for most applications
-3. Adjust bounds if parameters consistently hit boundaries
-4. Check parameter limit plots to verify appropriate scaling
+1. **Maximum iterations reached** (`maxit` in control parameters)
+2. **Relative tolerance satisfied**: Change in objective function falls below `reltol`
+3. **Absolute tolerance satisfied**: Objective function value falls below `abstol`
 
 ## Practical Implications
 
@@ -428,9 +331,12 @@ Understanding the theory helps in several practical situations:
 
 ### Optimization Strategy
 
-- Use internal optimization for hierarchical models
-- Choose appropriate scaling for each parameter
-- Start with BFGS, try other methods if needed
+For practical guidance on:
+- Using internal optimization for hierarchical models
+- Choosing appropriate scaling for each parameter
+- Selecting optimization methods
+
+See the [Optimization vignette](03-optimization.html).
 
 ### Interpreting Results
 
@@ -460,22 +366,21 @@ Understanding the theory helps in several practical situations:
 
 ## Conclusion
 
-The theoretical framework underlying `ospsuite.bmlm` combines:
+The mathematical framework underlying {ospsuite.bmlm} combines:
 - Maximum likelihood estimation for parameter identification
 - Hierarchical modeling for population analysis
 - Flexible prior specification for incorporating knowledge
-- Efficient optimization through internal optimization
-- Robust parameter scaling for numerical stability
+- Three-component likelihood construction (time profiles, hyperparameters, priors)
 
 Understanding these concepts helps you:
 - Configure models appropriately
-- Choose optimization settings wisely
-- Interpret results correctly
-- Troubleshoot problems effectively
+- Interpret likelihood components correctly
+- Choose appropriate error models and priors
+- Troubleshoot convergence problems
 
 For practical application of these concepts, refer to:
 - [Configuration vignette](02-configuration.html) for setting up models
-- [Optimization vignette](03-optimization.html) for running analyses
+- [Optimization vignette](03-optimization.html) for running analyses and optimization strategies
 - [Introduction vignette](01-introduction.html) for workflow overview
 
 ## References

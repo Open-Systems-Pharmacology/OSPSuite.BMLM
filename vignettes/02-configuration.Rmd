@@ -20,7 +20,7 @@ library(ospsuite.bmlm)
 
 ## Introduction
 
-The `ospsuite.bmlm` package is designed to facilitate the fitting of Bayesian multilevel models within the OSPSuite framework. One of the critical components of this package is the configuration file, `BMLMConfiguration.xlsx`, which serves as the foundation for defining the parameters, priors, and mappings necessary for model optimization and analysis.
+The {ospsuite.bmlm} package is designed to facilitate the fitting of Bayesian multilevel models within the OSPSuite framework. One of the critical components of this package is the configuration file, `BMLMConfiguration.xlsx`, which serves as the foundation for defining the parameters, priors, and mappings necessary for model optimization and analysis.
 
 The configuration file is structured into multiple sheets, each dedicated to specific aspects of the modeling process. By utilizing this file, users can efficiently set up their modeling environment, ensuring that all relevant parameters are correctly defined. This structured approach allows for flexibility in model configuration, enabling users to adapt the model to their specific data and research questions.
 
@@ -274,6 +274,165 @@ The **IndividualStartValues** sheet specifies the initial values for individual 
 1. **Physiologically Reasonable**: Choose values that are biologically plausible.
 2. **Avoid Boundaries**: Don't start exactly at min or max values.
 3. **Use Literature Values**: When available, use published parameter values as starting points.
+
+## Available Distributions
+
+The {ospsuite.bmlm} package supports a wide range of statistical distributions for modeling individual parameters and defining priors. Understanding these distributions is crucial for appropriate model configuration.
+
+### Distributions for Individual Parameters
+
+Individual parameters (those with `ValueMode = "individual"`) can follow various population distributions. The distribution is specified in the **ParameterDefinition** sheet.
+
+#### Commonly Used Distributions
+
+**Normal Distribution (`norm`)**
+- Parameters: `mean`, `sd` (standard deviation)
+- Use when: Parameter values are symmetrically distributed around a mean
+- Example: Height, weight differences from population mean
+
+**Log-Normal Distribution (`lnorm_geomean`)**
+- Parameters: `geomean` (geometric mean), `geosd` (geometric standard deviation)
+- Use when: Parameter values span multiple orders of magnitude and are positively skewed
+- Example: Clearance, volume of distribution, absorption rate constants
+- Note: This is a custom parameterization provided by {ospsuite.bmlm} that uses geometric parameters instead of log-scale parameters
+
+**Standard Log-Normal (`lnorm`)**
+- Parameters: `meanlog` (mean of log values), `sdlog` (standard deviation of log values)
+- Use when: You have log-scale parameters from literature
+- Related to `lnorm_geomean` by: `meanlog = log(geomean)`, `sdlog = log(geosd)`
+
+**Weibull Distribution (`weibull`)**
+- Parameters: `shape`, `scale`
+- Use when: Parameter has a bounded lower limit and right-skewed distribution
+- Example: Transit times, lag times
+
+**Gamma Distribution (`gamma`)**
+- Parameters: `shape`, `rate` (or `scale`)
+- Use when: Parameter is strictly positive with flexible shape
+- Example: Enzyme activity, metabolic rates
+
+**Uniform Distribution (`unif`)**
+- Parameters: `min`, `max`
+- Use when: No prior information about parameter distribution shape
+- Example: Exploratory analyses
+
+#### Distribution Parameter Names
+
+When configuring hyperparameters in the **Priors** sheet, use the following parameter names:
+
+| Distribution | HyperParameter Values |
+|--------------|----------------------|
+| `norm` | `mean`, `sd` |
+| `lnorm_geomean` | `geomean`, `geosd` |
+| `lnorm` | `meanlog`, `sdlog` |
+| `weibull` | `shape`, `scale` |
+| `gamma` | `shape`, `rate` or `shape`, `scale` |
+| `unif` | `min`, `max` |
+| `beta` | `shape1`, `shape2` |
+| `cauchy` | `location`, `scale` |
+| `exp` | `rate` |
+| `logis` | `location`, `scale` |
+
+### Prior Distributions
+
+Prior distributions can be assigned to:
+- Global parameters
+- Hyperparameters (distribution parameters of individual parameters)
+- Model error parameters
+
+#### Available Prior Distributions
+
+**Flat Prior (`flat`)**
+- No prior information
+- Contributes zero to log-likelihood
+- Use when: No prior knowledge exists
+- Configuration: Set `Prior Distribution = "flat"`, leave P1/P2/P3 columns empty
+
+**Normal Prior (`norm`)**
+- Parameters: `mean` (P1), `sd` (P2)
+- Use when: Parameter expected to be near a known value
+- Example: Compound lipophilicity from experiments
+
+**Log-Normal Prior (`lnorm_geomean`)**
+- Parameters: `geomean` (P1), `geosd` (P2)
+- Use when: Prior knowledge is on log scale
+- Example: Clearance from literature
+
+**Any R Distribution**
+The package supports all probability distributions available in R's `stats` package. Specify the distribution name (without the `d` prefix) and provide appropriate parameters in the P1_type, P1_value, P2_type, P2_value columns.
+
+### Choosing Appropriate Distributions
+
+**For Pharmacokinetic Parameters:**
+- Clearance, Volume: `lnorm_geomean` (typically log-normally distributed)
+- Absorption rate: `lnorm_geomean` or `gamma`
+- Transit time: `weibull` or `gamma`
+- Bioavailability (0-1): `beta`
+
+**For Physiological Parameters:**
+- Body weight: `norm` or `lnorm_geomean`
+- Organ volumes: `lnorm_geomean`
+- Enzyme activities: `lnorm_geomean` or `gamma`
+
+**For Covariate Effects:**
+- If modeling multiplicative effects: `lnorm_geomean`
+- If modeling additive effects: `norm`
+
+### Distribution Selection Guidelines
+
+1. **Check Literature**: Review published population PK/PD analyses for similar parameters
+2. **Consider Parameter Nature**: 
+   - Strictly positive parameters → log-normal, gamma, weibull
+   - Can be negative → normal
+   - Bounded (0-1) → beta
+3. **Examine Data**: Plot observed individual values to assess distribution shape
+4. **Start Simple**: Use `lnorm_geomean` as default for positive parameters
+5. **Validate Choice**: Check diagnostic plots (distribution plots, QQ plots) after optimization
+
+### Important Considerations
+
+**Truncation**: All distributions are automatically truncated at the `MinValue` and `MaxValue` specified in the configuration. The package accounts for this truncation in likelihood calculations.
+
+**Identifiability**: Ensure sufficient data exists to estimate distribution parameters. With few individuals (< 5), consider:
+- Using fixed distributions with prior information
+- Simplifying to fewer distribution parameters
+- Using informative priors on hyperparameters
+
+**Categorical Covariates**: When `CategoricCovariate` is specified, separate distributions are fitted for each category. Ensure each category has sufficient individuals (> 3).
+
+### Example Configurations
+
+**Example 1: Clearance with Log-Normal Distribution**
+```r
+# In ParameterDefinition sheet:
+# Name: CL, ValueMode: individual, Distribution: lnorm_geomean
+
+# In Priors sheet (hyperparameters):
+# Name: CL, ValueMode: hyperparameter, HyperParameter: geomean, 
+#   Distribution of Individual Values: lnorm_geomean,
+#   StartValue: 10, MinValue: 1, MaxValue: 100, Scaling: log,
+#   Prior Distribution: lnorm_geomean, P1_type: geomean, P1_value: 10,
+#   P2_type: geosd, P2_value: 1.5
+
+# Name: CL, ValueMode: hyperparameter, HyperParameter: geosd,
+#   StartValue: 1.5, MinValue: 1, MaxValue: 5, Scaling: linear,
+#   Prior Distribution: flat
+```
+
+**Example 2: Transit Time with Weibull Distribution**
+```r
+# In ParameterDefinition sheet:
+# Name: TransitTime, ValueMode: individual, Distribution: weibull
+
+# In Priors sheet:
+# Name: TransitTime, ValueMode: hyperparameter, HyperParameter: shape,
+#   StartValue: 2, MinValue: 0.5, MaxValue: 10, Scaling: linear,
+#   Prior Distribution: flat
+
+# Name: TransitTime, ValueMode: hyperparameter, HyperParameter: scale,
+#   StartValue: 30, MinValue: 5, MaxValue: 120, Scaling: linear,
+#   Prior Distribution: flat
+```
 
 ## Common Issues and Solutions
 

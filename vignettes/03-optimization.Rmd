@@ -28,7 +28,7 @@ options(rmarkdown.html_vignette.check_title = FALSE)
 
 ## Introduction
 
-In this vignette, we will explore how to perform optimization runs using the `BMLMOptimization` class from the `ospsuite.bmlm` package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress, and how to transfer the results back to the reporting framework structure.
+In this vignette, we will explore how to perform optimization runs using the `BMLMOptimization` class from the {ospsuite.bmlm} package. We will discuss the structure of the `BMLMOptimization` object, how to start an optimization, various methods to visualize and assess the optimization progress, and how to transfer the results back to the reporting framework structure.
 
 This vignette assumes you have already completed the configuration steps described in the [Configuration vignette](02-configuration.html).
 
@@ -156,55 +156,273 @@ myRun$startOptimization(
 
 - **lastStatusSavingIntervalInSecs**: How often to save intermediate results
 
+For detailed information on parameter scaling methods and internal optimization, see the dedicated sections below.
+
+## Internal Optimization and Parameter Scaling
+
+This section covers two advanced optimization features that can significantly improve performance and convergence.
+
+### Internal Optimization
+
+The `withInternalOptimization` parameter enables a powerful nested optimization strategy that can significantly improve optimization efficiency for hierarchical models.
+
+#### Concept
+
+Parameters are divided into two groups with different computational characteristics:
+
+**Group 1: Global and Individual Parameters**
+- Require full model simulations for evaluation
+- Often have complex, multimodal objective functions
+- Computationally expensive to evaluate
+- May have multiple local minima
+
+**Group 2: Hyperparameters and Error Parameters**
+- Do not require model simulations (work with simulation output)
+- Have relatively simple, well-behaved objective functions
+- Computationally cheap to evaluate
+- Usually unimodal and smooth
+
+#### How Internal Optimization Works
+
+When `withInternalOptimization = TRUE`, the optimization uses a nested two-level approach:
+
+```{r internal-opt-diagram, echo=FALSE, eval=TRUE, fig.width=8, fig.height=6}
+library(DiagrammeR)
+grViz("
+digraph internal_optimization {
+  graph [rankdir=TB, fontname=Helvetica]
+  node [shape=box, style=filled, fontname=Helvetica]
+  
+  start [label='Start Optimization', fillcolor='#E8F4F8']
+  outer [label='Outer Loop:\\nOptimize Global &\\nIndividual Parameters', fillcolor='#FFE6E6']
+  simulate [label='Run Model\\nSimulations', fillcolor='#FFF4E6']
+  inner [label='Inner Loop:\\nOptimize Hyperparameters\\n& Error Parameters', fillcolor='#E6F3E6']
+  calc_obj [label='Calculate\\nObjective Function', fillcolor='#F0E6FF']
+  converged [label='Converged?', shape=diamond, fillcolor='#FFFFCC']
+  end_node [label='Return Optimized\\nParameters', fillcolor='#E8F4F8']
+  
+  start -> outer
+  outer -> simulate
+  simulate -> inner
+  inner -> calc_obj
+  calc_obj -> converged
+  converged -> outer [label='No']
+  converged -> end_node [label='Yes']
+  
+  {rank=same; simulate; inner}
+}
+", width=600, height=500)
+```
+
+**Step-by-Step Process:**
+
+1. **Outer Loop Iteration**:
+   - Update global parameters and individual parameter values
+   - Run model simulations for all scenarios and individuals
+   
+2. **Inner Loop Optimization** (performed within each outer iteration):
+   - Fix global and individual parameters
+   - Use simulation output from step 1
+   - Optimize only hyperparameters and error parameters
+   - Quick convergence due to simple objective function
+   - No additional simulations needed
+   
+3. **Objective Function Calculation**:
+   - Combine likelihoods from all components
+   - Return to outer loop for next iteration
+
+4. **Convergence Check**:
+   - Repeat until optimization converges
+
+#### Benefits
+
+**Efficiency:**
+- Internal optimization is much faster than full model evaluation (no simulations needed)
+- Allows hyperparameters to quickly find optimal values given current individual parameters
+- Reduces total number of expensive outer iterations needed
+- Can reduce total optimization time by 50% or more
+
+**Improved Convergence:**
+- Separating parameter types helps navigate complex optimization landscape
+- Prevents hyperparameters from slowing down global/individual parameter optimization
+- Often leads to better final solutions
+- Reduces risk of getting stuck in local minima
+
+**Better Parameter Estimates:**
+- Hyperparameters continuously adapt during optimization
+- More accurate characterization of population variability
+- Improved estimation of individual parameters
+
+#### When to Use
+
+**Strongly Recommended:**
+- Models with hyperparameters (individual parameters with population distributions)
+- Large numbers of individuals (> 10)
+- Complex hierarchical structure
+- When standard optimization struggles to converge
+- Multi-level models with categorical covariates
+
+**May Not Be Necessary:**
+- Models with only global parameters (no hierarchical structure)
+- Very small datasets (< 5 individuals)
+- Simple parameter structures without population distributions
+- When hyperparameters are fixed (not estimated)
+
+#### Performance Comparison
+
+```{r echo=TRUE, eval=FALSE}
+# Example timing comparison (hypothetical)
+
+# Without internal optimization:
+# - Outer iterations: 200
+# - Time per iteration: 30 seconds
+# - Total time: 6000 seconds (100 minutes)
+
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 1000),
+  withInternalOptimization = FALSE
+)
+
+# With internal optimization:
+# - Outer iterations: 100 (fewer needed)
+# - Time per iteration: 35 seconds (slightly more per iteration)
+# - Total time: 3500 seconds (58 minutes)
+# - Improvement: 42% faster
+
+myRun$startOptimization(
+  method = "BFGS",
+  control = list(maxit = 500),
+  withInternalOptimization = TRUE  # Recommended!
+)
+```
+
 ### Parameter Scaling Methods
 
-Proper scaling of parameters is essential for optimization performance. The package offers two main scaling methods:
+Proper scaling of parameters is essential for optimization performance. The package offers two main scaling methods that work in two stages.
 
-#### Step 1: Initial Scaling (0 to 1)
+#### Stage 1: Normalization to [0, 1]
 
-Parameters are first scaled to the range [0, 1] using either:
+Parameters are first scaled to the range [0, 1] based on their defined bounds. This scaling is determined by the `Scaling` column in the configuration:
 
-**Linear Scaling:**
+**Linear Scaling** (when `Scaling = "linear"`):
 $$ 
 \text{scaledValue} = \frac{\text{value} - \text{minValue}}{\text{maxValue} - \text{minValue}} 
 $$
 
-**Logarithmic Scaling:** (when parameter scaling is set to "log")
+**Properties:**
+- Preserves linear relationships
+- Uniform sensitivity across parameter range
+- Appropriate for parameters that vary linearly (e.g., fractions, percentages)
+
+**Logarithmic Scaling** (when `Scaling = "log"`):
 $$ 
 \text{scaledValue} = \frac{\log(\text{value}) - \log(\text{minValue})}{\log(\text{maxValue}) - \log(\text{minValue})} 
 $$
 
-#### Step 2: Boundary Handling
+**Properties:**
+- Appropriate for parameters spanning multiple orders of magnitude
+- Provides equal sensitivity to relative changes
+- Common for pharmacokinetic parameters (clearance, volume, absorption rate)
+- Helps optimization navigate log-scale parameter space
 
-**Hard Bounds (`SCALINGMETHOD$hardBounds`):**
-- Parameters are strictly constrained within [minValue, maxValue]
-- Values outside bounds are treated as invalid (return NA)
-- Good when you have strong physical constraints
+#### Stage 2: Boundary Handling
 
-**LogSig Scaling (`SCALINGMETHOD$logsig`):**
-- Uses logistic function to map real numbers to [0, 1]
-- Allows exploration beyond specified bounds during optimization
-- More flexible, can help escape local minima
-- Generally recommended for complex optimization problems
+After normalization, the `scalingMethod` parameter in `startOptimization()` controls how parameter bounds are handled:
 
-### Internal Optimization
+**Hard Bounds** (`SCALINGMETHOD$hardBounds`):
 
-The `withInternalOptimization` parameter enables a powerful nested optimization strategy:
+**Mechanism:**
+- Parameters strictly constrained to [0, 1] after normalization
+- Values outside bounds return invalid results (NA)
+- Optimization cannot explore beyond specified ranges
 
-**How it Works:**
-1. **Outer Loop**: Optimizes global parameters and individual parameter values
-2. **Inner Loop**: For each outer iteration, re-optimizes hyperparameters and error parameters
-
-**Benefits:**
-- **Efficiency**: Hyperparameters have simpler objective functions and optimize faster
-- **Improved Convergence**: Separating parameter types can help navigate complex optimization landscapes
-- **Better Solutions**: Allows hyperparameters to adapt continuously during optimization
+**Properties:**
+- Enforces strict physical or biological constraints
+- Prevents exploration beyond specified ranges
+- May trap optimization in local minima near boundaries
+- Gradient-based methods can struggle at boundaries
 
 **When to Use:**
-- Models with hierarchical parameter structure (hyperparameters)
-- Large number of individual parameters
-- When optimization struggles to converge
-- Complex multi-level models
+- Strong physical constraints exist (e.g., fractions between 0 and 1)
+- Parameters absolutely cannot exceed bounds
+- When you have high confidence in bound specifications
+- Regulatory requirements mandate specific bounds
+
+**LogSig Scaling** (`SCALINGMETHOD$logsig` - **Recommended**):
+
+**Mechanism:**
+- Applies logistic transformation: $\sigma(x) = \frac{1}{1 + e^{-x}}$
+- Maps any real number to (0, 1)
+- Allows optimization to explore beyond nominal bounds temporarily
+- Final values are transformed back and constrained to original bounds
+
+**Properties:**
+- Removes hard boundaries from optimization space
+- Allows temporary excursions beyond specified ranges during search
+- Can help escape local minima near boundaries
+- Smoother optimization landscape for gradient-based methods
+- More robust convergence
+
+**When to Use (Recommended in most cases):**
+- Complex optimization landscapes
+- Uncertainty about exact bound values
+- When optimization frequently hits boundaries
+- Hierarchical models where flexibility helps convergence
+- As a default choice for most applications
+
+#### Scaling Configuration Examples
+
+```{r echo=TRUE, eval=FALSE}
+# Example 1: Clearance parameter (log-scaled)
+# In configuration: Scaling = "log", MinValue = 1, MaxValue = 100
+# Recommended: Use log scaling for parameters spanning orders of magnitude
+
+myRun$startOptimization(
+  scalingMethod = SCALINGMETHOD$logsig,  # Allow flexible boundary exploration
+  withInternalOptimization = TRUE
+)
+
+# Example 2: Fraction absorbed (linear-scaled)
+# In configuration: Scaling = "linear", MinValue = 0, MaxValue = 1
+# Use linear for bounded fractions
+
+myRun$startOptimization(
+  scalingMethod = SCALINGMETHOD$hardBounds,  # Enforce strict bounds
+  withInternalOptimization = TRUE
+)
+
+# Example 3: Mixed parameters (recommended general approach)
+# Let different parameters use their configured scaling
+myRun$startOptimization(
+  scalingMethod = SCALINGMETHOD$logsig,  # Generally recommended
+  withInternalOptimization = TRUE
+)
+```
+
+#### Impact on Optimization Performance
+
+**Good Scaling:**
+- All parameters have similar sensitivity
+- Optimization converges smoothly
+- Gradient-based methods work efficiently
+- Fewer iterations needed
+
+**Poor Scaling:**
+- Some parameters dominate objective function
+- Slow convergence or no convergence
+- Optimization may miss optimal values
+- Gradient-based methods struggle
+- Gets stuck at boundaries
+
+#### Scaling Best Practices
+
+1. **Use log scaling** for parameters spanning multiple orders of magnitude (clearance, volume, rate constants)
+2. **Use linear scaling** for bounded parameters (fractions, percentages, ratios)
+3. **Use LogSig boundary method** as default unless you have strict physical constraints
+4. **Check parameter limit plots** after optimization to verify parameters aren't consistently hitting boundaries
+5. **Adjust bounds** if parameters frequently reach boundaries - may indicate bounds are too restrictive
+6. **Monitor convergence** - poor scaling often manifests as slow or failed convergence
 
 **Example:**
 ```{r echo=TRUE, eval=FALSE}
@@ -528,21 +746,46 @@ myRun$exportIndividualValuesToConfigTable(
 - Use optimized values for subsequent analyses
 - Document fitted individual parameters
 
-### 4. Export Model Parameters
+### 4. Export Global Parameters
 
-Save global parameter values to a new sheet in model parameters configuration:
+Save fitted global parameter values to model parameters configuration:
 
 ```{r echo=TRUE, eval=FALSE}
-myRun$exportModelParametersToConfigTables(
+myRun$exportGlobalsParametersToConfigTables(
   projectConfiguration = projectConfiguration,
   overwrite = FALSE
 )
 ```
 
-**Use Case:**
+**What It Does:**
+- Exports all parameters with `ValueMode = "global"` from the optimization results
+- Creates a new sheet in the ModelParameters.xlsx file named `<runName>_global`
+- Includes fitted values for:
+  - Compound properties (e.g., lipophilicity, molecular weight)
+  - System parameters that are constant across individuals
+  - Any other global model parameters
+- The sheet follows the ModelParameters template format
+- Can be used to update simulations with optimized global parameters
+
+**Parameters:**
+- `projectConfiguration`: Your project configuration object
+- `overwrite`: Set to `TRUE` to replace existing sheet with same name (default: `FALSE`)
+
+**Use Cases:**
 - Apply optimized compound properties across all scenarios
-- Update global parameters for new simulations
-- Document fitted global parameters
+- Update baseline simulations with fitted global parameters
+- Compare pre- and post-optimization global parameter values
+- Document fitted global parameters for regulatory submissions
+- Share optimized compound-specific parameters with collaborators
+
+**Example Output Sheet:**
+The exported sheet contains columns like:
+- `ParameterPath`: Full path to parameter in model
+- `Value`: Optimized parameter value
+- `Unit`: Parameter unit
+- Additional scenario-specific information
+
+**Note:** Only parameters defined as `ValueMode = "global"` in the BMLM configuration are exported. Individual parameters and hyperparameters are handled by other export functions.
 
 ### 5. Export Final Values to BMLM Configuration
 
