@@ -1,8 +1,8 @@
 ---
-title: "Mathematical Details"
+title: "Likelihood Components and Error Models"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Mathematical Details}
+  %\VignetteIndexEntry{Likelihood Components and Error Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,7 +21,7 @@ library(ospsuite.bmlm)
 
 ## Introduction
 
-This vignette provides a comprehensive overview of the mathematical foundations underlying the Bayesian multilevel modeling approach implemented in the {ospsuite.bmlm} package. We explain the mathematical formulation of the objective function and the likelihood components.
+This vignette provides a comprehensive overview of the likelihood components and statistical foundations underlying the Bayesian multilevel modeling approach implemented in the {ospsuite.bmlm} package. We explain the mathematical formulation of the objective function and the three likelihood components that comprise it.
 
 Understanding these mathematical concepts will help you:
 - Make informed decisions about model configuration
@@ -257,62 +257,6 @@ Additionally, the package provides:
 
 **Caution:** The choice of prior distribution can significantly impact results, especially with limited data. Always check sensitivity to prior specifications.
 
-## Optimization Algorithm
-
-The package uses R's `optim()` function for parameter optimization, which implements several algorithms for function minimization.
-
-### Algorithm Overview
-
-The basic workflow is:
-
-1. **Parameter Transformation**: Transform parameters from their natural scale to an unconstrained optimization space
-2. **Objective Function Evaluation**:
-   - Update parameters in simulation models
-   - Run simulations for all scenarios
-   - Calculate log-likelihood components
-   - Return negative log-likelihood
-3. **Parameter Update**: Optimization algorithm updates parameters
-4. **Iteration**: Repeat steps 2-3 until convergence
-
-For details on internal optimization and parameter scaling strategies, see the [Optimization vignette](03-optimization.html).
-
-### Supported Optimization Methods
-
-**BFGS (Default):**
-- Quasi-Newton method
-- Uses gradient approximations
-- Generally efficient and robust
-- Good for smooth objective functions
-
-**Nelder-Mead:**
-- Simplex-based method
-- Derivative-free
-- More robust to non-smooth objectives
-- Can be slower than BFGS
-
-**CG (Conjugate Gradients):**
-- Useful for large parameter spaces
-- Lower memory requirements than BFGS
-- May be slower to converge
-
-**L-BFGS-B:**
-- Limited-memory BFGS with box constraints
-- Can explicitly handle parameter bounds
-- Good for large problems
-
-**SANN (Simulated Annealing):**
-- Global optimization method
-- Better at escaping local minima
-- Much slower than gradient-based methods
-
-### Convergence Criteria
-
-Optimization stops when one of the following is met:
-
-1. **Maximum iterations reached** (`maxit` in control parameters)
-2. **Relative tolerance satisfied**: Change in objective function falls below `reltol`
-3. **Absolute tolerance satisfied**: Objective function value falls below `abstol`
-
 ## Practical Implications
 
 Understanding the theory helps in several practical situations:
@@ -350,38 +294,42 @@ See the [Optimization vignette](03-optimization.html).
 
 - Most computational time is spent in model simulations
 - Number of simulations = (number of individuals) × (number of outputs)
-- Internal optimization doesn't add simulation time
+- Internal optimization doesn't add simulation time (see [Optimization vignette](03-optimization.html))
 
-### Optimization Time
+### Likelihood Evaluation
 
-- Depends on number of parameters
-- BFGS typically needs 10-100 iterations per parameter
-- Internal optimization reduces outer iterations needed
+- Each objective function call requires:
+  - Running all simulations
+  - Calculating all three likelihood components
+  - Summing to get total negative log-likelihood
+- Time per evaluation depends on model complexity and number of individuals
 
 ### Memory Requirements
 
 - Convergence history saved for all parameters
 - Predictions saved for best parameters
-- Usually not a limiting factor
+- Usually not a limiting factor for typical problems
 
 ## Conclusion
 
-The mathematical framework underlying {ospsuite.bmlm} combines:
+This vignette covered the statistical foundations of {ospsuite.bmlm}:
 - Maximum likelihood estimation for parameter identification
+- Three-component likelihood construction (time profiles, hyperparameters, priors)
+- Error models for different data characteristics
 - Hierarchical modeling for population analysis
 - Flexible prior specification for incorporating knowledge
-- Three-component likelihood construction (time profiles, hyperparameters, priors)
 
-Understanding these concepts helps you:
-- Configure models appropriately
-- Interpret likelihood components correctly
-- Choose appropriate error models and priors
+Understanding these likelihood components helps you:
+- Choose appropriate error models for your data
+- Configure priors effectively
+- Interpret optimization results correctly
 - Troubleshoot convergence problems
+- Understand the mathematical basis of parameter estimates
 
 For practical application of these concepts, refer to:
-- [Configuration vignette](02-configuration.html) for setting up models
-- [Optimization vignette](03-optimization.html) for running analyses and optimization strategies
-- [Introduction vignette](01-introduction.html) for workflow overview
+- [Configuration vignette](02-configuration.html) for setting up models and choosing distributions
+- [Optimization vignette](03-optimization.html) for running analyses, optimization algorithms, and strategies
+- [Introduction vignette](01-introduction.html) for complete workflow overview
 
 ## References
 

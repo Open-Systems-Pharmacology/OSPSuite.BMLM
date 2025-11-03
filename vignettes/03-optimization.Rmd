@@ -102,13 +102,87 @@ myRun$startOptimization(
 
 ### Available Optimization Methods
 
+The {ospsuite.bmlm} package uses R's `optim()` function for parameter optimization, which implements several algorithms for function minimization.
+
+#### Algorithm Overview
+
+The optimization follows this basic workflow:
+
+1. **Parameter Transformation**: Transform parameters from their natural scale to an unconstrained optimization space using the selected scaling method
+2. **Objective Function Evaluation**:
+   - Update parameters in simulation models
+   - Run simulations for all scenarios and individuals
+   - Calculate log-likelihood components (time profiles, hyperparameters, priors)
+   - Return negative log-likelihood (to convert maximization to minimization)
+3. **Parameter Update**: Optimization algorithm updates parameters based on objective function value
+4. **Iteration**: Repeat steps 2-3 until convergence criteria are met
+
+For detailed mathematical formulation of the objective function, see the [Likelihood Components vignette](04-likelihood-components.html).
+
+#### Supported Methods
+
 The `method` parameter accepts any optimization method supported by R's `optim()` function:
 
-- **"BFGS"** (default): Quasi-Newton method, generally good for smooth objective functions
-- **"Nelder-Mead"**: Simplex method, derivative-free, robust but can be slow
-- **"CG"**: Conjugate gradients, useful for large parameter spaces
-- **"L-BFGS-B"**: Limited-memory BFGS with box constraints
-- **"SANN"**: Simulated annealing, good for rough objective functions
+**BFGS (Default):**
+- Quasi-Newton method using gradient approximations
+- Generally efficient and robust
+- Good for smooth objective functions
+- Recommended as first choice for most problems
+- Memory requirements: moderate
+
+**Nelder-Mead:**
+- Simplex-based method
+- Derivative-free (doesn't use gradients)
+- More robust to non-smooth objectives
+- Can be slower than BFGS
+- Good when objective function is noisy or has discontinuities
+- Memory requirements: low
+
+**CG (Conjugate Gradients):**
+- Useful for large parameter spaces
+- Lower memory requirements than BFGS
+- May be slower to converge
+- Good for problems with many parameters (>100)
+
+**L-BFGS-B:**
+- Limited-memory BFGS with box constraints
+- Can explicitly handle parameter bounds
+- Good for large problems with constraints
+- Memory requirements: very low
+
+**SANN (Simulated Annealing):**
+- Global optimization method
+- Better at escaping local minima
+- Much slower than gradient-based methods
+- Use when BFGS gets stuck in local minima
+- Good for complex, multimodal objective functions
+
+#### Convergence Criteria
+
+Optimization stops when one of the following conditions is met:
+
+1. **Maximum iterations reached** (`maxit` in control parameters)
+   - Default varies by method (typically 100-500)
+   - Increase if optimization stops before convergence
+   
+2. **Relative tolerance satisfied** (`reltol` in control parameters)
+   - Change in objective function falls below `reltol`
+   - Default: typically 1e-8
+   - Measures relative improvement between iterations
+   
+3. **Absolute tolerance satisfied** (`abstol` in control parameters)
+   - Objective function value falls below `abstol`
+   - Default: typically -Inf (disabled)
+   - Less commonly used than relative tolerance
+
+**Checking Convergence:**
+
+After optimization completes, check the convergence status:
+- `convergence = 0`: Successful convergence
+- `convergence = 1`: Maximum iterations reached
+- `convergence = 10`: Degeneracy in Nelder-Mead simplex
+
+Use the diagnostic plots (see [Monitoring Optimization Progress](#monitoring-optimization-progress)) to verify that convergence was achieved and the solution is reasonable.
 
 ### Control Parameters
 
@@ -1002,9 +1076,9 @@ After completing your optimization:
 1. **Review diagnostics thoroughly** using all available plotting functions
 2. **Export results** to the reporting framework for further analysis
 3. **Run simulations** with optimized parameters to validate fit
-4. **Consider the mathematical details** - review the [Mathematical Details vignette](04-mathematical-details.html) to understand the mathematical foundations
+4. **Consider the likelihood components** - review the [Likelihood Components vignette](04-likelihood-components.html) to understand the mathematical foundations
 5. **Document findings** - record optimization settings and results for reproducibility
 
 ## Conclusion
 
-The `BMLMOptimization` class provides a comprehensive framework for Bayesian multilevel model optimization within the OSPSuite ecosystem. By understanding the optimization workflow, monitoring tools, and export capabilities, you can effectively estimate parameters and assess model fit. The various diagnostic plots help ensure that optimization has converged appropriately and that the model provides a good fit to the observed data. For mathematical background on the optimization algorithm and objective function, please refer to the [Mathematical Details vignette](04-mathematical-details.html).
+The `BMLMOptimization` class provides a comprehensive framework for Bayesian multilevel model optimization within the OSPSuite ecosystem. By understanding the optimization workflow, monitoring tools, and export capabilities, you can effectively estimate parameters and assess model fit. The various diagnostic plots help ensure that optimization has converged appropriately and that the model provides a good fit to the observed data. For mathematical background on the likelihood components and error models, please refer to the [Likelihood Components vignette](04-likelihood-components.html).

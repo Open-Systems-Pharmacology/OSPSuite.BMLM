@@ -96,7 +96,7 @@ This package provides several vignettes to help you get started and make the mos
 - **Running Optimization** ([vignette](03-optimization.html)): How to initialize the optimization object, start optimization runs, monitor progress with plotting functions, and export results back to the reporting framework
 
 ### Theoretical Background
-- **Mathematical Details** ([vignette](04-mathematical-details.html)): Mathematical formulation of the objective function, maximum likelihood estimation, algorithm overview, and internal optimization concepts
+- **Likelihood Components and Error Models** ([vignette](04-likelihood-components.html)): Mathematical formulation of the objective function, likelihood components, error models, and maximum likelihood estimation
 
 ## Quick Start Example
 
@@ -153,7 +153,7 @@ For more detailed information on specific topics:
 
 - **Configuration questions**: See the [Configuration vignette](02-configuration.html)
 - **Optimization issues**: See the [Optimization vignette](03-optimization.html)
-- **Mathematical background**: See the [Mathematical Details vignette](04-mathematical-details.html)
+- **Mathematical background**: See the [Likelihood Components vignette](04-likelihood-components.html)
 - **Function documentation**: Use `?BMLMOptimization` or `?configurePriors` in R
 - **Package issues**: Visit the [GitHub repository](https://github.com/Open-Systems-Pharmacology/OSPSuite.BMLM)
 
@@ -163,7 +163,7 @@ Now that you understand the basics of {ospsuite.bmlm}, we recommend:
 
 1. Reading the [Configuration vignette](02-configuration.html) to learn how to set up your BMLM project
 2. Following the [Optimization vignette](03-optimization.html) to run your first optimization
-3. Consulting the [Mathematical Details vignette](04-mathematical-details.html) to understand the mathematical foundations
+3. Consulting the [Likelihood Components vignette](04-likelihood-components.html) to understand the mathematical foundations
 
 ## Conclusion
 

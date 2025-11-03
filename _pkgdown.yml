@@ -29,11 +29,11 @@ articles:
     desc: Running optimization and analyzing results
     contents:
       - 03-optimization
-  - title: Mathematical Details
-    navbar: Mathematical Details
-    desc: Mathematical formulation and theoretical background
+  - title: Likelihood Components
+    navbar: Likelihood Components
+    desc: Likelihood components, error models, and statistical foundations
     contents:
-      - 04-mathematical-details
+      - 04-likelihood-components
 
 figures:
   dev: ragg::agg_png

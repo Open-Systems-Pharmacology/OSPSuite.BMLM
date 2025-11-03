@@ -464,7 +464,7 @@ After completing your configuration:
 
 1. **Validate Configuration**: Use `evaluateInitialValues()` to check that your model runs with the configured parameters.
 2. **Start Optimization**: Proceed to the [Optimization vignette](03-optimization.html) to learn how to run the optimization.
-3. **Understand Mathematical Details**: Consult the [Mathematical Details vignette](04-mathematical-details.html) for details on the mathematical foundations.
+3. **Understand Likelihood Components**: Consult the [Likelihood Components vignette](04-likelihood-components.html) for details on the mathematical foundations.
 
 ## Conclusion
 
