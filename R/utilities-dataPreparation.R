@@ -807,7 +807,7 @@ checkMinMaxValues <- function(dt) {
 checkDuplicates <- function(dt, identifierCols, sheetName) {
   if (any(duplicated(dt[, ..identifierCols]))) {
     duplicateNames <- unique(dt[duplicated(dt[, ..identifierCols]), ]$name)
-    stop(messages$errorDuplicateNames(sheetName, duplicateNames))
+    stop(messages$errorDuplicateNames(sheetName, identifierCols, duplicateNames))
   }
 }
 

@@ -61,10 +61,12 @@ messages$errorColumnsNotPositiveForLogScaling <- function() {
   "Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling log"
 }
 
-messages$errorDuplicateNames <- function(tableName, duplicateNames) {
+messages$errorDuplicateNames <- function(sheetName, identifierCols, duplicateNames) {
   paste0(
-    "There are duplicate names in ", tableName, ": ",
-    paste(duplicateNames, collapse = ", ")
+    "Sheet ", sheetName, " must be unique in columns '",
+    paste(identifierCols, collapse = "', '"), "' ",
+    "\nCheck parameters with name: '",
+    paste(duplicateNames, collapse = "', '"), "'"
   )
 }
 
