@@ -1,0 +1,346 @@
+---
+title: "Likelihood Components and Error Models"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Likelihood Components and Error Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  rmarkdown.html_vignette.check_title = FALSE
+)
+```
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+library(ospsuite.bmlm)
+```
+
+## Introduction
+
+This vignette provides a comprehensive overview of the likelihood components and statistical foundations underlying the Bayesian multilevel modeling approach implemented in the {ospsuite.bmlm} package. We explain the mathematical formulation of the objective function and the three likelihood components that comprise it.
+
+Understanding these mathematical concepts will help you:
+- Make informed decisions about model configuration
+- Interpret optimization results correctly
+- Troubleshoot optimization problems
+- Choose appropriate priors and error models
+
+## Bayesian Multilevel Models
+
+Bayesian multilevel models, also known as hierarchical models, are designed for parameter identification using individual study data. They are particularly useful when:
+
+- Data come from multiple individuals or groups
+- Parameters vary between individuals (random effects)
+- Some parameters are shared across individuals (fixed effects)
+- You want to borrow strength across individuals for better parameter estimates
+
+### Model Structure
+
+The hierarchical structure consists of multiple levels:
+
+1. **Individual Level**: Each individual has their own parameter values
+2. **Population Level**: Distribution parameters (hyperparameters) describe variability across individuals  
+3. **Global Level**: Parameters that are the same for all individuals (e.g., compound properties)
+
+This structure allows the model to:
+- Estimate individual-specific parameters
+- Characterize population variability
+- Identify parameters that are constant across the population
+
+## Maximum Likelihood Estimation
+
+Maximum likelihood estimation (MLE) is the core statistical method used for parameter identification in this package. MLE seeks to find parameter values that make the observed data most probable.
+
+### Objective Function
+
+The goal of MLE is to find the parameter values that maximize the likelihood function:
+
+$$ \hat{\theta} = \underset{\theta \in \Theta}{\operatorname{arg\,max}} \mathcal{L}(\theta, \mathbf{y}, \mathbf{p})$$
+
+Where:
+- $\theta$: Vector of all adjustable parameters
+- $\mathbf{y}$: Vector of observed data across all individuals and outputs
+- $\mathbf{p}$: Prior distributions on parameters
+
+### Parameter Vector $\theta$
+
+The parameter vector $\theta$ contains:
+
+1. **Global Parameters**: One scalar per global parameter, denoted $\theta_k$
+2. **Individual Parameters**: For parameters with hyperparameters:
+   - Individual values $\theta_{k_i}$ for each individual $i$
+   - Distribution parameters (hyperparameters) $\theta_{k_p}$
+3. **Model Error Parameters**: One or more error parameters $\epsilon_j$ for each output type
+
+### Conversion to Minimization
+
+For use in optimization algorithms, the maximization problem is converted to minimization:
+
+$$ \hat{\theta} = \underset{\theta \in \Theta}{\operatorname{arg\,min}} \left(-\log\left(\mathcal{L}(\theta, \mathbf{y}, \mathbf{p})\right)\right)$$
+
+This negative log-likelihood is the objective function that the optimization algorithm seeks to minimize.
+
+## Construction of the Log-Likelihood
+
+The total log-likelihood is constructed as the sum of three components:
+
+$$ \log(\mathcal{L}(\theta, \mathbf{y}, \mathbf{p})) = \log(\mathcal{L}_t(\theta, \mathbf{y})) + \log(\mathcal{L}_h(\theta)) + \log(\mathcal{L}_p(\theta, \mathbf{p}))$$
+
+Where:
+- $\mathcal{L}_t$: Likelihood of observed data given simulated time profiles
+- $\mathcal{L}_h$: Likelihood of hyperparameters (for individual parameters)
+- $\mathcal{L}_p$: Likelihood of parameter estimates given prior distributions
+
+Let's examine each component in detail.
+
+## Likelihood for Time Profiles $\log(\mathcal{L}_t(\theta, \mathbf{y}))$
+
+The likelihood for observed data is calculated as:
+
+$$ \log(\mathcal{L}_t(\theta, \mathbf{y})) = \sum_{i,j}\left(\log(\mathcal{L}u_{i,j}(\theta, \mathbf{y})) + \log(\mathcal{L}c_{i,j}(\theta, \mathbf{y}))\right)$$
+
+Where:
+- $i$: Individual index
+- $j$: Observer/output index (e.g., plasma concentration, metabolite, urine data)
+- $\mathcal{L}u(\theta, \mathbf{y})$: Likelihood for uncensored data points (values above LLOQ)
+- $\mathcal{L}c(\theta, \mathbf{y})$: Likelihood for censored data points (values below LLOQ)
+
+The package supports three error models, each with different formulations for the likelihood.
+
+### Additive Error Model
+
+In the additive error model, the measurement error is constant across all concentration levels.
+
+#### Uncensored Data Points
+
+$$\log(\mathcal{L}u_{i,j}(\theta, \mathbf{y})) = -\frac{1}{2}\sum_{t_u}\left(\frac{(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2}{\epsilon_j^2} + \log(2\pi \epsilon_j^2)\right) - \log\left(1-\Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j}\right)\right)$$
+
+#### Censored Data Points
+
+$$\log(\mathcal{L}c_{i,j}(\theta, \mathbf{y})) = \sum_{t_c}\left(\log\left(\Phi\left(\frac{lloq_{j}(t) - f_{i,j}(\theta,t)}{\epsilon_j}\right) - \Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j}\right)\right) - \log\left(1-\Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j}\right)\right)\right)$$
+
+**Notation:**
+- $\mathbf{y}_{i,j}(t)$: Observed data point for individual $i$ and output $j$ at time $t$
+- $f_{i,j}(\theta,t)$: Simulated (predicted) data point
+- $lloq_{j}(t)$: Lower limit of quantification
+- $LB$: Physiological lower bound (typically 0)
+- $\epsilon_j$: Model error (standard deviation) for output $j$
+- $\Phi(x)$: Cumulative distribution function of the standard normal distribution
+
+**When to Use:** When measurement error is approximately constant regardless of concentration level.
+
+### Proportional Error Model
+
+In the proportional error model, the measurement error increases proportionally with the measured value.
+
+#### Uncensored Data Points
+
+$$\log(\mathcal{L}u_{i,j}(\theta, \mathbf{y})) = -\frac{1}{2}\sum_{t_u}\left(\frac{(\mathbf{y}_{i,j}(t) - f_{i,j}(\theta,t))^2}{\epsilon_j^2 f_{i,j}(\theta,t)^2} + \log(2\pi \epsilon_j^2 f_{i,j}(\theta,t)^2)\right) - \log\left(1-\Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j f_{i,j}(\theta,t)}\right)\right)$$
+
+#### Censored Data Points
+
+$$\log(\mathcal{L}c_{i,j}(\theta, \mathbf{y})) = \sum_{t_c}\left(\log\left(\Phi\left(\frac{lloq_{j}(t) - f_{i,j}(\theta,t)}{\epsilon_j f_{i,j}(\theta,t)}\right) - \Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j f_{i,j}(\theta,t)}\right)\right) - \log\left(1-\Phi\left(\frac{LB - f_{i,j}(\theta,t)}{\epsilon_j f_{i,j}(\theta,t)}\right)\right)\right)$$
+
+**When to Use:** When measurement error is proportional to concentration (constant coefficient of variation).
+
+### Logarithmic Error Model
+
+In the logarithmic error model, the error is constant on a log scale, which is equivalent to a constant relative error.
+
+#### Uncensored Data Points
+
+$$\log(\mathcal{L}u_{i,j}(\theta, \mathbf{y})) = -\frac{1}{2}\sum_{t_u}\left(\frac{(\log(\mathbf{y}_{i,j}(t)) - \log(f_{i,j}(\theta,t)))^2}{\epsilon_j^2} + \log(2\pi \epsilon_j^2 \mathbf{y}_{i,j}(t)^2)\right) - \log\left(1-\Phi\left(\frac{\log(LB) - \log(f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)$$
+
+#### Censored Data Points
+
+$$\log(\mathcal{L}c_{i,j}(\theta, \mathbf{y})) = \sum_{t_c}\left(\log\left(\Phi\left(\frac{\log(lloq_{j}(t)) - \log(f_{i,j}(\theta,t))}{\epsilon_j}\right) - \Phi\left(\frac{\log(LB) - \log(f_{i,j}(\theta,t))}{\epsilon_j}\right)\right) - \log\left(1-\Phi\left(\frac{\log(LB) - \log(f_{i,j}(\theta,t))}{\epsilon_j}\right)\right)\right)$$
+
+**When to Use:** When error is approximately constant on a logarithmic scale; often appropriate for concentration data spanning multiple orders of magnitude.
+
+### Cumulative Normal Distribution
+
+The cumulative distribution function of the standard normal distribution is defined as:
+
+$$\Phi(x) = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^x e^{-\frac{t^2}{2}} dt$$
+
+This function is used to handle:
+- Lower limits of quantification (censored data)
+- Physiological lower bounds (e.g., concentrations cannot be negative)
+
+## Likelihood for Hyperparameters $\log(\mathcal{L}_h(\theta))$
+
+For individual parameters that are modeled with a population distribution, the hyperparameter likelihood quantifies how well the individual values conform to the assumed distribution.
+
+$$\log(\mathcal{L}_h(\theta)) = \sum_k \log(\mathcal{L}_{h,k}(\theta)) = \sum_{k \in K_h} \log(\phi(\theta_{k}))$$
+
+Where:
+- $K_h$: Set of parameters with hyperparameters
+- $\phi(\theta_k)$: Probability density function of the hyperparameter distribution
+- $\theta_{k}$: Individual parameter values and distribution parameters for parameter $k$
+
+### Example: Multimodal Normal Distribution
+
+For a normal distribution with multiple modes (groups):
+
+$$\log(\mathcal{L}_{h,k}(\theta)) = \sum_g\left(-\frac{1}{2\sigma_{k,g}^2}\sum_{i \in g}(value_{k,i} - \mu_{k,g})^2 - \frac{n_g}{2}\log(2\pi\sigma_{k,g}^2)\right)$$
+
+Where:
+- $g$: Group/mode index
+- $i \in g$: Individuals belonging to group $g$
+- $value_{k,i}$: Individual value for parameter $k$ and individual $i$
+- $\mu_{k,g}$: Mean of hyperparameter for group $g$
+- $\sigma_{k,g}$: Standard deviation of hyperparameter for group $g$
+- $n_g$: Number of individuals in group $g$
+
+This formulation allows for:
+- Different parameter distributions for different subgroups (e.g., by sex, age group)
+- Borrowing strength across individuals within each group
+- Separate characterization of variability in each group
+
+### Truncation Adjustment
+
+In practice, individual parameters are constrained within minimum and maximum bounds (defined in the configuration). The hyperparameter likelihood is adjusted for this truncation:
+
+$$\log(\mathcal{L}_{h,k}(\theta)) = \sum_i \log(d_{dist}(value_{k,i}|\theta_{k_p})) - \log(F_{dist}(max_{k}) - F_{dist}(min_{k}))$$
+
+Where:
+- $d_{dist}$: Probability density function of the hyperparameter distribution
+- $F_{dist}$: Cumulative distribution function of the hyperparameter distribution
+- $max_{k}$, $min_{k}$: Maximum and minimum bounds for parameter $k$
+
+This truncation adjustment ensures that the likelihood properly accounts for the bounded parameter space.
+
+## Likelihood for Prior Distributions $\log(\mathcal{L}_p(\theta, \mathbf{p}))$
+
+Prior distributions allow incorporation of previous knowledge about parameter values:
+
+$$\log(\mathcal{L}_p(\theta, \mathbf{p})) = \sum_{k \in K_p} \log(\mathcal{L}_{p,k}(\theta, \mathbf{p})) = \sum_{k \in K_p} \log(\Pi(\theta_{k}, \mathbf{p}))$$
+
+Where:
+- $K_p$: Set of parameters with defined priors
+- $\Pi(\theta_k, \mathbf{p})$: Probability density function of the prior distribution
+
+### Available Distributions
+
+The package supports all distributions available in R's `stats` package:
+- Normal: `dnorm`
+- Log-normal: `dlnorm`
+- Gamma: `dgamma`
+- Beta: `dbeta`
+- Uniform: `dunif`
+- And many others
+
+Additionally, the package provides:
+- **`lnorm_geomean`**: Log-normal distribution parameterized by geometric mean and geometric standard deviation (instead of log-mean and log-SD)
+- **`flat`**: Uninformative (flat) prior where $\log(\mathcal{L}_{p,k}) = 0$
+
+### Choosing Priors
+
+**Flat Priors:**
+- Use when no prior information is available
+- Let the data completely determine the parameter
+- May lead to convergence issues for weakly identified parameters
+
+**Informative Priors:**
+- Incorporate literature values or previous experimental results
+- Help stabilize estimation for weakly identified parameters
+- Can introduce bias if prior information is incorrect
+
+**Weakly Informative Priors:**
+- Provide gentle constraints without strong assumptions
+- Good balance between incorporating knowledge and letting data speak
+- Often a good default choice
+
+**Caution:** The choice of prior distribution can significantly impact results, especially with limited data. Always check sensitivity to prior specifications.
+
+## Practical Implications
+
+Understanding the theory helps in several practical situations:
+
+### Choosing Error Models
+
+- Review your measurement process
+- Consider concentration range (absolute vs. proportional)
+- Check residual plots to validate choice
+
+### Setting Priors
+
+- Use flat priors when no information exists
+- Use informative priors from literature when available
+- Consider sensitivity analysis for prior impact
+
+### Optimization Strategy
+
+For practical guidance on:
+- Using internal optimization for hierarchical models
+- Choosing appropriate scaling for each parameter
+- Selecting optimization methods
+
+See the [Optimization vignette](03-optimization.html).
+
+### Interpreting Results
+
+- Check all three likelihood components
+- Verify hyperparameters make sense
+- Examine residuals for model adequacy
+
+## Computational Considerations
+
+### Simulation Time
+
+- Most computational time is spent in model simulations
+- Number of simulations = (number of individuals) × (number of outputs)
+- Internal optimization doesn't add simulation time (see [Optimization vignette](03-optimization.html))
+
+### Likelihood Evaluation
+
+- Each objective function call requires:
+  - Running all simulations
+  - Calculating all three likelihood components
+  - Summing to get total negative log-likelihood
+- Time per evaluation depends on model complexity and number of individuals
+
+### Memory Requirements
+
+- Convergence history saved for all parameters
+- Predictions saved for best parameters
+- Usually not a limiting factor for typical problems
+
+## Conclusion
+
+This vignette covered the statistical foundations of {ospsuite.bmlm}:
+- Maximum likelihood estimation for parameter identification
+- Three-component likelihood construction (time profiles, hyperparameters, priors)
+- Error models for different data characteristics
+- Hierarchical modeling for population analysis
+- Flexible prior specification for incorporating knowledge
+
+Understanding these likelihood components helps you:
+- Choose appropriate error models for your data
+- Configure priors effectively
+- Interpret optimization results correctly
+- Troubleshoot convergence problems
+- Understand the mathematical basis of parameter estimates
+
+For practical application of these concepts, refer to:
+- [Configuration vignette](02-configuration.html) for setting up models and choosing distributions
+- [Optimization vignette](03-optimization.html) for running analyses, optimization algorithms, and strategies
+- [Introduction vignette](01-introduction.html) for complete workflow overview
+
+## References
+
+For more information on the statistical and computational methods:
+
+1. Bates, D. M., et al. (2015). Fitting Linear Mixed-Effects Models Using lme4. Journal of Statistical Software, 67(1), 1-48.
+
+2. Gelman, A., et al. (2013). Bayesian Data Analysis, Third Edition. CRC Press.
+
+3. Nocedal, J., & Wright, S. J. (2006). Numerical Optimization, Second Edition. Springer.
+
+4. Pinheiro, J. C., & Bates, D. M. (2000). Mixed-Effects Models in S and S-PLUS. Springer.
+
+These references provide deeper insights into Bayesian hierarchical modeling, maximum likelihood estimation, and numerical optimization algorithms.
