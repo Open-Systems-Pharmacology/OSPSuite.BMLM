@@ -459,7 +459,7 @@ updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
 #' @noRd
 evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
   if (is.null(loglikelihoods) || length(loglikelihoods) < 3) {
-    stop("strange loglikelihood")
+    stop(messages$errorStrangeLikelihood())
   }
   if (any(is.na(loglikelihoods))) {
     optimEnv$NAcounter <- optimEnv$NAcounter + 1
@@ -480,7 +480,7 @@ evaluateLogLikelihood <- function(loglikelihoods, optimEnv, outputDir) {
       object = failedValues,
       file = fileFailedValues
     )
-    if (optimEnv$iteration == 1) stop("First likelihood evaluation must not fail")
+    if (optimEnv$iteration == 1) stop(messages$errorFirstLikelihoodEvaluationFailed())
 
     return(optimEnv$failValue)
   } else {

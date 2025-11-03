@@ -246,10 +246,8 @@ updateOutputMappings <- function(projectConfiguration, snp, selectedPI, wb) {
       )
 
     if (any(is.na(dtOutputMappings$outputPathId))) {
-      stop(paste0(
-        "Missing identifier for path(s): ",
-        paste(dtOutputMappings[is.na(outputPathId)]$path, collapse = ","),
-        ". Please update Plotconfiguration 'Outputs'"
+      stop(messages$errorMissingOutputIdentifier(
+        dtOutputMappings[is.na(outputPathId)]$path
       ))
     }
 
@@ -323,7 +321,7 @@ updateFixedParameters <- function(linkedParameterDT, projectConfiguration, nameO
     xlsxCloneAndSet(wb = wbP, clonedSheet = "Template", sheetName = nameOfParameterIdentification, dt = modelParameters)
     openxlsx::saveWorkbook(wb = wbP, projectConfiguration$modelParamsFile, overwrite = TRUE)
   } else {
-    warning(paste("Sheet", nameOfParameterIdentification, "exists already in", projectConfiguration$modelParamsFile))
+    warning(messages$warningSheetExists(nameOfParameterIdentification, projectConfiguration$modelParamsFile))
   }
 }
 
@@ -416,7 +414,7 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
       )
     isEdited <- TRUE
   } else {
-    warning("sheet 'Prior' is already edited") # nolint
+    warning(messages$warningPriorSheetAlreadyEdited())
   }
 
   dtStartValuesHeaders <- loadStartValuesHeader(wb, overwrite)
@@ -428,7 +426,7 @@ configurePriors <- function(projectConfiguration, dataObserved, overwrite = FALS
     xlsxWriteData(wb = wb, sheetName = "IndividualStartValues", dt = dtStartValues) # nolint
     isEdited <- TRUE
   } else {
-    warning("StartValue sheet is already edited")
+    warning(messages$warningStartValueSheetAlreadyEdited())
   }
 
   if (isEdited) {

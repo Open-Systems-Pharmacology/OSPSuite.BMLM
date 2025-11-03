@@ -84,13 +84,9 @@ prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList
 
   # Check if all scenario names are in the default scenarios
   if (!all(scenarioNames %in% dtDataGroups$defaultScenario)) {
-    stop(
-      paste(
-        'There are scenarios which are not selected as "DefaultScenario" in sheet "DataGroups" "Plots.xlsx".',
-        "This is mandatory to connect data and simulations:",
-        paste(setdiff(scenarioNames, dtDataGroups$defaultScenario), collapse = ", ")
-      )
-    )
+    stop(messages$errorScenariosNotDefaultScenario(
+      setdiff(scenarioNames, dtDataGroups$defaultScenario)
+    ))
   }
 
   # Clean up observed data columns
@@ -110,13 +106,9 @@ prepareDataForMatch <- function(projectConfiguration, dataObserved, scenarioList
 
   # Check data class
   if (!all(dataObservedForMatch$dataClass == DATACLASS$tpIndividual)) {
-    stop(
-      paste(
-        'Please select only scenarios which are matched as "DefaultScenarios" in sheet "DataGroups" "Plots.xlsx" to individual data.',
-        "Check dataGroup",
-        paste(unique(dataObservedForMatch[dataClass != DATACLASS$tpIndividual]$group), collapse = ", ")
-      )
-    )
+    stop(messages$errorNonIndividualDataClass(
+      unique(dataObservedForMatch[dataClass != DATACLASS$tpIndividual]$group)
+    ))
   }
 
   return(dataObservedForMatch)
@@ -188,7 +180,7 @@ calculateUnitFactors <- function(dataObserved, dtOutputs, scenarioList) {
   dataObserved[, displayUnit := NULL]
 
   if (any(dataObserved$xValues < 0)) {
-    warning("data with time < 0 is outside simulation range will be ignored")
+    warning(messages$warningDataBeforeSimulationRange())
     dataObserved <- dataObserved[xValues >= 0]
   }
   if (any(dataObserved$xValues > dataObserved$endTimeSimulation)) {
@@ -197,7 +189,7 @@ calculateUnitFactors <- function(dataObserved, dtOutputs, scenarioList) {
         getColumnsForColumnType(dataObserved, "identifier"),
         "xValues", "endTimeSimulation", "timeUnit"
       ))))
-    warning("data with time outside simulation range will be ignored")
+    warning(messages$warningDataOutsideSimulationRange())
     dataObserved <- dataObserved[xValues <= endTimeSimulation]
   }
   dataObserved[, endTimeSimulation := NULL]
@@ -240,7 +232,7 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
     )
 
   if (nrow(dataObservedForMatch[yValues < lloq / 2]) > 0) {
-    warning("Set Data Values below lloq to lloq/2")
+    warning(messages$warningDataBelowLLOQ())
     writeTableToLog(dt = dataObservedForMatch[yValues < lloq, c("outputPathId", "group", "individualId", "xValues", "yValues", "lloq")])
     dataObservedForMatch[yValues < lloq, yValues := lloq / 2]
   }
@@ -249,7 +241,7 @@ addAndValidateErrorModel <- function(projectConfiguration = projectConfiguration
 
   if (nrow(tmp) > 0) {
     writeTableToLog(dt = tmp[, c("outputPathId", "group", "individualId", "xValues", "yValues", "lloq", "errorModel")])
-    stop("values <= 0 not allowed for this error model")
+    stop(messages$errorValuesNotAllowedForErrorModel())
   }
 
 
@@ -277,7 +269,7 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
     skipDescriptionRow = TRUE,
     alwaysCharacter = c("P1_type", "P2_type", "P3_type")
   )
-  if (nrow(dtPrior) == 0) stop("empty Prior sheet")
+  if (nrow(dtPrior) == 0) stop(messages$errorEmptyPriorSheet())
 
   checkmate::assertCharacter(dtPrior$name, any.missing = FALSE)
   checkmate::assertNames(dtPrior$valueMode, subset.of = unlist(PARAMETERTYPE))
@@ -353,16 +345,14 @@ validateAndLoadPriorDefinition <- function(projectConfiguration) {
   dtPrior[, probability := apply(.SD, 1, calculateProbability)]
 
   if (any(is.na(dtPrior$probability))) {
-    stop(paste(
-      "Probability of startvalue is NA, check priors ",
-      paste(dtPrior[is.na(probability)]$name, collapse = ", ")
+    stop(messages$errorProbabilityOfStartValueNA(
+      dtPrior[is.na(probability)]$name
     ))
   }
 
   if (any(dtPrior$probability == 0)) {
-    stop(paste(
-      "Start value outside distribution range, check",
-      paste(dtPrior[probability < 0 | probability > 1]$name, collapse = ", ")
+    stop(messages$errorStartValueOutsideDistribution(
+      dtPrior[probability < 0 | probability > 1]$name
     ))
   }
 
@@ -571,7 +561,7 @@ randomizeIndividualStartValues <-
       trials <- trials + 1
     }
     if (nNew > 0) {
-      stop(paste("Not possible to generate random startValues in boundarys for", indGroup$name[1]))
+      stop(messages$errorRandomStartValuesNotPossible(indGroup$name[1]))
     }
 
     # Check if all values are within the distribution range
@@ -580,7 +570,7 @@ randomizeIndividualStartValues <-
 
     if (any(is.na(probs)) | any(probs <= 0)) {
       writeTableToLog(indGroup[which(is.na(probs) | probs <= 0)])
-      stop(paste("There are start values outside the distribution range"))
+      stop(messages$errorStartValuesOutsideDistributionRange())
     }
 
     return(indGroup)
@@ -707,7 +697,7 @@ getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("P
   sheetName <- match.arg(sheetName)
 
   if (sheetName == "IndividualStartValues" & nrow(dtList$startValues) == 0) {
-    warning("No individual start values available")
+    warning(messages$warningNoIndividualStartValues())
     return(data.table())
   }
 
@@ -756,11 +746,7 @@ checkConsistencyWithDefinition <- function(dtDefinition,
       tmpInconsistent <- tmp[get(col) != get(paste0(col, ".", tableName))]
       if (nrow(tmpInconsistent) > 0) {
         print(tmpInconsistent)
-        warning(paste0(
-          "Sheet '", tableName, "' is not consistent with sheet 'ParameterDefinition' for column '",
-          col, "' for parameter(s): '", paste(tmpInconsistent$name, collapse = "', '"), ".",
-          " Settings defined in 'ParameterDefinition' are ignored!"
-        ))
+        warning(messages$warningInconsistentDefinition(tableName, col, tmpInconsistent$name))
       }
     }
   }
@@ -789,7 +775,7 @@ checkMinMaxValues <- function(dt) {
   tmpFailing <- dt[value > maxValue | value < minValue]
   if (nrow(tmpFailing) > 0) {
     writeTableToLog(tmpFailing)
-    stop("Some values do not satisfy the condition minValue <= value <= maxValue")
+    stop(messages$errorValuesNotSatisfyCondition())
   }
 
   if ("scaling" %in% names(dt)) {
@@ -799,7 +785,7 @@ checkMinMaxValues <- function(dt) {
 
     if (nrow(tmpFailing) > 0) {
       writeTableToLog(tmpFailing)
-      stop("Columns 'value', 'minValue', and 'maxValue' must be greater than 0, for Scaling log")
+      stop(messages$errorColumnsNotPositiveForLogScaling())
     }
   }
 
@@ -820,12 +806,8 @@ checkMinMaxValues <- function(dt) {
 #' @noRd
 checkDuplicates <- function(dt, identifierCols, sheetName) {
   if (any(duplicated(dt[, ..identifierCols]))) {
-    stop(paste0(
-      "Sheet ", sheetName, " must be unique in columns '",
-      paste(identifierCols, collapse = "', '"), "' ",
-      "\nCheck parameters with name: '",
-      paste(unique(dt[duplicated(dt[, ..identifierCols]), ]$name), collapse = "', '"), "'"
-    ))
+    duplicateNames <- unique(dt[duplicated(dt[, ..identifierCols]), ]$name)
+    stop(messages$errorDuplicateNames(sheetName, identifierCols, duplicateNames))
   }
 }
 

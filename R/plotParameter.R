@@ -111,7 +111,7 @@ plotDistributions <- function(dtList,
   xScale <- tolower(match.arg(xScale))
 
   if (nrow(dtList$startValues) == 0) {
-    stop("No distributed parameters available")
+    stop(messages$errorNoDistributedParameters())
   }
 
   plotData <- prepareDataForDistributionPlot(
@@ -204,7 +204,7 @@ plotBestVsStartParameter <- function(dtList,
 
 
   if (nrow(dtList$startValues) == 0) {
-    stop("No distributed parameters available")
+    stop(messages$errorNoDistributedParameters())
   }
 
   # Prepare data
@@ -270,7 +270,7 @@ plotParameterValuesVsPrior <- function(dtList,
 
   dtPrior <- dtList$prior[distribution != "flat"]
   if (nrow(dtPrior) == 0) {
-    stop("No parameters with prior information available")
+    stop(messages$errorNoParametersWithPrior())
   }
 
   plotData <- preparePlotDataParameterValues(
@@ -415,7 +415,7 @@ prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, 
   rangeLimits <- unique(dtList$startValues[, c("name", "categoricCovariate", "minValue", "maxValue")]) %>%
     setnames(old = c("minValue", "maxValue"), new = c("rangeMin", "rangeMax"))
   if (any(duplicated(rangeLimits[, c("name", "categoricCovariate")]))) {
-    stop("min and max Values must be unique for each group in startValues")
+    stop(messages$errorMinMaxValuesMustBeUnique())
   }
   plotData <- plotData %>%
     merge(rangeLimits,by = c("name", "categoricCovariate"))
@@ -438,9 +438,8 @@ prepareDataForDistributionPlot <- function(dtList, statusList, parameterFilter, 
     if (any(plotData$displayMin <= 0) || any(plotData$displayMax <= 0)){
       skippedParameters <- unique(plotData[displayMin <= 0 | displayMax <= 0]$name)
       plotData <- plotData[displayMin >0 & displayMax > 0,]
-      warning(sprintf('Skipping parameters with display ranges less than or equal to zero for log-scale display: %s',
-                      paste(skippedParameters, collapse = ", ")))
-      if (nrow(plotData) == 0) stop('No parameters left for log-scale display.')
+      warning(messages$warningSkippingParametersForLogScale(skippedParameters))
+      if (nrow(plotData) == 0) stop(messages$errorNoParametersForLogScale())
     }
   }
 
