@@ -257,60 +257,6 @@ Additionally, the package provides:
 
 **Caution:** The choice of prior distribution can significantly impact results, especially with limited data. Always check sensitivity to prior specifications.
 
-## Optimization Algorithm
-
-The package uses R's `optim()` function for parameter optimization, which implements several algorithms for function minimization.
-
-### Algorithm Overview
-
-The basic workflow is:
-
-1. **Parameter Transformation**: Transform parameters from their natural scale to an unconstrained optimization space
-2. **Objective Function Evaluation**:
-   - Update parameters in simulation models
-   - Run simulations for all scenarios
-   - Calculate log-likelihood components
-   - (Optionally) Perform internal optimization
-   - Return negative log-likelihood
-3. **Parameter Update**: Optimization algorithm updates parameters
-4. **Iteration**: Repeat steps 2-3 until convergence
-
-### Supported Optimization Methods
-
-**BFGS (Default):**
-- Quasi-Newton method
-- Uses gradient approximations
-- Generally efficient and robust
-- Good for smooth objective functions
-
-**Nelder-Mead:**
-- Simplex-based method
-- Derivative-free
-- More robust to non-smooth objectives
-- Can be slower than BFGS
-
-**CG (Conjugate Gradients):**
-- Useful for large parameter spaces
-- Lower memory requirements than BFGS
-- May be slower to converge
-
-**L-BFGS-B:**
-- Limited-memory BFGS with box constraints
-- Can explicitly handle parameter bounds
-- Good for large problems
-
-**SANN (Simulated Annealing):**
-- Global optimization method
-- Better at escaping local minima
-- Much slower than gradient-based methods
-
-### Convergence Criteria
-
-Optimization stops when one of the following is met:
-
-1. **Maximum iterations reached** (`maxit` in control parameters)
-2. **Relative tolerance satisfied**: Change in objective function falls below `reltol`
-3. **Absolute tolerance satisfied**: Objective function value falls below `abstol`
 
 ## Internal Optimization
 

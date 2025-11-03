@@ -343,7 +343,7 @@ This shows:
 
 ### 3. Residual Analysis
 
-Residuals are the differences between observed and predicted values, normalized by the model error. Good residuals should be randomly distributed around zero.
+Residuals are the differences between observed and predicted values, normalized by the model error. Good residuals should be normal distributed around zero.
 
 #### QQ Plot
 
@@ -528,12 +528,12 @@ myRun$exportIndividualValuesToConfigTable(
 - Use optimized values for subsequent analyses
 - Document fitted individual parameters
 
-### 4. Export Global Parameters
+### 4. Export Model Parameters
 
 Save global parameter values to a new sheet in model parameters configuration:
 
 ```{r echo=TRUE, eval=FALSE}
-myRun$exportGlobalsParametersToConfigTables(
+myRun$exportModelParametersToConfigTables(
   projectConfiguration = projectConfiguration,
   overwrite = FALSE
 )
@@ -625,7 +625,7 @@ myRun$exportIndividualResultsToPkml(
 
 **Solutions:**
 1. Increase `maxit` in control parameters
-2. Try a different optimization method (e.g., Nelder-Mead)
+2. Try a different optimization method
 3. Adjust parameter bounds in configuration
 4. Check starting values are reasonable
 5. Enable internal optimization if not already active

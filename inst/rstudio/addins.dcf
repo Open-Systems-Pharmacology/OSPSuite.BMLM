@@ -1,4 +1,4 @@
-Name: Add Template Workflow
+Name: Insert BMLM Template
 Description: Add template to currentworkflow
 Binding: insertTemplateText
 Interactive: false

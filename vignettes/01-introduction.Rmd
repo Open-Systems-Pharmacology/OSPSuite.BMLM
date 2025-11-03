@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
+```{r setup, echo=FALSE,warning=FALSE,message=FALSE}
 library(ospsuite.bmlm)
 ```
 
@@ -77,16 +77,7 @@ To use the add-in:
 
 ### Template Workflow
 
-The template provides a complete BMLM workflow that you can customize for your specific project:
-
-```{r, echo=FALSE}
-templatePath <- system.file("templates/codeTemplate.R", package = "ospsuite.bmlm")
-templateCode <- readLines(templatePath)
-
-cat(templateCode, sep = "\n")
-```
-
-This template includes:
+The template includes:
 
 - Configuration setup with snapshot loading
 - Prior configuration
@@ -112,10 +103,11 @@ This package provides several vignettes to help you get started and make the mos
 Here's a minimal example to get you started (assumes you have already set up a reporting framework project):
 
 ```{r, eval=FALSE}
-# Load your project configuration
-# projectConfiguration <- loadProjectConfiguration("path/to/project")
-# scenarioList <- loadScenarios(projectConfiguration)
-# dataObserved <- loadObservedData(projectConfiguration)
+# The workflow assumes the project configuration was initialized with the reporting engine 
+# and the following variables are defined
+# - projectConfiguration 
+# - scenarioList 
+# - dataObserved 
 
 # Add BMLM configuration
 projectConfiguration <- addBMLMPConfiguration(

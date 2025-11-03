@@ -32,7 +32,8 @@ Configuring your Bayesian Multilevel Model (BMLM) involves several key steps to 
 
 ### Step 1: Add the BMLM Configuration File
 
-Start by adding the BMLM configuration file to your project configuration. You can load a snapshot file that contains predefined parameters or, if `snapshotFile = NULL`, add the empty template.
+Start by adding the BMLM configuration file to your project configuration. 
+You can load a snapshot file of a PK-Sim Model with a parameter identification that contains predefined parameters or, if `snapshotFile = NULL`, add the empty template.
 
 ```{r, eval=FALSE, echo=TRUE}
 # Add BMLM configuration file and set up parameter identification from snapshot
@@ -95,7 +96,7 @@ The **ParameterDefinition** sheet is the primary sheet for configuring the param
 | **MinValue**            | The minimum allowable value for the parameter (mandatory).                                                         |
 | **MaxValue**            | The maximum allowable value for the parameter (mandatory).                                                         |
 | **Scaling**             | Indicates if the parameter should be log-transformed during optimization (set to "log") or kept linear (set to "linear"). |
-| **UseAsFactor**         | If TRUE (1), the fitted value is applied as a factor to all mapped parameters. If FALSE (0), the fitted value replaces the parameter value. |
+| **UseAsFactor**         | If TRUE (1), the fitted value is applied as a factor to all mapped parameters. If FALSE (0), the fitted value replaces the parameter value. Parameter defined as factors are not exported back to the reporting framework.|
 | **Comment**             | Additional comments or notes regarding the parameter.                                                              |
 
 ### Example Configuration
@@ -111,7 +112,7 @@ Here is an example of how a configuration might look in the **ParameterDefinitio
 ### Notes
 
 - **ValueMode**: Choose "global" for compound properties that don't vary between individuals. Choose "individual" for physiological parameters that vary in the population.
-- **Distribution**: Only required for individual parameters. Common choices include normal, lnorm_geomean (log-normal), and weibull distributions.
+- **Distribution**: Only required for individual parameters. Common choices include norm, lnorm_geomean (log-normal), and weibull distributions.
 - **CategoricCovariate**: Use this to model parameter distributions that differ by subgroups (e.g., males vs. females, different age groups).
 - **Scaling**: Log scaling is often appropriate for parameters that span multiple orders of magnitude.
 - **UseAsFactor**: Set to 1 when you want to scale existing parameter values rather than replace them completely.
@@ -190,7 +191,7 @@ The **Priors** sheet defines the prior distributions for parameters. This sheet 
 | **StartValue**                       | Initial value for the parameter.                                                                                     |
 | **MinValue**                         | Minimum limit for the parameter.                                                                                     |
 | **MaxValue**                         | Maximum limit for the parameter.                                                                                     |
-| **Distribution of Individual Values**| The distribution type for individual parameters (e.g., "lnorm_geomean", "normal").                                  |
+| **Distribution of Individual Values**| The distribution type for individual parameters (e.g., "lnorm_geomean", "norm").                                  |
 | **UseAsFactor**                      | If TRUE (1), the fitted value is applied as a factor.                                                               |
 | **Unit**                             | The unit of measurement.                                                                                             |
 | **Scaling**                          | Parameter scaling ("log" or "linear").                                                                               |
@@ -280,7 +281,7 @@ The **IndividualStartValues** sheet specifies the initial values for individual 
 
 **Solution**: Check that:
 - ParameterMappedPaths correctly references the model parameter paths
-- Scenarios column includes the relevant scenarios
+- Scenarios column includes the relevant scenarios or is empty
 - Parameter names match exactly between sheets
 
 ### Issue: Optimization fails to converge
