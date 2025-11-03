@@ -746,46 +746,106 @@ myRun$exportIndividualValuesToConfigTable(
 - Use optimized values for subsequent analyses
 - Document fitted individual parameters
 
-### 4. Export Global Parameters
+### 4. Export Model Parameters
 
-Save fitted global parameter values to model parameters configuration:
+Save fitted model parameters (global and hyperparameters) to configuration files:
 
 ```{r echo=TRUE, eval=FALSE}
-myRun$exportGlobalsParametersToConfigTables(
+myRun$exportModelParametersToConfigTables(
   projectConfiguration = projectConfiguration,
+  sheetName = NULL,  # Uses runName if NULL
   overwrite = FALSE
 )
 ```
 
 **What It Does:**
-- Exports all parameters with `ValueMode = "global"` from the optimization results
-- Creates a new sheet in the ModelParameters.xlsx file named `<runName>_global`
-- Includes fitted values for:
-  - Compound properties (e.g., lipophilicity, molecular weight)
-  - System parameters that are constant across individuals
-  - Any other global model parameters
-- The sheet follows the ModelParameters template format
-- Can be used to update simulations with optimized global parameters
+
+This function exports optimized model parameters to both ModelParameters.xlsx and Populations.xlsx files, creating comprehensive documentation of fitted values.
+
+**Exported Content:**
+
+1. **Global Parameters** (to ModelParameters.xlsx):
+   - Exports all parameters with `ValueMode = "global"`
+   - Creates sheet(s) named `<sheetName>_<covariate>_global`
+   - Includes:
+     - Compound properties (e.g., lipophilicity, molecular weight)
+     - System parameters constant across individuals
+     - Container path, parameter name, optimized value, and units
+
+2. **Hyperparameter Medians** (to ModelParameters.xlsx):
+   - Exports median values of individual parameter distributions
+   - Creates sheet(s) named `<sheetName>_<covariate>_median`
+   - Calculated as the 50th percentile of the fitted distribution
+   - Useful for creating representative individuals or typical simulations
+
+3. **Population Distribution Parameters** (to Populations.xlsx):
+   - Exports complete hyperparameter distributions
+   - Creates sheet(s) named `<sheetName>_<covariate>`
+   - Includes distribution type and all distribution parameters (e.g., mean, sd, geomean, geosd)
+   - Enables recreation of population variability in new simulations
 
 **Parameters:**
+
 - `projectConfiguration`: Your project configuration object
-- `overwrite`: Set to `TRUE` to replace existing sheet with same name (default: `FALSE`)
+- `sheetName`: Name for exported sheets (default: uses `runName`)
+- `overwrite`: Set to `TRUE` to replace existing sheets with same name (default: `FALSE`)
+
+**Categorical Covariates:**
+
+When parameters have categorical covariates (e.g., SEX), separate sheets are created for each covariate level:
+- `<sheetName>_Male_global`, `<sheetName>_Female_global`
+- `<sheetName>_Male_median`, `<sheetName>_Female_median`
+- `<sheetName>_Male`, `<sheetName>_Female` (in Populations.xlsx)
+
+**Important Notes:**
+
+- Parameters defined with `useAsFactor = TRUE` are **not exported** and will generate a warning
+- Parameters with `ValueMode = "outputError"` are excluded (error parameters)
+- All non-error parameters (global and individual) are processed
 
 **Use Cases:**
-- Apply optimized compound properties across all scenarios
-- Update baseline simulations with fitted global parameters
-- Compare pre- and post-optimization global parameter values
-- Document fitted global parameters for regulatory submissions
-- Share optimized compound-specific parameters with collaborators
 
-**Example Output Sheet:**
-The exported sheet contains columns like:
-- `ParameterPath`: Full path to parameter in model
-- `Value`: Optimized parameter value
-- `Unit`: Parameter unit
-- Additional scenario-specific information
+- **Global parameters**: Apply optimized compound properties across all scenarios
+- **Median parameters**: Create simulations with typical individual values
+- **Population distributions**: Generate new populations with fitted variability
+- **Documentation**: Preserve complete parameter estimates for regulatory submissions
+- **Comparison**: Evaluate changes in parameter estimates across different optimization runs
 
-**Note:** Only parameters defined as `ValueMode = "global"` in the BMLM configuration are exported. Individual parameters and hyperparameters are handled by other export functions.
+**Example Output Structure:**
+
+For a model with clearance (CL) varying by sex and lipophilicity as global:
+
+*ModelParameters.xlsx sheets:*
+- `myRun_global`: Contains lipophilicity value
+- `myRun_Male_median`: Contains median CL for males
+- `myRun_Female_median`: Contains median CL for females
+
+*Populations.xlsx sheets:*
+- `myRun_Male`: Distribution parameters for CL in males (e.g., geomean, geosd)
+- `myRun_Female`: Distribution parameters for CL in females
+
+**Complete Export Example:**
+
+```{r echo=TRUE, eval=FALSE}
+# Export with default sheet name (uses runName)
+myRun$exportModelParametersToConfigTables(
+  projectConfiguration = projectConfiguration
+)
+
+# Export with custom sheet name
+myRun$exportModelParametersToConfigTables(
+  projectConfiguration = projectConfiguration,
+  sheetName = "OptimRun_20231103",
+  overwrite = FALSE
+)
+
+# Overwrite existing sheets
+myRun$exportModelParametersToConfigTables(
+  projectConfiguration = projectConfiguration,
+  sheetName = "FinalFit",
+  overwrite = TRUE
+)
+```
 
 ### 5. Export Final Values to BMLM Configuration
 
@@ -848,7 +908,7 @@ myRun$checkCorrelations()
 myRun$exportFinalValuesToBMLConfigTable(projectConfiguration)
 myRun$exportResultAsPopulation(projectConfiguration, addAsNewScenarios = TRUE)
 myRun$exportIndividualValuesToConfigTable(projectConfiguration)
-myRun$exportGlobalsParametersToConfigTables(projectConfiguration)
+myRun$exportModelParametersToConfigTables(projectConfiguration)
 
 # 6. Optional: Export specific individuals to PKML
 myRun$exportIndividualResultsToPkml(
