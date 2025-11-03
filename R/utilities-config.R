@@ -567,7 +567,7 @@ createStartValues <- function(dtDefinition, dataObserved) {
       dplyr::select(dplyr::any_of(c("individualId", covariates))) %>%
       unique() %>%
       data.table::setDT()
-    tmpStartValues <- cbind(tmpStartValues, dtDefinition[iRow, c("name", "minValue", "maxValue", "scaling", "useAsFactor")])
+    tmpStartValues <- cbind(tmpStartValues, dtDefinition[iRow, c("name", "minValue", "maxValue", "scaling", "useAsFactor","unit")])
 
     if (!is.null(covariates)) {
       tmpStartValues[, categoricCovariate := paste(.SD), by = c("individualId", "name"), .SDcols = covariates]

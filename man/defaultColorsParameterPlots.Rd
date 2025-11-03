@@ -28,3 +28,19 @@ customColors <- defaultColorsParameterPlots()
 print(customColors)
 }
 }
+\seealso{
+Other plotting: 
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotConvergence}()},
+\code{\link{plotCorrelations}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotParameterValuesVsPrior}()},
+\code{\link{plotPredictedVsObserved}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsHistogram}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

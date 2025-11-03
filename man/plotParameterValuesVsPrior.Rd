@@ -30,3 +30,19 @@ An invisible ggplot object visualizing the parameter values vs prior.
 \description{
 This function generates a plot comparing parameter values against their prior distributions.
 }
+\seealso{
+Other plotting: 
+\code{\link{defaultColorsParameterPlots}()},
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotConvergence}()},
+\code{\link{plotCorrelations}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotPredictedVsObserved}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsHistogram}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

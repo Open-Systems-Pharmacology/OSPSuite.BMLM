@@ -7,7 +7,15 @@
 addBMLMWorkflowTemplate()
 }
 \description{
-Per default the workflow template of the package is loaded.
-To customize it save the file with name "template_workflow.R" in your template directory and
-set the path to the template via option \verb{options(OSPSuite.RF.PathForWorkflowTemplate = 'myTemplateDirectory'})
+Opens the workflow template as new document
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMPConfiguration}()},
+\code{\link{configurePriors}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{getCurrentConfigTable}()},
+\code{\link{loadListsForRun}()},
+\code{\link{readIdentificationParameterFromSnapshot}()}
+}
+\concept{configuration}

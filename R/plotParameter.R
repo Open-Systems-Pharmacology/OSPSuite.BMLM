@@ -36,10 +36,10 @@ plotParameterLimits <-
       statusList = statusList
     )
 
-    mapping <- aes(y = statusParam, color = status, shape = status)
+    mapping <- aes(y = statusParam,  fill = status, shape = status)
 
     # limits of global parameter
-    plotObject <- ggplot(dataList$globals) +
+    plotObject <- ggplotWithWatermark(dataList$globals) +
       suppressWarnings(geom_point(utils::modifyList(mapping, aes(x = name)))) +
       facet_wrap(vars(valueMode), ncol = 2, scales = "free_y")
     plotObject <- adjustLimitsPlot(plotObject = plotObject,
@@ -56,7 +56,7 @@ plotParameterLimits <-
 
     for (facetsToPlot in facetToPlotList) {
       # Create the plot using the subset
-      plotObject <- ggplot(dataList$individuals[label %in% facetsToPlot]) +
+      plotObject <- ggplotWithWatermark(dataList$individuals[label %in% facetsToPlot]) +
         suppressWarnings(geom_point(utils::modifyList(mapping, aes(x = xlabel)))) +
         facet_wrap(vars(label), ncol = nCols, scales = "free_y")
 
@@ -224,7 +224,7 @@ plotBestVsStartParameter <- function(dtList,
   plotList <- list()
   for (facetsToPlot in facetsToPlotList) {
     # Create the  plot
-    plotObject <- ggplot(data  = plotData[label %in% facetsToPlot],
+    plotObject <- ggplotWithWatermark(data  = plotData[label %in% facetsToPlot],
                          mapping = aes(x = startValue, y = bestValue)) +
      geom_point(shape = 'circle') +
       geom_line(data = identitylineData,mapping = aes(x = x, y = y)) +
@@ -282,7 +282,7 @@ plotParameterValuesVsPrior <- function(dtList,
   functionLines <- createPriorLineData(dtPrior)
 
   plotObject <-
-    ggplot() +
+    ggplotWithWatermark() +
     geom_line(data = functionLines, aes(x = x, y = y)) +
     geom_vline(
       data = merge(plotData,
@@ -295,6 +295,10 @@ plotParameterValuesVsPrior <- function(dtList,
     labs(
       y = "density",
       y = titeltxt
+    ) +
+    scale_color_manual(
+      values = colorScalingVector,
+      breaks = names(colorScalingVector)
     ) +
     theme(
       legend.direction = "horizontal",
@@ -363,14 +367,10 @@ adjustLimitsPlot <- function(plotObject,colorScalingVector,titeltxt){
   plotObject <-
     plotObject +
     geom_hline(yintercept = c(0, 1)) +
-    scale_color_manual(
-      values = colorScalingVector
-    ) +
     coord_flip() +
     labs(
       x = "",
       y = "",
-      color = "",
       shape = "",
       title = titeltxt
     ) +
@@ -378,8 +378,12 @@ adjustLimitsPlot <- function(plotObject,colorScalingVector,titeltxt){
       breaks = seq(0, 1, by = 0.25),
       labels = c("min", rep("", 3), "max")
     ) +
-    layerWatermark() +
     theme(legend.direction = "horizontal")
+
+  plotObject <- customizeLegend(plotObject = plotObject,
+                                colorScalingVector = colorScalingVector,
+                                aesthetics = c( "fill", "shape"))
+  return(plotObject)
 }
 #' Prepare Data for Distribution Plot
 #'
@@ -465,7 +469,7 @@ generateParameterDistributionPlot <- function(dtValuesSubset, hyperParameterSubs
   )
 
   # Create the plot for the current subset
-  plotObject <- ggplot(data = dtValuesSubset) +
+  plotObject <- ggplotWithWatermark(data = dtValuesSubset) +
     geom_point(mapping = aes(x = statusValue, y = ecdf, fill = status, shape = status)) +
     labs(
       x = "parameter values",
@@ -479,8 +483,7 @@ generateParameterDistributionPlot <- function(dtValuesSubset, hyperParameterSubs
 
   plotObject <- plotObject +
     geom_line(data = lineData, aes(x = x, y = value, color = status, linetype = status), linewidth = 1) +
-    facet_wrap(vars(label), scales = "free_x", ncol = nCols) +
-    layerWatermark()
+    facet_wrap(vars(label), scales = "free_x", ncol = nCols)
 
   plotObject <- customizeLegend(plotObject, colorScalingVector)
 
@@ -660,14 +663,18 @@ customizeLegend <- function(plotObject, colorScalingVector,
   if ("linetype" %in% aesthetics) {
     plotObject <- plotObject +
       scale_linetype_manual(
-        values = c("dotted", "solid", "twodash"),
+        values = c(current = "dotted",
+                   start = "solid",
+                   best = "twodash"),
         breaks = names(colorScalingVector)
       )
   }
   if ("shape" %in% aesthetics) {
     plotObject <- plotObject +
       scale_shape_manual(
-        values = c("square filled", "triangle filled", "circle filled"),
+        values = c(current = "square filled",
+                   start = "triangle filled",
+                   best = "circle filled"),
         breaks = names(colorScalingVector)
       )
   }

@@ -208,10 +208,9 @@ plotResidualsDistribution <- function(filteredData, ...) {
   setorderv(filteredData,'resNorm')
   filteredData[, ecdf := seq_len(.N) / .N, by = c('scenario', 'group')]
 
-  plotObject <- ggplot(filteredData) +
+  plotObject <- ggplotWithWatermark(filteredData) +
     geom_point(aes(x = resNorm, y = ecdf,shape = isCensored)) +
     geom_function(fun = pnorm) +
-    layerWatermark() +
     labs(
       x = getErrormodelLabel(filteredData$errorModel[1]),
       y = "cumulative proportion"

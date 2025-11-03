@@ -18,3 +18,19 @@ A ggplot object for the histogram plot.
 \description{
 This function generates histogram plots of the residuals to visualize their distribution for a single outputPathId.
 }
+\seealso{
+Other plotting: 
+\code{\link{defaultColorsParameterPlots}()},
+\code{\link{plotBestVsStartParameter}()},
+\code{\link{plotConvergence}()},
+\code{\link{plotCorrelations}()},
+\code{\link{plotDistributions}()},
+\code{\link{plotParameterLimits}()},
+\code{\link{plotParameterValuesVsPrior}()},
+\code{\link{plotPredictedVsObserved}()},
+\code{\link{plotPredictedVsTime}()},
+\code{\link{plotResidualsAsQQ}()},
+\code{\link{plotResidualsDistribution}()},
+\code{\link{plotResidualsVsTime}()}
+}
+\concept{plotting}

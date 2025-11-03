@@ -30,3 +30,10 @@ A list containing:
 This function updates parameter values for a given scenario, runs the scenario using the specified simulation options,
 and retrieves predictions based on the scenario results.
 }
+\seealso{
+Other optimization: 
+\code{\link{calculateLogLikelihood}()},
+\code{\link{evaluateInitialValues}()},
+\code{\link{optimizeParameters}()}
+}
+\concept{optimization}

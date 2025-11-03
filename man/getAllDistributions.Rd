@@ -12,3 +12,10 @@ A vector of unique distribution names.
 \description{
 This function retrieves all distributions available for prior definitions and hyperprameter.
 }
+\seealso{
+Other distribution: 
+\code{\link{computeStatFunction}()},
+\code{\link{getDistributionParameters}()},
+\code{\link{lognormal_geomean}}
+}
+\concept{distribution}

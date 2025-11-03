@@ -52,9 +52,9 @@ test_that("getConvergenceColumnHeaders handles NULL displayVariablesIndx", {
 
 # Unit tests for selectIterations
 test_that("selectIterations selects correct number of points", {
-  selectedData <- selectIterations(sampleData, nPointsAvailable = 10, nPoints = 5, selectionMode = "first")
-  expect_equal(nrow(selectedData), 5)
-  expect_equal(selectedData$iteration, 1:5)  # First 5 iterations when nPoints is 5
+  selectedData <- selectIterations(split(sampleData,by = 'event'), nPointsAvailable = 10, nPoints = 5, selectionMode = "first")
+  expect_equal(nrow(selectedData$best), 5)
+  expect_equal(selectedData$best$iteration, which(sampleData$event == 'best')[seq(1,5)])  # First 5 iterations when nPoints is 5
 })
 
 test_that("selectIterations throws an error for unknown selection mode", {
@@ -63,23 +63,26 @@ test_that("selectIterations throws an error for unknown selection mode", {
 })
 
 test_that("selectIterations selects correct points using 'last' mode", {
-  selectedData <- selectIterations(sampleData, nPointsAvailable = 10, nPoints = 5, selectionMode = "last")
-  expect_equal(nrow(selectedData), 5)
-  expect_equal(selectedData$iteration, 6:10)
+  selectedData <- selectIterations(split(sampleData,by = 'event'), nPointsAvailable = 10, nPoints = 5, selectionMode = "last")
+  expect_equal(nrow(selectedData$best), 5)
+  expect_equal(selectedData$best$iteration, which(sampleData$event == 'best')[seq(6,10)])
 })
 
 test_that("selectIterations selects correct points using 'random' mode", {
+  nPointsAvailable = nrow(sampleData[event == 'best'])
   set.seed(123)  # Set seed for reproducibility
-  selectedData <- selectIterations(sampleData, nPointsAvailable = 10, nPoints = 5, selectionMode = "random")
-  expect_equal(nrow(selectedData), 5)
-  expect_contains(selectedData$iteration ,expected =  c(1,10))  # Ensure start and end are included
-  expect_true(dplyr::n_distinct(selectedData$iteration) ==  5)  # Ensure points ar unique
+  selectedData <- selectIterations(split(sampleData,by = 'event'), nPointsAvailable = nPointsAvailable,
+                                   nPoints = 5, selectionMode = "random")
+  expect_equal(nrow(selectedData$best), 5)
+  expect_contains(selectedData$best$iteration ,expected =  c(1,10))  # Ensure start and end are included
+  expect_true(dplyr::n_distinct(selectedData$best$iteration) ==  5)  # Ensure points ar unique
 })
 
 # Test for edge cases
 test_that("selectIterations returns all nPoints exceeds nPointsAvailable", {
-  selectedData <- selectIterations(sampleData, nPointsAvailable = 10, nPoints = 20, selectionMode = "first")
-  expect_equal(nrow(selectedData), 10)
+  nPointsAvailable = nrow(sampleData[event == 'best'])
+  selectedData <- selectIterations(split(sampleData,by = 'event'), nPointsAvailable = nPointsAvailable, nPoints = 20, selectionMode = "first")
+  expect_equal(nrow(selectedData$best), nPointsAvailable)
 
 })
 

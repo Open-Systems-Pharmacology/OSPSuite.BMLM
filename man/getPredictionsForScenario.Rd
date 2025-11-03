@@ -32,3 +32,9 @@ This function generates predictions for a set of scenarios based on observed dat
 The function validates the input names, loops through each scenario to generate predictions, and combines all results into a single data.table.
 It also handles individual matching if 'ObservedIndividualId' is present in the scenario results.
 }
+\seealso{
+Other data-preparation: 
+\code{\link{prepareDataForMatch}()},
+\code{\link{preparePopulationForCorrelationCheck}()}
+}
+\concept{data-preparation}

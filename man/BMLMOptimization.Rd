@@ -9,9 +9,6 @@ An object storing configuration used project-wide
 This class encapsulates the functionality for performing BMLM optimization.
 It manages the configuration, output directories, logging, and optimization processes.
 }
-\section{Super class}{
-\code{\link[ospsuite.utils:Printable]{ospsuite.utils::Printable}} -> \code{BMLMOptimization}
-}
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
@@ -34,7 +31,7 @@ run name, scenario list, observed data, and random seed.}
 \item \href{#method-BMLMOptimization-exportIndividualResultsToPkml}{\code{BMLMOptimization$exportIndividualResultsToPkml()}}
 \item \href{#method-BMLMOptimization-exportResultAsPopulation}{\code{BMLMOptimization$exportResultAsPopulation()}}
 \item \href{#method-BMLMOptimization-exportIndividualValuesToConfigTable}{\code{BMLMOptimization$exportIndividualValuesToConfigTable()}}
-\item \href{#method-BMLMOptimization-exportGlobalsParametersToConfigTables}{\code{BMLMOptimization$exportGlobalsParametersToConfigTables()}}
+\item \href{#method-BMLMOptimization-exportModelParametersToConfigTables}{\code{BMLMOptimization$exportModelParametersToConfigTables()}}
 \item \href{#method-BMLMOptimization-exportHyperParametersToConfigTables}{\code{BMLMOptimization$exportHyperParametersToConfigTables()}}
 \item \href{#method-BMLMOptimization-exportFinalValuesToBMLConfigTable}{\code{BMLMOptimization$exportFinalValuesToBMLConfigTable()}}
 \item \href{#method-BMLMOptimization-getCurrentConfigTable}{\code{BMLMOptimization$getCurrentConfigTable()}}
@@ -181,12 +178,13 @@ This function exports global parameters from the provided data table to a new sh
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-BMLMOptimization-exportGlobalsParametersToConfigTables"></a>}}
-\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportGlobalsParametersToConfigTables}{}}}
-\subsection{Method \code{exportGlobalsParametersToConfigTables()}}{
+\if{html}{\out{<a id="method-BMLMOptimization-exportModelParametersToConfigTables"></a>}}
+\if{latex}{\out{\hypertarget{method-BMLMOptimization-exportModelParametersToConfigTables}{}}}
+\subsection{Method \code{exportModelParametersToConfigTables()}}{
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportGlobalsParametersToConfigTables(
+\if{html}{\out{<div class="r">}}\preformatted{BMLMOptimization$exportModelParametersToConfigTables(
   projectConfiguration,
+  sheetName = NULL,
   overwrite = FALSE
 )}\if{html}{\out{</div>}}
 }
@@ -196,12 +194,10 @@ This function exports global parameters from the provided data table to a new sh
 \describe{
 \item{\code{projectConfiguration}}{A ProjectConfiguration object containing project configuration details, including the path to the model parameters file.}
 
+\item{\code{sheetName}}{A string representing the name of the exported sheets. If NULL The name of the run (myRun$runName) is sued}
+
 \item{\code{overwrite}}{A boolean indicating whether to overwrite an existing sheet.
 This function exports global parameters from the provided data table to a new sheet in the model parameters Excel file.}
-
-\item{\code{dtList}}{A list of data.tables containing the prior values.}
-
-\item{\code{runName}}{A string representing the name of the run.}
 }
 \if{html}{\out{</div>}}
 }

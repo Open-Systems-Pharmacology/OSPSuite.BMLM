@@ -31,3 +31,13 @@ NULL (invisible), as the function performs side effects by modifying the configu
 This function reads specified identification parameters from a snapshot file and updates the BMLM project configuration accordingly.
 It performs checks to ensure the validity of the snapshot and the specified parameter identification.
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMPConfiguration}()},
+\code{\link{addBMLMWorkflowTemplate}()},
+\code{\link{configurePriors}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{getCurrentConfigTable}()},
+\code{\link{loadListsForRun}()}
+}
+\concept{configuration}

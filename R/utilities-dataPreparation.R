@@ -658,21 +658,24 @@ validateAndLoadMappedPaths <- # nolint cyclocomp
               stopIfNotFound = FALSE
             )
           if (is.null(par)) {
-            factor <- NA
+            # parameter does not exist in this scenario
+            multiplicator <- NA
           } else if (as.logical(dp$useAsFactor)) {
-            factor <- par$value
+            # for factors multiplicator returns the base parameter value of the scenario model
+            multiplicator <- par$value
           } else {
-            factor <-
+            # for basolut fit parameter multiplicator returns the unit factor to the base unit
+            multiplicator <-
               ospsuite::toBaseUnit(
                 quantityOrDimension = par$dimension,
                 values = 1,
                 unit = dp$unit
               )
           }
-          dtMappedPaths[linkedParameters == dp$linkedParameters, (scenarioName) := as.numeric(factor)]
+          dtMappedPaths[linkedParameters == dp$linkedParameters, (scenarioName) := as.numeric(multiplicator)]
 
           # set all parameters as population parameters
-          if (!(dp$linkedParameters %in% scenario$population$allParameterPaths) & !is.na(factor)) {
+          if (!(dp$linkedParameters %in% scenario$population$allParameterPaths) & !is.na(multiplicator)) {
             scenario$population$setParameterValues(
               parameterOrPath = dp$linkedParameters,
               values = rep(par$value, scenario$population$count)
@@ -727,7 +730,7 @@ getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("P
                          newTable = dtOld
   )
 
-  return(dtNew)
+  return(dtNew[-1,])
 }
 
 # auxiliaries --------------

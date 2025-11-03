@@ -18,3 +18,10 @@ NULL This function does not return any value but logs information to the console
 This function evaluates initial values for a given project configuration by running simulations for specified scenarios.
 It logs the progress and results to both the console and a designated log file.
 }
+\seealso{
+Other optimization: 
+\code{\link{calculateLogLikelihood}()},
+\code{\link{optimizeParameters}()},
+\code{\link{processScenario}()}
+}
+\concept{optimization}

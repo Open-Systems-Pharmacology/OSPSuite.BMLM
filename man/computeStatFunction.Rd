@@ -54,3 +54,10 @@ computeStatFunction(
 )
 
 }
+\seealso{
+Other distribution: 
+\code{\link{getAllDistributions}()},
+\code{\link{getDistributionParameters}()},
+\code{\link{lognormal_geomean}}
+}
+\concept{distribution}

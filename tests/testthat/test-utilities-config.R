@@ -5,7 +5,7 @@
 test_that("addBMLMPConfiguration works correctly with out snapshotFile", {
   result <- addBMLMPConfiguration(
     projectConfiguration = projectConfiguration,
-    nameOfParameterIdentfication = "TestIdentification",
+    nameOfParameterIdentification = "TestIdentification",
     snapshotFile = NULL,
     overwrite = TRUE
   )
@@ -17,7 +17,7 @@ test_that("addBMLMPConfiguration works correctly with out snapshotFile", {
 
 # Unit tests for addBMLMPConfiguration
 test_that("addBMLMPConfiguration works correctly with out snapshotFile", {
-  addBMLMPConfiguration(
+  result <- addBMLMPConfiguration(
     projectConfiguration = projectConfiguration,
     nameOfParameterIdentification = "PI",
     snapshotFile = system.file(
@@ -27,7 +27,6 @@ test_that("addBMLMPConfiguration works correctly with out snapshotFile", {
       mustWork = TRUE
     )
   )
-
 
   expect_s3_class(result, "ProjectConfiguration")
   expect_true("bMLMConfigurationFile" %in% names(result$addOns))
@@ -47,7 +46,7 @@ test_that("configurePriors updates prior parameters", {
 
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dtPrior <- xlsxReadData(wb = wb, sheetName = "Prior")
-  expect_length(nrow(dtPrior), 8)
+  expect_equal(nrow(dtPrior), 8)
 })
 
 # Unit tests for updateFixedParameters
@@ -58,7 +57,7 @@ test_that("updateFixedParameters adds fixed parameters correctly", {
   updateFixedParameters(
     linkedParameterDT = data.table(name = "FixedParam", isFixed = TRUE, startValue = 1, unit = "unit"),
     projectConfiguration = projectConfiguration,
-    nameOfParameterIdentfication = "TestIdentification"
+    nameOfParameterIdentification = "TestIdentification"
   )
 
   # Check if the new sheet was created

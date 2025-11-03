@@ -23,3 +23,13 @@ A data.table containing the current configuration values.
 \description{
 This function retrieves the current configuration table from the specified sheet in the Excel workbook.
 }
+\seealso{
+Other configuration: 
+\code{\link{addBMLMPConfiguration}()},
+\code{\link{addBMLMWorkflowTemplate}()},
+\code{\link{configurePriors}()},
+\code{\link{convertVersionBMLM}()},
+\code{\link{loadListsForRun}()},
+\code{\link{readIdentificationParameterFromSnapshot}()}
+}
+\concept{configuration}

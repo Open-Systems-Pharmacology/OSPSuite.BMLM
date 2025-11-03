@@ -54,3 +54,10 @@ e.g. dlnorm_geomean(geomean, geosd, x = x) calls dlnorm(logmean = log(geomean), 
 }
 }
 
+\seealso{
+Other distribution: 
+\code{\link{computeStatFunction}()},
+\code{\link{getAllDistributions}()},
+\code{\link{getDistributionParameters}()}
+}
+\concept{distribution}

@@ -144,7 +144,8 @@ mockManualEditingsUpdateParameterDefinition <- function(projectConfiguration) {
   dt <- xlsxReadData(wb = wb, sheetName = "ParameterDefinition", skipDescriptionRow = FALSE)
   dt[grep("Ontogeny", name), `:=`(
     valueMode = PARAMETERTYPE$individual,
-    distribution = "lnorm_geomean"
+    distribution = "lnorm_geomean",
+    useAsFactors = 0
   )]
 
   xlsxWriteData(wb = wb, sheetName = "ParameterDefinition", dt = dt)
@@ -157,7 +158,7 @@ mockManualEditingsUpdateParameterDefinition <- function(projectConfiguration) {
 mockManualEditingsUpdatePriorDefinition <- function(projectConfiguration) {
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dt <- xlsxReadData(wb = wb, sheetName = "Prior", skipDescriptionRow = FALSE)
-  dt[!grep("geomean", hyperParameter)]
+  dt <- dt[!grep("geomean", hyperParameter)]
   dt[grep("geosd", hyperParameter), `:=`(
     maxValue = 1.4
   )]
