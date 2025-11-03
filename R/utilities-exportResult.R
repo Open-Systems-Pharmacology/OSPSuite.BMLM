@@ -61,7 +61,7 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
       melt(value.name = 'multiplicator',variable.name = 'scenario',measure.vars = scenarios)
     dtAdd <- unique(dtAdd[,!c('scenario'),with = FALSE])
     if (any(duplicated(dtAdd$linkedParameters))){
-      stop('Export not possible. There are ambiguous values.')
+      stop(messages$errorExportAmbiguousValues())
     }
     dtAdd[useAsFactor == 1,value := value*multiplicator]
 
@@ -241,7 +241,7 @@ exportModelParametersToConfigTables <- function(projectConfiguration,dtList,shee
   tmp <- dtList$prior[useAsFactor == TRUE,c("name")] %>%
     unique()
   if (nrow(tmp) > 0){
-    warning("Parameters defined with `useAsFactors = TRUE` are not exported. Please check", paste(tmp$name,collapse=', '))
+    warning(messages$warningFactorParametersNotExported(tmp$name))
   }
 
   dtExport = dtList$prior[valueMode != PARAMETERTYPE$outputError &
@@ -292,7 +292,7 @@ addExportSheet <- function(wb,dt,sheetName,covariate,overwrite,suffix, toModelPa
   sheetName <- paste(sheetNameParts[trimws(sheetNameParts) !=''],collapse = '_')
 
   if (sheetName %in% wb$sheet_names & !overwrite) {
-    stop(paste(sheetName, "already exists. Please set overwrite to `TRUE` if you want to overwrite existing values."))
+    stop(messages$errorSheetAlreadyExists(sheetName))
   }
 
   message(paste("export parameters to",sheetName))

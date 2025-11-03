@@ -36,7 +36,7 @@ plotCorrelations <- function(dtList,
   checkmate::assertDouble(pValueCut,lower = 0,upper = 1,any.missing = FALSE,len = 1)
 
   if (nrow(dtList$startValues) == 0) {
-    stop("No distributed parameters available")
+    stop(messages$errorNoDistributedParameters())
   }
 
   plotData <- preparePlotDataParameterValues(

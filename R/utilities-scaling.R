@@ -13,7 +13,7 @@ getScaleFunction <- function(scalingMethod) {
   } else if (scalingMethod == SCALINGMETHOD$hardBounds) {
     scaleWithinBounds
   } else {
-    stop("unknown scaling method")
+    stop(messages$errorUnknownScalingMethod())
   }
 }
 " Get Inverse Scaling Function
@@ -31,7 +31,7 @@ getUnscaleFunction <- function(scalingMethod) {
   } else if (scalingMethod == SCALINGMETHOD$hardBounds) {
     unscaleFromBounds
   } else {
-    stop("unknown scaling method")
+    stop(messages$errorUnknownScalingMethod())
   }
 }
 #' Prepare Input Data

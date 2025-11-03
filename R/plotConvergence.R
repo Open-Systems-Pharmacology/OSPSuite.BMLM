@@ -98,7 +98,7 @@ calculateConvergenceMetrics <- function(dt) {
 
   requiredCols <- c("logTimeProfile", "logHyperParameter", "logPrior", "NAcounter", "outsideRangeCounter", "iteration")
   if (!all(requiredCols %in% names(dt))) {
-    stop("Convergence table must contain the following columns: ", paste(requiredCols, collapse = ", "))
+    stop(messages$errorConvergenceTableMissingColumns(requiredCols))
   }
 
   dt[, objectiveValue := -(logTimeProfile + logHyperParameter + logPrior)]
@@ -162,7 +162,7 @@ selectIterations <- function(dtConvergenceList, nPointsAvailable, nPoints, selec
                                            replace = FALSE),
                                     nPointsAvailable)),
                     last = seq(1, nPoints) + nPointsAvailable - nPoints,
-                    stop('unknown sectionMode'))]
+                    stop(messages$errorUnknownSectionMode()))]
     if (!is.null(dtConvergenceList$restart)){
       dtConvergenceList$restart <- dtConvergenceList$restart[
         iteration >= min(dtConvergenceList$best$iteration) &

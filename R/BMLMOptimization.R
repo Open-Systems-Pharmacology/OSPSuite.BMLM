@@ -45,7 +45,7 @@ BMLMOptimization <- R6::R6Class(
                           seed = 1234) {
       # Check BMLM Configuration
       if (is.null(projectConfiguration$addOns$bMLMConfigurationFile)) {
-        stop("Project configuration has no BMLM Configuration attached!")
+        stop(messages$errorNoBMLMConfiguration())
       }
       checkmate::assertFileExists(projectConfiguration$addOns$bMLMConfigurationFile)
 
@@ -60,10 +60,8 @@ BMLMOptimization <- R6::R6Class(
       # Initialize data list
       private$scenarioList <- scenarioList
       if (any(lapply(scenarioList, "getElement", "scenarioType") == "Individual")) {
-        stop(paste("Please use only scenarios for virtual twin populations! Check",
-          paste(names(scenarioList)[lapply(scenarioList, "getElement", "scenarioType") == "Individual"]),
-          collapse = ", "
-        ))
+        invalidScenarios <- names(scenarioList)[lapply(scenarioList, "getElement", "scenarioType") == "Individual"]
+        stop(messages$errorOnlyVirtualTwinPopulations(invalidScenarios))
       }
 
 
@@ -796,8 +794,7 @@ BMLMOptimization <- R6::R6Class(
                                  startInBackground = TRUE,
                                  ...) {
       if (private$status == RUNSTATUS$running) {
-        stop("Status is running!
-             Please check if a background job is still running, otherwise reset status with 'cleanUpStatus()'")
+        stop(messages$errorStatusIsRunning())
       }
       scalingMethod <- match.arg(scalingMethod)
       scalingMethod <- unname(unlist(scalingMethod))
@@ -964,7 +961,7 @@ BMLMOptimization <- R6::R6Class(
             asReload <- FALSE
             return(asReload)
           } else {
-            stop("Execution stopped by user.")
+            stop(messages$errorExecutionStoppedByUser())
           }
         }
 
