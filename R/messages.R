@@ -86,14 +86,6 @@ messages$warningNoIndividualStartValues <- function() {
   "No individual start values available"
 }
 
-messages$warningInvalidProbability <- function(parameterNames) {
-  paste0(
-    "Invalid probability for parameters: ",
-    paste(parameterNames, collapse = ", "),
-    ". Probability must be between 0 and 1"
-  )
-}
-
 messages$warningInconsistentDefinition <- function(tableName, col, parameterNames) {
   paste0(
     "Sheet '", tableName, "' is not consistent with sheet 'ParameterDefinition' for column '",
@@ -161,14 +153,6 @@ messages$errorUnknownScalingMethod <- function() {
 }
 
 # Config Messages ----
-
-messages$errorUnsupportedModelParametersExtension <- function(fileExtension, supportedExtensions) {
-  paste0(
-    "Model parameters file extension '", fileExtension, 
-    "' is not supported. Supported extensions are: ", 
-    paste(supportedExtensions, collapse = ", ")
-  )
-}
 
 messages$errorMissingOutputIdentifier <- function(paths) {
   paste0(
