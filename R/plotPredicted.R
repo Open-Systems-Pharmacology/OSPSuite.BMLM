@@ -155,11 +155,12 @@ plotPredictedVsObserved <- function(
   # Create the  plot
   plotObject <- ospsuite_plotPredictedVsObserved(
     plotData = filteredData,
-    mapping = aes(shape = isCensored),
+    mapping = aes(lloq = lloq),
     addRegression = addRegression,
     comparisonLineVector = getFoldDistanceList(folds = c()),
     xyscale = xyScale,
     groupAesthetics = c(),
+    geomPointAttributes = list(shape = 21,fill = 'blue'),
     ...
   )
 
@@ -202,6 +203,9 @@ plotResidualsVsTime <- function(filteredData, ...) {
 #' @export
 #' @family plotting
 plotResidualsDistribution <- function(filteredData, ...) {
+  # initialize variable used in data.table syntax
+  isCensored <- resNorm <- NULL
+
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
 
