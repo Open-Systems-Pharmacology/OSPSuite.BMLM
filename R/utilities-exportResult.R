@@ -420,6 +420,8 @@ addContainerAndParameterPath <- function(dtExport,dtMappedPaths){
 #'   Populations.xlsx file.
 #' @param newName An optional string for the new population name. If NULL, defaults to
 #'   paste(populationName, variabilitySheetName, sep = '_').
+#' @param overwrite A logical indicating whether to overwrite an existing population file with the same name.
+#'   Default is FALSE.
 #'
 #' @return NULL (invisible). The function saves a new population CSV file.
 #' @export
@@ -427,12 +429,14 @@ addContainerAndParameterPath <- function(dtExport,dtMappedPaths){
 exportPopulationWithVariability <- function(projectConfiguration,
                                            populationName,
                                            variabilitySheetName,
-                                           newName = NULL) {
+                                           newName = NULL,
+                                           overwrite = FALSE) {
   # Validate inputs
   checkmate::assertClass(projectConfiguration, "ProjectConfiguration")
   checkmate::assertString(populationName)
   checkmate::assertString(variabilitySheetName)
   checkmate::assertString(newName, null.ok = TRUE)
+  checkmate::assertFlag(overwrite)
 
   # Set default newName if not provided
   if (is.null(newName)) {
@@ -507,6 +511,13 @@ exportPopulationWithVariability <- function(projectConfiguration,
   
   # Save new population
   newPopulationFile <- file.path(projectConfiguration$populationsFolder, paste0(newName, ".csv"))
+  
+  # Check if file already exists
+  if (file.exists(newPopulationFile) && !overwrite) {
+    message(paste("Population file", newPopulationFile, "already exists. Use overwrite=TRUE to replace it."))
+    return(invisible())
+  }
+  
   message(paste("Saving new population to:", newPopulationFile))
   data.table::fwrite(dtPopulation, newPopulationFile)
   

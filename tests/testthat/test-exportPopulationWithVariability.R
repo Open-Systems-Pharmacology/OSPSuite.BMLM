@@ -82,7 +82,8 @@ test_that("exportPopulationWithVariability creates new population file", {
       projectConfiguration = projectConfiguration,
       populationName = populationName,
       variabilitySheetName = testVariabilitySheetName,
-      newName = newPopName
+      newName = newPopName,
+      overwrite = TRUE
     ),
     "Successfully created population with variability"
   )
@@ -218,5 +219,101 @@ test_that("exportPopulationWithVariability uses default newName", {
   # Clean up
   if (file.exists(defaultNewFile)) {
     file.remove(defaultNewFile)
+  }
+})
+
+test_that("exportPopulationWithVariability respects overwrite flag", {
+  skip_if_not_installed("ospsuite.reportingframework")
+  
+  testData <- buildTestData()
+  projectConfiguration <- testData$projectConfiguration
+  
+  populationName <- "testPopulation"
+  populationFile <- file.path(projectConfiguration$populationsFolder, paste0(populationName, ".csv"))
+  skip_if_not(file.exists(populationFile))
+  
+  wbPop <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
+  variabilitySheetName <- "Template_Variability"
+  skip_if_not(variabilitySheetName %in% wbPop$sheet_names)
+  
+  dtVariability <- xlsxReadData(wb = wbPop, sheetName = variabilitySheetName)
+  skip_if(nrow(dtVariability) == 0)
+  
+  # Create minimal test variability sheet
+  dtOriginalPop <- data.table::fread(populationFile)
+  paramNames <- names(dtOriginalPop)[2:min(3, length(names(dtOriginalPop)))]
+  
+  testVariabilitySheetName <- "test_var3"
+  testVarData <- data.table::data.table(
+    `container Path` = sapply(paramNames, function(p) {
+      parts <- strsplit(p, "\\|")[[1]]
+      if (length(parts) > 1) paste(parts[-length(parts)], collapse = "|") else ""
+    }),
+    `parameter Name` = sapply(paramNames, function(p) {
+      parts <- strsplit(p, "\\|")[[1]]
+      parts[length(parts)]
+    }),
+    `parameter Group` = paste0("Group_", seq_along(paramNames)),
+    distribution = "norm",
+    p1_type = "mean",
+    p1_value = 1.0,
+    p2_type = "sd",
+    p2_value = 0.1,
+    units = ""
+  )
+  
+  xlsxAddDataUsingTemplate(
+    wb = wbPop,
+    templateSheet = "Template_Variability",
+    sheetName = testVariabilitySheetName,
+    dtNewData = testVarData,
+    templateXlsx = "Populations.xlsx"
+  )
+  openxlsx::saveWorkbook(wbPop, projectConfiguration$populationsFile, overwrite = TRUE)
+  
+  newPopName <- "testPop_overwrite_test"
+  newPopFile <- file.path(projectConfiguration$populationsFolder, paste0(newPopName, ".csv"))
+  
+  # First call - should create the file
+  expect_message(
+    exportPopulationWithVariability(
+      projectConfiguration = projectConfiguration,
+      populationName = populationName,
+      variabilitySheetName = testVariabilitySheetName,
+      newName = newPopName,
+      overwrite = TRUE
+    ),
+    "Successfully created"
+  )
+  
+  expect_true(file.exists(newPopFile))
+  
+  # Second call with overwrite=FALSE - should not overwrite
+  expect_message(
+    exportPopulationWithVariability(
+      projectConfiguration = projectConfiguration,
+      populationName = populationName,
+      variabilitySheetName = testVariabilitySheetName,
+      newName = newPopName,
+      overwrite = FALSE
+    ),
+    "already exists"
+  )
+  
+  # Third call with overwrite=TRUE - should overwrite
+  expect_message(
+    exportPopulationWithVariability(
+      projectConfiguration = projectConfiguration,
+      populationName = populationName,
+      variabilitySheetName = testVariabilitySheetName,
+      newName = newPopName,
+      overwrite = TRUE
+    ),
+    "Successfully created"
+  )
+  
+  # Clean up
+  if (file.exists(newPopFile)) {
+    file.remove(newPopFile)
   }
 })
