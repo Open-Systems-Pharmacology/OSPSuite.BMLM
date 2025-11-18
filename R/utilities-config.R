@@ -48,6 +48,13 @@ addBMLMPConfiguration <- function(projectConfiguration,
     )
   }
 
+  copyConfigSheet(projectConfiguration = projectConfiguration,
+                  sourceSheetName = 'Template_Variability',
+                  destinationSheetName = 'Template_Variability',
+                  sourceFile = system.file("templates", "Populations.xlsx",
+                                           package = "ospsuite.bmlm"),
+                  destinationFile = projectConfiguration$populationsFile)
+
   return(projectConfiguration)
 }
 

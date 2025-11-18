@@ -33,7 +33,7 @@ myRun$evaluateInitialValues()
 # start the Optimization ( as default this is done as background job)
 myRun$startOptimization(
   projectConfiguration = projectConfiguration,
-  method = "BFGS",  # Specify the optimization method
+  method = "Nelder-Mead",  # Specify the optimization method
   control = list(maxit = 1000)  # Control parameters for the optimization
 )
 
@@ -52,7 +52,7 @@ dtStartValues <- myRun$getCurrentConfigTable(projectConfiguration,sheetName = 'I
 
 # export results ----------------
 myRun$exportFinalValuesToBMLConfigTable(projectConfiguration)
-myRun$exportResultAsPopulation()
-myRun$exportIndividualValuesToConfigTable()
-myRun$exportGlobalsParametersToConfigTables()
+myRun$exportResultAsPopulation(projectConfiguration)
+myRun$exportModelParametersToConfigTables(projectConfiguration)
+myRun$exportIndividualValuesToConfigTable(projectConfiguration)
 myRun$exportIndividualResultsToPkml(projectConfiguration,individualId = dataObserved$individualId[1])

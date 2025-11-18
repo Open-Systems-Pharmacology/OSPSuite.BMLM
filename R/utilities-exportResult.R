@@ -292,7 +292,8 @@ addExportSheet <- function(wb,dt,sheetName,covariate,overwrite,suffix, toModelPa
   sheetName <- paste(sheetNameParts[trimws(sheetNameParts) !=''],collapse = '_')
 
   if (sheetName %in% wb$sheet_names & !overwrite) {
-    stop(messages$errorSheetAlreadyExists(sheetName))
+    warning(messages$errorSheetAlreadyExists(sheetName))
+    return(wb)
   }
 
   message(paste("export parameters to",sheetName))
@@ -351,10 +352,10 @@ extractParameterValues <- function(dtExport, dtMappedPaths ) {
                       `container Path` + `parameter Name` + name + units + hyperDistribution   ~ index,
                       value.var = c("hyperParameter","value")) %>%
     setnames(old = c('name','hyperDistribution',paste("hyperParameter",seq(1,3),sep = '_'),paste("value",seq(1,3),sep = '_')),
-             new = c('parameterGroup','distribution',paste0('p',seq(1,3),'_type'),paste0('p',seq(1,3),'_value')),
+             new = c('parameter Group','distribution',paste0('p',seq(1,3),'_type'),paste0('p',seq(1,3),'_value')),
              skip_absent = TRUE)
 
-  exportSheets[['population']] <- dtExport
+  exportSheets[['population']] <- copy(dtExport)
 
   dtExport[,value := apply(.SD, 1, calculateValueOfDistributionRow,value = 0.5,type = 'Q',log = FALSE)]
   exportSheets[['median']] <- dtExport[c("container Path", "parameter Name", "value", "units")]
