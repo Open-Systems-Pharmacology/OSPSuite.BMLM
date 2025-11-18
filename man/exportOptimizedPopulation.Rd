@@ -29,4 +29,8 @@ exportOptimizedPopulation(
 \description{
 This function exports optimized population data to CSV files for each scenario in the scenario list.
 }
+\seealso{
+Other export: 
+\code{\link{exportPopulationWithVariability}()}
+}
 \concept{export}

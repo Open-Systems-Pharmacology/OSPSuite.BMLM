@@ -140,11 +140,11 @@ BMLMOptimization <- R6::R6Class(
     #'
     #' @description  This method prints the current properties and status of the BMLMOptimization object to the console.
     print = function() {
-        ospsuite.utils::ospPrintClass(self)
-        ospsuite.utils::ospPrintItems(list(
-          Run = self$runName,
-          Status = self$status
-        ))
+      ospsuite.utils::ospPrintClass(self)
+      ospsuite.utils::ospPrintItems(list(
+        Run = self$runName,
+        Status = self$status
+      ))
       invisible(self)
     },
     #' This function exports individual results to a PKML file for a specified individual ID across scenarios.
@@ -258,7 +258,7 @@ BMLMOptimization <- R6::R6Class(
       exportModelParametersToConfigTables(
         projectConfiguration = projectConfiguration,
         dtList = private$dtList,
-        sheetName = ifelse(is.null(sheetName),self$runName,sheetName),
+        sheetName = ifelse(is.null(sheetName), self$runName, sheetName),
         overwrite = overwrite
       )
 
@@ -362,11 +362,13 @@ BMLMOptimization <- R6::R6Class(
         return(invisible(list()))
       }
 
-      plotList <- plotResidualLoop(dtRes = dtRes,
-                                   plotFunction = plotResidualsAsQQ,
-                                   excludeCensored = excludeCensored,
-                                   nCols = nCols,
-                                   titeltxt = self$runName, ...)
+      plotList <- plotResidualLoop(
+        dtRes = dtRes,
+        plotFunction = plotResidualsAsQQ,
+        excludeCensored = excludeCensored,
+        nCols = nCols,
+        titeltxt = self$runName, ...
+      )
 
       print(plotList)
       return(invisible(plotList))
@@ -396,11 +398,13 @@ BMLMOptimization <- R6::R6Class(
         return(invisible(list()))
       }
 
-      plotList <- plotResidualLoop(dtRes = dtRes,
-                                   plotFunction = plotResidualsVsTime,
-                                   excludeCensored = excludeCensored,
-                                   nCols = nCols,
-                                   titeltxt = self$runName, ...)
+      plotList <- plotResidualLoop(
+        dtRes = dtRes,
+        plotFunction = plotResidualsVsTime,
+        excludeCensored = excludeCensored,
+        nCols = nCols,
+        titeltxt = self$runName, ...
+      )
 
       print(plotList)
       return(invisible(plotList))
@@ -430,11 +434,13 @@ BMLMOptimization <- R6::R6Class(
         return(invisible(list()))
       }
 
-      plotList <- plotResidualLoop(dtRes = dtRes,
-                                   plotFunction = plotResidualsDistribution,
-                                   excludeCensored = excludeCensored,
-                                   nCols = nCols,
-                                   titeltxt = self$runName, ...)
+      plotList <- plotResidualLoop(
+        dtRes = dtRes,
+        plotFunction = plotResidualsDistribution,
+        excludeCensored = excludeCensored,
+        nCols = nCols,
+        titeltxt = self$runName, ...
+      )
 
       print(plotList)
       return(invisible(plotList))
@@ -464,11 +470,13 @@ BMLMOptimization <- R6::R6Class(
         return(invisible(list()))
       }
 
-      plotList <- plotResidualLoop(dtRes = dtRes,
-                                   plotFunction = plotResidualsAsHistogram,
-                                   excludeCensored = excludeCensored,
-                                   nCols = nCols,
-                                   titeltxt = self$runName, ...)
+      plotList <- plotResidualLoop(
+        dtRes = dtRes,
+        plotFunction = plotResidualsAsHistogram,
+        excludeCensored = excludeCensored,
+        nCols = nCols,
+        titeltxt = self$runName, ...
+      )
 
       print(plotList)
       return(invisible(plotList))
@@ -596,7 +604,7 @@ BMLMOptimization <- R6::R6Class(
     #'
     #' @param xScale character 'linear' or 'log', scale of x axis
     #' @param ... additional arguments passed on to plotDistributions
-    checkParameterValuesVsPrior = function( xScale = unlist(SCALING), ...) {
+    checkParameterValuesVsPrior = function(xScale = unlist(SCALING), ...) {
       xScale <- match.arg(xScale)
 
       statusList <- private$loadOptimStatusList()
@@ -605,7 +613,7 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotObject <- plotParameterValuesVsPrior(
-        dtList = private$dtList[c('prior','startValues')],
+        dtList = private$dtList[c("prior", "startValues")],
         statusList,
         xScale = xScale,
         titeltxt = self$runName,
@@ -622,11 +630,11 @@ BMLMOptimization <- R6::R6Class(
     #' @param xyScale A character string specifying the scale of the x- and y-axis. Default is 'log'.
     #' @param parameterFilter A character vector for filtering parameter names. Default is NULL.
     #' @param ... additional arguments passed on to plotBestVsStartParameter
-    checkBestVsStartParameter = function( xyScale = unlist(SCALING),
-                                          nCols = 2,
-                                          nRows = 3,
-                                          parameterFilter,
-                                          ...) {
+    checkBestVsStartParameter = function(xyScale = unlist(SCALING),
+                                         nCols = 2,
+                                         nRows = 3,
+                                         parameterFilter,
+                                         ...) {
       xyScale <- match.arg(xyScale)
 
       statusList <- private$loadOptimStatusList()
@@ -635,7 +643,7 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotObject <- plotBestVsStartParameter(
-        dtList = private$dtList[c('prior','startValues')],
+        dtList = private$dtList[c("prior", "startValues")],
         statusList,
         titeltxt = self$runName,
         nCols = nCols,
@@ -661,7 +669,7 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotList <- plotParameterLimits(
-        dtList = private$dtList[c('prior','startValues')],
+        dtList = private$dtList[c("prior", "startValues")],
         statusList = statusList,
         titeltxt = self$runName,
         nCols = nCols,
@@ -692,7 +700,7 @@ BMLMOptimization <- R6::R6Class(
       }
 
       plotList <- plotDistributions(
-        dtList = private$dtList[c('prior','startValues')],
+        dtList = private$dtList[c("prior", "startValues")],
         statusList = statusList,
         nCols = nCols,
         nRows = nRows,
@@ -1068,11 +1076,13 @@ BMLMOptimization <- R6::R6Class(
     printStatus = function(statusObject, statusName) {
       cat(
         sprintf(
-          paste("%s:\n",
-                "    iteration: %d\n",
-                "    objective function value: %.2f\n",
-                "    percentage of failed function evaluations: %.2f\n",
-                "    percentage of iterations with parameter outside range: %.2f\n"),
+          paste(
+            "%s:\n",
+            "    iteration: %d\n",
+            "    objective function value: %.2f\n",
+            "    percentage of failed function evaluations: %.2f\n",
+            "    percentage of iterations with parameter outside range: %.2f\n"
+          ),
           statusName,
           statusObject$iteration,
           -sum(
@@ -1082,7 +1092,6 @@ BMLMOptimization <- R6::R6Class(
             statusObject$iteration * 100,
           statusObject$outsideRangeCounter /
             statusObject$iteration * 100
-
         )
       )
     }

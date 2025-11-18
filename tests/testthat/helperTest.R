@@ -1,6 +1,5 @@
 buildTestData <- function(rootDirectory = NULL,
                           writeTestData = FALSE) {
-
   # Initialize class to build test project
   pBuilder <- TestProjectBuilder$new()
 
@@ -26,7 +25,7 @@ buildTestData <- function(rootDirectory = NULL,
     ontogeny = "CYP3A4,UGT1A4"
   )
   pBuilder$mockManualEditingsPopulation(projectConfiguration,
-                                        randomPops = randomPops
+    randomPops = randomPops
   )
 
   modelFiles <- list.files(file.path(system.file(

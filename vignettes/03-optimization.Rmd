@@ -54,7 +54,7 @@ myRun <- BMLMOptimization$new(
   runName = "myRun",
   scenarioList = scenarioList,
   dataObserved = dataObserved,
-  seed = 1234  # Optional: for reproducibility
+  seed = 1234 # Optional: for reproducibility
 )
 ```
 
@@ -95,8 +95,8 @@ Once the `BMLMOptimization` object is initialized and initial values are evaluat
 ```{r echo=TRUE, eval=FALSE}
 # Start the optimization process
 myRun$startOptimization(
-  method = "BFGS",  # Optimization method
-  control = list(maxit = 1000)  # Control parameters
+  method = "BFGS", # Optimization method
+  control = list(maxit = 1000) # Control parameters
 )
 ```
 
@@ -189,12 +189,12 @@ Use the diagnostic plots (see [Monitoring Optimization Progress](#monitoring-opt
 The `control` list can include:
 
 ```{r echo=TRUE, eval=FALSE}
-control = list(
-  maxit = 1000,        # Maximum number of iterations
-  trace = 1,           # Progress reporting level (0-6)
-  REPORT = 10,         # Frequency of progress reports
-  reltol = 1e-8,       # Relative convergence tolerance
-  abstol = -Inf        # Absolute convergence tolerance
+control <- list(
+  maxit = 1000, # Maximum number of iterations
+  trace = 1, # Progress reporting level (0-6)
+  REPORT = 10, # Frequency of progress reports
+  reltol = 1e-8, # Relative convergence tolerance
+  abstol = -Inf # Absolute convergence tolerance
 )
 ```
 
@@ -204,10 +204,10 @@ control = list(
 myRun$startOptimization(
   method = "BFGS",
   control = list(maxit = 1000),
-  scalingMethod = SCALINGMETHOD$logsig,  # Parameter scaling method
-  withInternalOptimization = TRUE,       # Enable internal optimization
-  startInBackground = TRUE,              # Run as background job
-  lastStatusSavingIntervalInSecs = 60    # Save progress every 60 seconds
+  scalingMethod = SCALINGMETHOD$logsig, # Parameter scaling method
+  withInternalOptimization = TRUE, # Enable internal optimization
+  startInBackground = TRUE, # Run as background job
+  lastStatusSavingIntervalInSecs = 60 # Save progress every 60 seconds
 )
 ```
 
@@ -266,7 +266,7 @@ grViz("
 digraph internal_optimization {
   graph [rankdir=TB, fontname=Helvetica]
   node [shape=box, style=filled, fontname=Helvetica]
-  
+
   start [label='Start Optimization', fillcolor='#E8F4F8']
   outer [label='Outer Loop:\\nOptimize Global &\\nIndividual Parameters', fillcolor='#FFE6E6']
   simulate [label='Run Model\\nSimulations', fillcolor='#FFF4E6']
@@ -274,7 +274,7 @@ digraph internal_optimization {
   calc_obj [label='Calculate\\nObjective Function', fillcolor='#F0E6FF']
   converged [label='Converged?', shape=diamond, fillcolor='#FFFFCC']
   end_node [label='Return Optimized\\nParameters', fillcolor='#E8F4F8']
-  
+
   start -> outer
   outer -> simulate
   simulate -> inner
@@ -282,10 +282,10 @@ digraph internal_optimization {
   calc_obj -> converged
   converged -> outer [label='No']
   converged -> end_node [label='Yes']
-  
+
   {rank=same; simulate; inner}
 }
-", width=600, height=500)
+", width = 600, height = 500)
 ```
 
 **Step-by-Step Process:**
@@ -367,7 +367,7 @@ myRun$startOptimization(
 myRun$startOptimization(
   method = "BFGS",
   control = list(maxit = 500),
-  withInternalOptimization = TRUE  # Recommended!
+  withInternalOptimization = TRUE # Recommended!
 )
 ```
 
@@ -453,7 +453,7 @@ After normalization, the `scalingMethod` parameter in `startOptimization()` cont
 # Recommended: Use log scaling for parameters spanning orders of magnitude
 
 myRun$startOptimization(
-  scalingMethod = SCALINGMETHOD$logsig,  # Allow flexible boundary exploration
+  scalingMethod = SCALINGMETHOD$logsig, # Allow flexible boundary exploration
   withInternalOptimization = TRUE
 )
 
@@ -462,14 +462,14 @@ myRun$startOptimization(
 # Use linear for bounded fractions
 
 myRun$startOptimization(
-  scalingMethod = SCALINGMETHOD$hardBounds,  # Enforce strict bounds
+  scalingMethod = SCALINGMETHOD$hardBounds, # Enforce strict bounds
   withInternalOptimization = TRUE
 )
 
 # Example 3: Mixed parameters (recommended general approach)
 # Let different parameters use their configured scaling
 myRun$startOptimization(
-  scalingMethod = SCALINGMETHOD$logsig,  # Generally recommended
+  scalingMethod = SCALINGMETHOD$logsig, # Generally recommended
   withInternalOptimization = TRUE
 )
 ```
@@ -522,14 +522,14 @@ If an optimization is interrupted or you want to refine results with different s
 ```{r echo=TRUE, eval=FALSE}
 # Restart with different method
 myRun$startOptimization(
-  method = "Nelder-Mead",  # Try a different method
+  method = "Nelder-Mead", # Try a different method
   control = list(maxit = 500)
 )
 
 # Or continue with more iterations
 myRun$startOptimization(
   method = "BFGS",
-  control = list(maxit = 2000)  # Allow more iterations
+  control = list(maxit = 2000) # Allow more iterations
 )
 ```
 
@@ -772,7 +772,7 @@ Export optimized population data for each scenario:
 ```{r echo=TRUE, eval=FALSE}
 myRun$exportResultAsPopulation(
   projectConfiguration = projectConfiguration,
-  addAsNewScenarios = TRUE,  # Create new scenarios with optimized populations
+  addAsNewScenarios = TRUE, # Create new scenarios with optimized populations
   overwrite = FALSE
 )
 ```
@@ -827,7 +827,7 @@ Save fitted model parameters (global and hyperparameters) to configuration files
 ```{r echo=TRUE, eval=FALSE}
 myRun$exportModelParametersToConfigTables(
   projectConfiguration = projectConfiguration,
-  sheetName = NULL,  # Uses runName if NULL
+  sheetName = NULL, # Uses runName if NULL
   overwrite = FALSE
 )
 ```

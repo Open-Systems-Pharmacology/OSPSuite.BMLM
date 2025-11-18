@@ -1,5 +1,5 @@
 #' List of functions and strings used to signal error and warning messages
-#' @description 
+#' @description
 #' This module contains all error and warning messages used throughout the package.
 #' Messages are organized as functions that return formatted strings.
 #' @export
@@ -115,7 +115,7 @@ messages$errorSheetAlreadyExists <- function(sheetName) {
 }
 
 messages$warningFactorParametersNotExported <- function(parameterNames) {
-  paste("Parameters defined with `useAsFactors = TRUE` are not exported. Please check", paste(parameterNames, collapse = ', '))
+  paste("Parameters defined with `useAsFactors = TRUE` are not exported. Please check", paste(parameterNames, collapse = ", "))
 }
 
 # BMLM Optimization Messages ----
@@ -125,8 +125,10 @@ messages$errorNoBMLMConfiguration <- function() {
 }
 
 messages$errorOnlyVirtualTwinPopulations <- function(invalidScenarios) {
-  paste("Please use only scenarios for virtual twin populations! Check",
-        paste(invalidScenarios, collapse = ", "))
+  paste(
+    "Please use only scenarios for virtual twin populations! Check",
+    paste(invalidScenarios, collapse = ", ")
+  )
 }
 
 messages$errorStatusIsRunning <- function() {
@@ -195,6 +197,8 @@ messages$errorNoParametersForLogScale <- function() {
 }
 
 messages$warningSkippingParametersForLogScale <- function(parameterNames) {
-  sprintf('Skipping parameters with display ranges less than or equal to zero for log-scale display: %s',
-          paste(parameterNames, collapse = ', '))
+  sprintf(
+    "Skipping parameters with display ranges less than or equal to zero for log-scale display: %s",
+    paste(parameterNames, collapse = ", ")
+  )
 }
