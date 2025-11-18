@@ -406,3 +406,110 @@ addContainerAndParameterPath <- function(dtExport,dtMappedPaths){
 
   return(dtExport)
 }
+
+#' Export Population with Variability
+#'
+#' This function loads an existing population CSV file and generates new random parameter values
+#' according to the distributions defined in a variability sheet. Parameters with the same
+#' parameter group are strictly correlated.
+#'
+#' @param projectConfiguration A ProjectConfiguration object containing project configuration details,
+#'   including the path to the populations folder and populations file.
+#' @param populationName A string representing the name of the population (without .csv extension).
+#' @param variabilitySheetName A string representing the name of the variability sheet in the
+#'   Populations.xlsx file.
+#' @param newName An optional string for the new population name. If NULL, defaults to
+#'   paste(populationName, variabilitySheetName, sep = '_').
+#'
+#' @return NULL (invisible). The function saves a new population CSV file.
+#' @export
+#' @family export
+exportPopulationWithVariability <- function(projectConfiguration,
+                                           populationName,
+                                           variabilitySheetName,
+                                           newName = NULL) {
+  # Validate inputs
+  checkmate::assertClass(projectConfiguration, "ProjectConfiguration")
+  checkmate::assertString(populationName)
+  checkmate::assertString(variabilitySheetName)
+  checkmate::assertString(newName, null.ok = TRUE)
+
+  # Set default newName if not provided
+  if (is.null(newName)) {
+    newName <- paste(populationName, variabilitySheetName, sep = '_')
+  }
+
+  # Load existing population file
+  populationFile <- file.path(projectConfiguration$populationsFolder, paste0(populationName, ".csv"))
+  checkmate::assertFileExists(populationFile)
+  
+  message(paste("Loading population from:", populationFile))
+  dtPopulation <- data.table::fread(populationFile)
+  
+  # Load variability sheet from Populations.xlsx
+  wbPop <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
+  
+  if (!(variabilitySheetName %in% wbPop$sheet_names)) {
+    stop(paste("Variability sheet", variabilitySheetName, "not found in", projectConfiguration$populationsFile))
+  }
+  
+  message(paste("Loading variability sheet:", variabilitySheetName))
+  dtVariability <- xlsxReadData(wb = wbPop, sheetName = variabilitySheetName)
+  
+  # Validate variability sheet has required columns
+  requiredCols <- c("container Path", "parameter Name", "parameter Group", "distribution")
+  missingCols <- setdiff(requiredCols, names(dtVariability))
+  if (length(missingCols) > 0) {
+    stop(paste("Variability sheet missing required columns:", paste(missingCols, collapse = ", ")))
+  }
+  
+  # Create full parameter paths for matching
+  dtVariability[, parameterPath := paste(`container Path`, `parameter Name`, sep = "|")]
+  
+  # Get number of individuals
+  nIndividuals <- nrow(dtPopulation)
+  message(paste("Generating variability for", nIndividuals, "individuals"))
+  
+  # Group parameters by parameter Group for correlation
+  uniqueGroups <- unique(dtVariability$`parameter Group`)
+  
+  # Generate random values for each group
+  for (group in uniqueGroups) {
+    dtGroup <- dtVariability[`parameter Group` == group]
+    nParams <- nrow(dtGroup)
+    
+    message(paste("Processing parameter group:", group, "with", nParams, "parameters"))
+    
+    # For strict correlation, generate one set of random quantiles (probabilities)
+    # and apply to all parameters in the group
+    randomQuantiles <- runif(nIndividuals)
+    
+    # Apply the same quantiles to each parameter in the group
+    for (i in seq_len(nParams)) {
+      row <- dtGroup[i, ]
+      paramPath <- row$parameterPath
+      
+      # Check if this parameter exists in the population
+      if (!(paramPath %in% names(dtPopulation))) {
+        warning(paste("Parameter", paramPath, "not found in population CSV, skipping"))
+        next
+      }
+      
+      # Generate new values using the quantile function for the distribution
+      newValues <- sapply(randomQuantiles, function(q) {
+        calculateValueOfDistributionRow(row = row, type = "Q", value = q, log = FALSE)
+      })
+      
+      # Update population with new values
+      dtPopulation[[paramPath]] <- newValues
+    }
+  }
+  
+  # Save new population
+  newPopulationFile <- file.path(projectConfiguration$populationsFolder, paste0(newName, ".csv"))
+  message(paste("Saving new population to:", newPopulationFile))
+  data.table::fwrite(dtPopulation, newPopulationFile)
+  
+  message(paste("Successfully created population with variability:", newName))
+  return(invisible())
+}
