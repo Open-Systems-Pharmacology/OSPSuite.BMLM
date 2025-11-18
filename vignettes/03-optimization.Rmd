@@ -921,7 +921,84 @@ myRun$exportModelParametersToConfigTables(
 )
 ```
 
-### 5. Export Final Values to BMLM Configuration
+### 5. Generate Populations with Variability
+
+After exporting model parameters with `exportModelParametersToConfigTables`, you can generate new populations that incorporate the fitted parameter variability. This is useful for uncertainty analysis and creating virtual populations that reflect the estimated inter-individual variability.
+
+```{r echo=TRUE, eval=FALSE}
+exportPopulationWithVariability(
+  projectConfiguration = projectConfiguration,
+  populationName = "myPopulation",
+  variabilitySheetName = "myRun",  # Sheet created by exportModelParametersToConfigTables
+  newName = NULL,  # Defaults to "myPopulation_myRun"
+  overwrite = FALSE
+)
+```
+
+**What It Does:**
+
+This function creates a new population CSV file by sampling parameter values from the distributions exported in the variability sheet. It maintains the correlation structure of parameters within groups while allowing independent variation between groups.
+
+**Key Features:**
+
+1. **Loads Base Population**: Reads existing population CSV from `populationsFolder`
+2. **Reads Variability**: Loads distribution parameters from specified sheet in Populations.xlsx
+3. **Strict Correlation**: Parameters in the same `parameter Group` are perfectly correlated
+4. **Distribution Sampling**: Generates values according to fitted distributions (normal, log-normal, etc.)
+5. **Saves New Population**: Creates new CSV file with sampled parameter values
+
+**Parameters:**
+
+- `projectConfiguration`: Your project configuration object
+- `populationName`: Name of base population CSV file (without .csv extension)
+- `variabilitySheetName`: Name of sheet in Populations.xlsx with distribution parameters
+- `newName`: Optional custom name for output population (default: `paste(populationName, variabilitySheetName, '_')`)
+- `overwrite`: Set to `TRUE` to replace existing file with same name (default: `FALSE`)
+
+**How Correlation Works:**
+
+Parameters with the same `parameter Group` value use identical random quantiles, ensuring perfect rank correlation:
+
+- **Same Group**: If CL and Vd are in group "PK_params", an individual in the 90th percentile for CL will also be in the 90th percentile for Vd
+- **Different Groups**: Parameters in different groups vary independently
+
+**Example Workflow:**
+
+```{r echo=TRUE, eval=FALSE}
+# 1. Export model parameters after optimization
+myRun$exportModelParametersToConfigTables(
+  projectConfiguration = projectConfiguration,
+  sheetName = "FinalRun"
+)
+
+# 2. Generate new population with fitted variability
+exportPopulationWithVariability(
+  projectConfiguration = projectConfiguration,
+  populationName = "basePopulation",
+  variabilitySheetName = "FinalRun",  # Uses sheet from step 1
+  newName = "basePopulation_withVariability",
+  overwrite = TRUE
+)
+
+# 3. The new population can now be used in simulations
+# Update scenario to use new population in Scenarios.xlsx
+```
+
+**Use Cases:**
+
+- **Uncertainty Analysis**: Generate multiple populations to assess prediction uncertainty
+- **Virtual Trials**: Create diverse populations for clinical trial simulations
+- **Sensitivity Analysis**: Evaluate impact of inter-individual variability on outcomes
+- **Population Comparison**: Generate populations for different subgroups or conditions
+
+**Important Notes:**
+
+- Requires variability sheet created by `exportModelParametersToConfigTables`
+- Base population must exist in `populationsFolder`
+- Parameters not in variability sheet remain unchanged
+- Warning issued for parameters in variability sheet but not in population CSV
+
+### 6. Export Final Values to BMLM Configuration
 
 Save all final values back to the BMLM configuration file:
 
@@ -984,7 +1061,15 @@ myRun$exportResultAsPopulation(projectConfiguration, addAsNewScenarios = TRUE)
 myRun$exportIndividualValuesToConfigTable(projectConfiguration)
 myRun$exportModelParametersToConfigTables(projectConfiguration)
 
-# 6. Optional: Export specific individuals to PKML
+# 6. Generate population with fitted variability
+exportPopulationWithVariability(
+  projectConfiguration = projectConfiguration,
+  populationName = "basePopulation",
+  variabilitySheetName = myRun$runName,
+  overwrite = TRUE
+)
+
+# 7. Optional: Export specific individuals to PKML
 myRun$exportIndividualResultsToPkml(
   projectConfiguration,
   individualId = dataObserved$individualId[1]
