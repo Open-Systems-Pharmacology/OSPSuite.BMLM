@@ -52,6 +52,214 @@ The typical BMLM workflow consists of the following steps:
 4. **Monitoring**: Check optimization progress using diagnostic plots
 5. **Export Results**: Transfer optimized parameters back to the reporting framework
 
+### Workflow and Data Flow Diagram
+
+The following diagram visualizes the complete BMLM workflow, showing the relationships between different files and the data flow through the optimization process:
+
+```{r workflow-diagram, echo=FALSE, eval=TRUE, fig.width=10, fig.height=12}
+library(DiagrammeR)
+grViz("
+digraph BMLM_Workflow {
+  graph [rankdir=TB, fontname=Helvetica, compound=true]
+  node [shape=box, style=filled, fontname=Helvetica, margin=0.2]
+  edge [fontname=Helvetica]
+  
+  # Styling
+  node [fillcolor='#E8F4F8']
+  
+  # Input files
+  subgraph cluster_input {
+    label='Input Files (User Provided)'
+    style=filled
+    fillcolor='#FFF4E6'
+    
+    snapshot [label='Snapshot\n(.json)', fillcolor='#FFE6E6']
+    observed [label='Observed Data\n(from Reporting Framework)', fillcolor='#FFE6E6']
+    rf_config [label='Reporting Framework\nConfiguration', fillcolor='#FFE6E6']
+  }
+  
+  # Configuration phase
+  subgraph cluster_config {
+    label='Configuration Phase'
+    style=filled
+    fillcolor='#E6F3E6'
+    
+    add_config [label='addBMLMPConfiguration()', shape=ellipse, fillcolor='#C8E6C9']
+    bmlm_xlsx [label='BMLMConfiguration.xlsx\n(Parameter definitions,\nMapped paths,\nModel errors)', fillcolor='#A5D6A7']
+    config_priors [label='configurePriors()', shape=ellipse, fillcolor='#C8E6C9']
+  }
+  
+  # Optimization initialization
+  subgraph cluster_init {
+    label='Optimization Initialization'
+    style=filled
+    fillcolor='#E1F5FE'
+    
+    bmlm_new [label='BMLMOptimization$new()', shape=ellipse, fillcolor='#B3E5FC']
+    output_dir [label='Output Directory\nBMLMOptimization/<runName>/', fillcolor='#81D4FA']
+    
+    # Configuration files in output
+    data_csv [label='data.csv', fillcolor='#4FC3F7']
+    prior_csv [label='prior.csv', fillcolor='#4FC3F7']
+    start_csv [label='startValues.csv', fillcolor='#4FC3F7']
+    mapped_csv [label='mappedPaths.csv', fillcolor='#4FC3F7']
+  }
+  
+  # Optimization execution
+  subgraph cluster_optim {
+    label='Optimization Execution'
+    style=filled
+    fillcolor='#F3E5F5'
+    
+    start_optim [label='startOptimization()', shape=ellipse, fillcolor='#E1BEE7']
+    
+    # Intermediate files
+    conv_csv [label='convergence.csv\n(iteration history)', fillcolor='#CE93D8']
+    status_rds [label='status.RDS\n(running status)', fillcolor='#CE93D8']
+    optim_rds [label='optimStatus.RDS\n(current params)', fillcolor='#CE93D8']
+    best_rds [label='bestOptimStatus.RDS\n(best params)', fillcolor='#CE93D8']
+    pred_rds [label='bestPrediction.RDS\n(predictions)', fillcolor='#CE93D8']
+    log_txt [label='optimization_log.txt\n(detailed log)', fillcolor='#CE93D8']
+  }
+  
+  # Monitoring
+  subgraph cluster_monitor {
+    label='Progress Monitoring'
+    style=filled
+    fillcolor='#FFF9C4'
+    
+    check_conv [label='checkConvergence()', shape=ellipse, fillcolor='#FFF59D']
+    check_pred [label='checkPredictedVsObserved()', shape=ellipse, fillcolor='#FFF59D']
+    check_res [label='checkResidualsAsQQ()', shape=ellipse, fillcolor='#FFF59D']
+    check_dist [label='checkDistributions()', shape=ellipse, fillcolor='#FFF59D']
+  }
+  
+  # Final results
+  result_rds [label='result.RDS\n(final optimization results)', fillcolor='#BA68C8', penwidth=2]
+  
+  # Export phase
+  subgraph cluster_export {
+    label='Export Results'
+    style=filled
+    fillcolor='#E0F2F1'
+    
+    export_pop [label='exportResultAsPopulation()', shape=ellipse, fillcolor='#B2DFDB']
+    export_params [label='exportModelParametersToConfigTables()', shape=ellipse, fillcolor='#B2DFDB']
+    export_ind [label='exportIndividualValuesToConfigTable()', shape=ellipse, fillcolor='#B2DFDB']
+    export_pkml [label='exportIndividualResultsToPkml()', shape=ellipse, fillcolor='#B2DFDB']
+  }
+  
+  # Output files back to reporting framework
+  subgraph cluster_output {
+    label='Output Files (Back to Reporting Framework)'
+    style=filled
+    fillcolor='#FFE0B2'
+    
+    pop_files [label='Population CSV files\n(optimized individuals)', fillcolor='#FFCC80']
+    model_params [label='ModelParameters.xlsx\n(global params, medians)', fillcolor='#FFCC80']
+    pop_xlsx [label='Populations.xlsx\n(distribution params)', fillcolor='#FFCC80']
+    ind_table [label='Individuals table\n(updated values)', fillcolor='#FFCC80']
+    pkml_files [label='PKML files\n(individual models)', fillcolor='#FFCC80']
+  }
+  
+  # Main workflow edges
+  snapshot -> add_config
+  rf_config -> add_config
+  add_config -> bmlm_xlsx
+  
+  bmlm_xlsx -> config_priors
+  observed -> config_priors
+  config_priors -> bmlm_xlsx [label='Updates\nPriors &\nStartValues', style=dashed]
+  
+  bmlm_xlsx -> bmlm_new
+  observed -> bmlm_new
+  rf_config -> bmlm_new
+  
+  bmlm_new -> output_dir
+  output_dir -> data_csv
+  output_dir -> prior_csv
+  output_dir -> start_csv
+  output_dir -> mapped_csv
+  
+  data_csv -> start_optim
+  prior_csv -> start_optim
+  start_csv -> start_optim
+  mapped_csv -> start_optim
+  
+  start_optim -> conv_csv
+  start_optim -> status_rds
+  start_optim -> optim_rds
+  start_optim -> best_rds
+  start_optim -> pred_rds
+  start_optim -> log_txt
+  
+  # Monitoring reads from intermediate files
+  conv_csv -> check_conv [style=dashed]
+  best_rds -> check_pred [style=dashed]
+  pred_rds -> check_pred [style=dashed]
+  best_rds -> check_res [style=dashed]
+  pred_rds -> check_res [style=dashed]
+  best_rds -> check_dist [style=dashed]
+  
+  # Final result
+  best_rds -> result_rds [label='After\nconvergence', penwidth=2]
+  
+  # Export phase
+  result_rds -> export_pop
+  result_rds -> export_params
+  result_rds -> export_ind
+  result_rds -> export_pkml
+  
+  rf_config -> export_pop
+  rf_config -> export_params
+  rf_config -> export_ind
+  rf_config -> export_pkml
+  
+  export_pop -> pop_files
+  export_params -> model_params
+  export_params -> pop_xlsx
+  export_ind -> ind_table
+  export_pkml -> pkml_files
+  
+  # Legend
+  subgraph cluster_legend {
+    label='Legend'
+    style=filled
+    fillcolor='white'
+    
+    leg_input [label='Input Files', fillcolor='#FFE6E6']
+    leg_config [label='Configuration', fillcolor='#A5D6A7']
+    leg_func [label='Functions', fillcolor='#C8E6C9', shape=ellipse]
+    leg_temp [label='Intermediate Files', fillcolor='#CE93D8']
+    leg_output [label='Output Files', fillcolor='#FFCC80']
+  }
+  
+  {rank=same; leg_input; leg_config; leg_func; leg_temp; leg_output}
+}
+", width=800, height=1000)
+```
+
+**Key File Dependencies:**
+
+**Configuration Files (Created During Setup):**
+- `BMLMConfiguration.xlsx`: Central configuration with multiple sheets (ParameterDefinition, ParameterMappedPaths, ModelError, Priors, IndividualStartValues)
+- `data.csv`, `prior.csv`, `startValues.csv`, `mappedPaths.csv`: Extracted from configuration for optimization
+
+**Intermediate Files (Updated During Optimization):**
+- `convergence.csv`: Tracks log-likelihood and parameters at each iteration
+- `status.RDS`: Current status (initialized/running/stopped)
+- `optimStatus.RDS`: Current parameter values
+- `bestOptimStatus.RDS`: Best parameters found so far
+- `bestPrediction.RDS`: Model predictions with best parameters
+- `optimization_log.txt`: Detailed execution log
+
+**Final Output (After Optimization):**
+- `result.RDS`: Complete optimization results
+- Population CSV files: Optimized individual parameter values
+- `ModelParameters.xlsx`: Global parameters and hyperparameter medians
+- `Populations.xlsx`: Distribution parameters for population variability
+- PKML files: Individual-specific models for PK-Sim/MoBi
+
 ## Integration with {ospsuite.reportingframework}
 
 Before using BMLM, you need to set up your project configuration using the {ospsuite.reportingframework} package. This package allows you to define:
