@@ -118,6 +118,46 @@ messages$warningFactorParametersNotExported <- function(parameterNames) {
   paste("Parameters defined with `useAsFactors = TRUE` are not exported. Please check", paste(parameterNames, collapse = ', '))
 }
 
+messages$errorVariabilitySheetNotFound <- function(sheetName, fileName) {
+  paste("Variability sheet", sheetName, "not found in", fileName)
+}
+
+messages$errorVariabilitySheetMissingColumns <- function(missingCols) {
+  paste("Variability sheet missing required columns:", paste(missingCols, collapse = ", "))
+}
+
+messages$warningParameterNotFoundInPopulation <- function(paramPath) {
+  paste("Parameter", paramPath, "not found in population CSV, skipping")
+}
+
+messages$messagePopulationFileExists <- function(fileName) {
+  paste("Population file", fileName, "already exists. Use overwrite=TRUE to replace it.")
+}
+
+messages$messageLoadingPopulation <- function(filePath) {
+  paste("Loading population from:", filePath)
+}
+
+messages$messageLoadingVariabilitySheet <- function(sheetName) {
+  paste("Loading variability sheet:", sheetName)
+}
+
+messages$messageGeneratingVariability <- function(nIndividuals) {
+  paste("Generating variability for", nIndividuals, "individuals")
+}
+
+messages$messageProcessingParameterGroup <- function(group, nParams) {
+  paste("Processing parameter group:", group, "with", nParams, "parameters")
+}
+
+messages$messageSavingPopulation <- function(filePath) {
+  paste("Saving new population to:", filePath)
+}
+
+messages$messagePopulationCreated <- function(newName) {
+  paste("Successfully created population with variability:", newName)
+}
+
 # BMLM Optimization Messages ----
 
 messages$errorNoBMLMConfiguration <- function() {
