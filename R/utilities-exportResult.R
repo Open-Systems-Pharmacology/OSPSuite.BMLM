@@ -463,33 +463,33 @@ exportPopulationWithVariability <- function(projectConfiguration,
 
   # Check if file already exists
   if (file.exists(newPopulationFile) && !overwrite) {
-    message(paste("Population file", newPopulationFile, "already exists. Use overwrite=TRUE to replace it."))
+    message(messages$messagePopulationFileExists(newPopulationFile))
     return(invisible())
   }
-
 
   # Load existing population file
   populationFile <- file.path(projectConfiguration$populationsFolder, paste0(populationName, ".csv"))
   checkmate::assertFileExists(populationFile)
+  message(messages$messageLoadingPopulation(populationFile))
 
-  message(paste("Loading population from:", populationFile))
   dtPopulation <- data.table::fread(populationFile)
 
   # Load variability sheet from Populations.xlsx
   wbPop <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
 
   if (!(variabilitySheetName %in% wbPop$sheet_names)) {
-    stop(paste("Variability sheet", variabilitySheetName, "not found in", projectConfiguration$populationsFile))
+    stop(messages$errorVariabilitySheetNotFound(variabilitySheetName, projectConfiguration$populationsFile))
   }
 
-  message(paste("Loading variability sheet:", variabilitySheetName))
+
+  message(messages$messageLoadingVariabilitySheet(variabilitySheetName))
   dtVariability <- xlsxReadData(wb = wbPop, sheetName = variabilitySheetName, skipDescriptionRow = TRUE)
 
   # Validate variability sheet has required columns
   requiredCols <- c("container Path", "parameter Name", "parameter Group", "distribution")
   missingCols <- setdiff(requiredCols, names(dtVariability))
   if (length(missingCols) > 0) {
-    stop(paste("Variability sheet missing required columns:", paste(missingCols, collapse = ", ")))
+    stop(messages$errorVariabilitySheetMissingColumns(missingCols))
   }
 
   # Create full parameter paths for matching
@@ -497,7 +497,7 @@ exportPopulationWithVariability <- function(projectConfiguration,
 
   # Get number of individuals
   nIndividuals <- nrow(dtPopulation)
-  message(paste("Generating variability for", nIndividuals, "individuals"))
+  message(messages$messageGeneratingVariability(nIndividuals))
 
   # Group parameters by parameter Group for correlation
   uniqueGroups <- unique(dtVariability$`parameter Group`)
@@ -507,7 +507,7 @@ exportPopulationWithVariability <- function(projectConfiguration,
     dtGroup <- dtVariability[`parameter Group` == group]
     nParams <- nrow(dtGroup)
 
-    message(paste("Processing parameter group:", group, "with", nParams, "parameters"))
+    message(messages$messageProcessingParameterGroup(group, nParams))
 
     # For strict correlation, generate one set of random quantiles (probabilities)
     # and apply to all parameters in the group
@@ -517,6 +517,12 @@ exportPopulationWithVariability <- function(projectConfiguration,
     for (i in seq_len(nParams)) {
       row <- dtGroup[i, ]
       paramPath <- row$parameterPath
+
+      # Check if this parameter exists in the population
+      if (!(paramPath %in% names(dtPopulation))) {
+        warning(messages$warningParameterNotFoundInPopulation(paramPath))
+        next
+      }
 
       # Generate new values using the quantile function for the distribution
       newValues <- sapply(randomQuantiles, function(q) {
@@ -531,9 +537,9 @@ exportPopulationWithVariability <- function(projectConfiguration,
   }
 
   # Save new population
-  message(paste("Saving new population to:", newPopulationFile))
+  message(messages$messageSavingPopulation(newPopulationFile))
   data.table::fwrite(dtPopulation, newPopulationFile)
 
-  message(paste("Successfully created population with variability:", newName))
+  message(messages$messagePopulationCreated(newName))
   return(invisible())
 }
