@@ -123,7 +123,7 @@ calculateProbability <- function(row, log = FALSE) {
   }
   value <- as.numeric(row["value"])
 
-  prob <- calculateValueOfDistributionRow(row,"D",value,log)
+  prob <- calculateValueOfDistributionRow(row, "D", value, log)
 
   return(prob)
 }
@@ -140,7 +140,7 @@ calculateProbability <- function(row, log = FALSE) {
 #'   - Additional parameters with names ending in `_type` and `_value` that specify the distribution parameters.
 #'
 #' @return A numeric value representing the calculated probability. Returns NA in case of an error.
-calculateValueOfDistributionRow <- function(row,type,value,log) {
+calculateValueOfDistributionRow <- function(row, type, value, log) {
   distribution <- row["distribution"]
 
   # Extract parameters

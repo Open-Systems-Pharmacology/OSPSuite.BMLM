@@ -9,12 +9,13 @@
 #' @return None
 #' @export
 #' @family configuration
-convertVersionBMLM <- function(projectConfiguration){
+convertVersionBMLM <- function(projectConfiguration) {
+  runFolders <- list.dirs(
+    path = file.path(projectConfiguration$outputFolder, "BMLM"),
+    recursive = FALSE
+  )
 
-  runFolders <- list.dirs(path = file.path(projectConfiguration$outputFolder,'BMLM'),
-                          recursive = FALSE)
-
-  for (folder in runFolders){
+  for (folder in runFolders) {
     checkAndUpdateScalingMethod(folder)
   }
 
@@ -31,28 +32,27 @@ convertVersionBMLM <- function(projectConfiguration){
 #' @param folder A character string specifying the path to the folder containing
 #'               the status files.
 #' @return None
-checkAndUpdateScalingMethod <- function(folder){
+checkAndUpdateScalingMethod <- function(folder) {
+  statusFiles <- list.files(path = folder, pattern = "Status.RDS")
 
-  statusFiles <- list.files(path = folder,pattern = 'Status.RDS')
+  for (sFile in statusFiles) {
+    status <- readRDS(file = file.path(folder, sFile))
 
-  for (sFile in statusFiles){
-    status <- readRDS(file = file.path(folder,sFile))
+    if (!"scalingMethod" %in% names(status)) {
+      status[["scalingMethod"]] <- ospsuite.bmlm::SCALINGMETHOD$logsig
+      status[["outsideRangeCounter"]] <- 0
 
-    if (!'scalingMethod' %in% names(status)){
-      status[['scalingMethod']] <- ospsuite.bmlm::SCALINGMETHOD$logsig
-      status[['outsideRangeCounter']] <- 0
+      saveRDS(object = status, file = file.path(folder, sFile))
 
-      saveRDS(object = status, file = file.path(folder,sFile))
-
-      message(paste("Updated scalingMethod in file:", sFile,"for run",folder))
+      message(paste("Updated scalingMethod in file:", sFile, "for run", folder))
     }
-    convergence <- fread(file = file.path(folder,'convergence.csv'))
-    if (!"outsideRangeCounter" %in% names(convergence)){
-      convergence[,outsideRangeCounter := 0]
-      setcolorder(convergence,neworder = 'outsideRangeCounter',before = 'event')
+    convergence <- fread(file = file.path(folder, "convergence.csv"))
+    if (!"outsideRangeCounter" %in% names(convergence)) {
+      convergence[, outsideRangeCounter := 0]
+      setcolorder(convergence, neworder = "outsideRangeCounter", before = "event")
 
-      fwrite(convergence,file = file.path(folder,'convergence.csv'))
-      message(paste("Add outsideRangeCounter to convergence.csv for run",folder))
+      fwrite(convergence, file = file.path(folder, "convergence.csv"))
+      message(paste("Add outsideRangeCounter to convergence.csv for run", folder))
     }
   }
 

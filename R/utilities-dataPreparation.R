@@ -702,25 +702,25 @@ getCurrentConfigTable <- function(projectConfiguration, dtList, sheetName = c("P
   }
 
   identifier <- switch(sheetName,
-                       Prior = c("name", "hyperParameter", "categoricCovariate"),
-                       IndividualStartValues = c("name", "individualId", "categoricCovariate")
+    Prior = c("name", "hyperParameter", "categoricCovariate"),
+    IndividualStartValues = c("name", "individualId", "categoricCovariate")
   )
 
   dtOld <- switch(sheetName,
-                  Prior = dtList$prior,
-                  IndividualStartValues = dtList$startValues
+    Prior = dtList$prior,
+    IndividualStartValues = dtList$startValues
   )
 
 
   wb <- openxlsx::loadWorkbook(file = projectConfiguration$addOns$bMLMConfigurationFile)
 
   dtNew <- addFinalValue(wb,
-                         sheetName = sheetName,
-                         identifier = identifier,
-                         newTable = dtOld
+    sheetName = sheetName,
+    identifier = identifier,
+    newTable = dtOld
   )
 
-  return(dtNew[-1,])
+  return(dtNew[-1, ])
 }
 
 # auxiliaries --------------

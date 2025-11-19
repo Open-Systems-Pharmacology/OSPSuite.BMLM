@@ -1,6 +1,5 @@
 buildTestData <- function(rootDirectory = NULL,
                           writeTestData = FALSE) {
-
   # Initialize class to build test project
   pBuilder <- TestProjectBuilder$new()
 
@@ -26,7 +25,7 @@ buildTestData <- function(rootDirectory = NULL,
     ontogeny = "CYP3A4,UGT1A4"
   )
   pBuilder$mockManualEditingsPopulation(projectConfiguration,
-                                        randomPops = randomPops
+    randomPops = randomPops
   )
 
   modelFiles <- list.files(file.path(system.file(
@@ -92,7 +91,7 @@ buildTestData <- function(rootDirectory = NULL,
   exportVirtualTwinPopulations(
     projectConfiguration = projectConfiguration,
     modelFile = list.files(projectConfiguration$modelFolder, pattern = ".pkml")[1],
-    overwrite = TRUE
+    overwrite = FALSE
   )
 
   scenarioList <- createScenarios.wrapped(
@@ -102,7 +101,7 @@ buildTestData <- function(rootDirectory = NULL,
 
   mockManualEditingsUpdateDefaultSCenario(projectConfiguration)
 
-  addBMLMPConfiguration(
+  tmp <- capture.output(addBMLMPConfiguration(
     projectConfiguration = projectConfiguration,
     nameOfParameterIdentification = "PI",
     snapshotFile = system.file(
@@ -111,7 +110,7 @@ buildTestData <- function(rootDirectory = NULL,
       "ParameterIdentificationSetup.json",
       mustWork = TRUE
     )
-  )
+  ))
 
   mockManualEditingsUpdateParameterDefinition(projectConfiguration)
   configurePriors(

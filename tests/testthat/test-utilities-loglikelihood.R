@@ -131,9 +131,9 @@ test_that("calculateLogLikelihood identifies uncensored when lloq <= yValue", {
 
 ## TODO -----------
 
-dtPrior <- fread(file.path(myTestRun$outputDir,'prior.csv'))
-dtStartValues <- fread(file.path(myTestRun$outputDir,'startValues.csv'))
-dtRes <- readRDS(file.path(myTestRun$outputDir,'bestPrediction.RDS'))[[1]]
+dtPrior <- fread(file.path(myTestRun$outputDir, "prior.csv"))
+dtStartValues <- fread(file.path(myTestRun$outputDir, "startValues.csv"))
+dtRes <- readRDS(file.path(myTestRun$outputDir, "bestPrediction.RDS"))[[1]]
 
 # Test cases for getLogLikelihood function
 test_that("getLogLikelihood calculates total log likelihood correctly", {
@@ -144,7 +144,6 @@ test_that("getLogLikelihood calculates total log likelihood correctly", {
 
 # Test cases for getLikelihoodTimeProfiles function
 test_that("getLikelihoodTimeProfiles calculates likelihood for time profiles", {
-
   result <- getLikelihoodTimeProfiles(dtPrior, dtRes)
   expect_type(result, "double")
   expect_true(is.finite(result)) # Expect a finite log likelihood value
@@ -170,4 +169,3 @@ test_that("setlogTruncationOffset calculates log truncation offsets", {
   expect_s3_class(result, "data.table")
   expect_true("logTruncationOffset" %in% colnames(result)) # Expect logTruncationOffset column in result
 })
-

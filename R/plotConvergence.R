@@ -19,7 +19,7 @@ plotConvergence <- function(dtConvergence,
                             nPoints = 200,
                             selectionMode = c("last", "random", "first")) {
   # Validate inputs
-  checkmate::assertDataTable(dtConvergence,min.rows = 1,.var.name = 'convergence table')
+  checkmate::assertDataTable(dtConvergence, min.rows = 1, .var.name = "convergence table")
   checkmate::assertIntegerish(displayVariablesIndx, lower = 1, upper = 6, unique = TRUE, any.missing = FALSE, null.ok = TRUE)
   checkmate::assertString(titletxt, null.ok = TRUE)
   checkmate::assertCount(nPoints, positive = TRUE)
@@ -27,7 +27,7 @@ plotConvergence <- function(dtConvergence,
 
   setorderv(dtConvergence, "iteration", 1)
 
-  dtConvergenceList = split(dtConvergence,by = 'event')
+  dtConvergenceList <- split(dtConvergence, by = "event")
 
   # Calculate metrics
   dtConvergenceList$best <- calculateConvergenceMetrics(dtConvergenceList$best)
@@ -76,7 +76,7 @@ plotConvergence <- function(dtConvergence,
     theme(legend.position = "none")
 
   # Add restart points as vertical lines
-  if (!is.null(dtConvergenceList$restart) && nrow(dtConvergenceList$restart)>0) {
+  if (!is.null(dtConvergenceList$restart) && nrow(dtConvergenceList$restart) > 0) {
     plotObject <- plotObject +
       geom_vline(data = dtConvergenceList$restart, mapping = aes(xintercept = iteration)) +
       labs(caption = "vertical lines indicate restart of algorithm")
@@ -95,7 +95,6 @@ plotConvergence <- function(dtConvergence,
 #' @keywords internal
 #' @noRd
 calculateConvergenceMetrics <- function(dt) {
-
   requiredCols <- c("logTimeProfile", "logHyperParameter", "logPrior", "NAcounter", "outsideRangeCounter", "iteration")
   if (!all(requiredCols %in% names(dt))) {
     stop(messages$errorConvergenceTableMissingColumns(requiredCols))
@@ -152,21 +151,25 @@ getConvergenceColumnHeaders <- function(dt, displayVariablesIndx) {
 #' @keywords internal
 #' @noRd
 selectIterations <- function(dtConvergenceList, nPointsAvailable, nPoints, selectionMode) {
-
   if (nPointsAvailable > nPoints) {
     dtConvergenceList$best <- dtConvergenceList$best[switch(selectionMode,
-                    first = seq(1, nPoints) ,
-                    random = sort(c(1,
-                                    sample(seq(2, nPointsAvailable - 1),
-                                           size = nPoints - 2,
-                                           replace = FALSE),
-                                    nPointsAvailable)),
-                    last = seq(1, nPoints) + nPointsAvailable - nPoints,
-                    stop(messages$errorUnknownSectionMode()))]
-    if (!is.null(dtConvergenceList$restart)){
+      first = seq(1, nPoints),
+      random = sort(c(
+        1,
+        sample(seq(2, nPointsAvailable - 1),
+          size = nPoints - 2,
+          replace = FALSE
+        ),
+        nPointsAvailable
+      )),
+      last = seq(1, nPoints) + nPointsAvailable - nPoints,
+      stop(messages$errorUnknownSectionMode())
+    )]
+    if (!is.null(dtConvergenceList$restart)) {
       dtConvergenceList$restart <- dtConvergenceList$restart[
         iteration >= min(dtConvergenceList$best$iteration) &
-          iteration <= max(dtConvergenceList$best$iteration)]
+          iteration <= max(dtConvergenceList$best$iteration)
+      ]
     }
   }
   return(dtConvergenceList)
