@@ -1,9 +1,4 @@
-#' List of functions and strings used to signal error and warning messages
-#' @description
-#' This module contains all error and warning messages used throughout the package.
-#' Messages are organized as functions that return formatted strings.
-#' @export
-messages <- list()
+messages <- ospsuite.utils::messages
 
 # Data Preparation Messages ----
 
