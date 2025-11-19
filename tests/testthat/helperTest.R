@@ -91,7 +91,7 @@ buildTestData <- function(rootDirectory = NULL,
   exportVirtualTwinPopulations(
     projectConfiguration = projectConfiguration,
     modelFile = list.files(projectConfiguration$modelFolder, pattern = ".pkml")[1],
-    overwrite = TRUE
+    overwrite = FALSE
   )
 
   scenarioList <- createScenarios.wrapped(
@@ -101,7 +101,7 @@ buildTestData <- function(rootDirectory = NULL,
 
   mockManualEditingsUpdateDefaultSCenario(projectConfiguration)
 
-  addBMLMPConfiguration(
+  tmp <- capture.output(addBMLMPConfiguration(
     projectConfiguration = projectConfiguration,
     nameOfParameterIdentification = "PI",
     snapshotFile = system.file(
@@ -110,7 +110,7 @@ buildTestData <- function(rootDirectory = NULL,
       "ParameterIdentificationSetup.json",
       mustWork = TRUE
     )
-  )
+  ))
 
   mockManualEditingsUpdateParameterDefinition(projectConfiguration)
   configurePriors(

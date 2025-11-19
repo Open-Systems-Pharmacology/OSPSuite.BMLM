@@ -1,4 +1,4 @@
-#' Save Final Values to Tables
+' Save Final Values to Tables
 #'
 #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
 #'
@@ -47,8 +47,7 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
   results <- lapply(individualIds, function(sheetName) {
     message(paste("export values for", sheetName))
 
-
-    dtInd <- dtList$startValues[sheetName == individualId, c("name", "categoricCovariate", "finalValue")]
+    dtInd <- dtList$startValues[sheetName == individualId, c("name", "categoricCovariate", "value")]
     dtAdd <- addContainerAndParameterPath(
       dtExport = dtInd,
       dtMappedPaths = dtList$mappedPaths
@@ -77,7 +76,7 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
     if (sheetName %in% wb$sheet_names) {
       dt <- xlsxReadData(wb, sheetName = sheetName)
     } else {
-      return(data.table(
+      dt <- (data.table(
         "container Path" = character(),
         "parameter Name" = character(),
         value = numeric(),
@@ -359,22 +358,23 @@ extractParameterValues <- function(dtExport, dtMappedPaths) {
     valueMode != PARAMETERTYPE$global,
     c("container Path", "parameter Name", "name", "units", "hyperDistribution", "hyperParameter", "value")
   ]
-  dtExport[, index := seq(1, .N), by = c("container Path", "parameter Name", "name", "units", "hyperDistribution")]
+  if (nrow(dtExport) > 0){
+    dtExport[, index := seq(1, .N), by = c("container Path", "parameter Name", "name", "units", "hyperDistribution")]
 
-  dtExport <- dcast(dtExport,
-    `container Path` + `parameter Name` + name + units + hyperDistribution ~ index,
-    value.var = c("hyperParameter", "value")
-  ) %>%
-    setnames(
-      old = c("name", "hyperDistribution", paste("hyperParameter", seq(1, 3), sep = "_"), paste("value", seq(1, 3), sep = "_")),
-      new = c("parameter Group", "distribution", paste0("p", seq(1, 3), "_type"), paste0("p", seq(1, 3), "_value")),
-      skip_absent = TRUE
-    )
+    dtExport <- dcast(dtExport,
+                      `container Path` + `parameter Name` + name + units + hyperDistribution ~ index,
+                      value.var = c("hyperParameter", "value")
+    ) %>%
+      setnames(
+        old = c("name", "hyperDistribution", paste("hyperParameter", seq(1, 3), sep = "_"), paste("value", seq(1, 3), sep = "_")),
+        new = c("parameter Group", "distribution", paste0("p", seq(1, 3), "_type"), paste0("p", seq(1, 3), "_value")),
+        skip_absent = TRUE
+      )
+    exportSheets[["population"]] <- copy(dtExport)
 
-  exportSheets[["population"]] <- copy(dtExport)
-
-  dtExport[, value := apply(.SD, 1, calculateValueOfDistributionRow, value = 0.5, type = "Q", log = FALSE)]
-  exportSheets[["median"]] <- dtExport[c("container Path", "parameter Name", "value", "units")]
+    dtExport[, value := apply(.SD, 1, calculateValueOfDistributionRow, value = 0.5, type = "Q", log = FALSE)]
+    exportSheets[["median"]] <- dtExport[c("container Path", "parameter Name", "value", "units")]
+  }
 
   return(exportSheets)
 }

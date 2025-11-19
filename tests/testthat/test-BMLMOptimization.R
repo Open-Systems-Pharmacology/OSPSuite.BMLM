@@ -130,29 +130,36 @@ test_that("export functions creates output", {
     }
   ))
 
-  myRun$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration)
+  tmp <- capture.output(myRun$exportFinalValuesToBMLConfigTable(projectConfiguration = projectConfiguration))
 
   wb <- openxlsx::loadWorkbook(projectConfiguration$addOns$bMLMConfigurationFile)
   dt <- xlsxReadData(wb = wb, sheetName = "Prior", skipDescriptionRow = FALSE)
   expect_contains(names(dt), "finalValue")
 
-  # myRun$exportModelParametersToConfigTables(projectConfiguration,overwrite = TRUE)
-  # wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
-  # expect_contains(wb$sheet_names,"myRun_global")
-  # dt <- xlsxReadData(wb = wb, sheetName = "myRun_global", skipDescriptionRow = FALSE)
-  # expect_equal(nrow(dt),expected = 2)
+  expect_warning(
+    capture.output(
+      suppressMessages(
+        myRun$exportModelParametersToConfigTables(projectConfiguration,overwrite = TRUE)
+      )
+    )
+  )
 
-  myRun$exportIndividualResultsToPkml(
+  wb <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
+  expect_contains(wb$sheet_names,"myRun_global")
+  dt <- xlsxReadData(wb = wb, sheetName = "myRun_global", skipDescriptionRow = FALSE)
+  expect_equal(nrow(dt),expected = 2)
+
+  tmp <- capture.output(myRun$exportIndividualResultsToPkml(
     projectConfiguration = projectConfiguration,
     individualId = dataObserved$individualId[1]
-  )
+  ))
   expect_length(list.files(myRun$outputDir, pattern = dataObserved$individualId[1]), n = 1)
 
-  myRun$exportIndividualValuesToConfigTable(projectConfiguration)
+  tmp <- capture.output(suppressMessages(myRun$exportIndividualValuesToConfigTable(projectConfiguration)))
   wb <- openxlsx::loadWorkbook(projectConfiguration$individualsFile)
   dt <- xlsxReadData(wb = wb, sheetName = dataObserved$individualId[1], skipDescriptionRow = FALSE)
   expect_equal(nrow(dt), expected = 3)
 
-  myRun$exportResultAsPopulation(projectConfiguration)
+  tmp <- capture.output(suppressMessages(myRun$exportResultAsPopulation(projectConfiguration)))
   expect_true(file.exists(file.path(projectConfiguration$populationsFolder, "1234_adults_iv_myRun.csv")))
 })
