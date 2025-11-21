@@ -67,6 +67,9 @@ BMLMOptimization <- R6::R6Class(
 
       if (asReload) {
         dtList <- loadListsForRun(self$outputDir, self$runName)
+        
+        # Check and update version if needed
+        private$checkAndConvertVersion(projectConfiguration)
       } else {
         callDetails <- paste("Configuration Call:\n",
           "      BMLM Configuration file: ", basename(projectConfiguration$addOns$bMLMConfigurationFile), "\n",
@@ -81,6 +84,9 @@ BMLMOptimization <- R6::R6Class(
         saveDataTablesAsCSV(dtList = dtList, outputDir = self$outputDir)
 
         private$setStatus(RUNSTATUS$initialized)
+        
+        # Save current package version
+        private$savePackageVersion()
       }
 
       for (iList in names(dtList)) {
@@ -167,15 +173,18 @@ BMLMOptimization <- R6::R6Class(
           optimizationGroup = "both",
           scalingMethod = scalingMethod
         )
+        private$dtList <- setParameterToTables(
+          dtList = private$dtList,
+          params = params,
+          scalingMethod = scalingMethod
+        )
       } else {
-        params <- statusList$best$params
-        scalingMethod <- statusList$best$scalingMethod
+        # params are already unscaled in the statusList
+        private$dtList <- setUnscaledParameterToTables(
+          dtList = private$dtList,
+          params = statusList$best$params
+        )
       }
-      private$dtList <- setParameterToTables(
-        dtList = private$dtList,
-        params = params,
-        scalingMethod = scalingMethod
-      )
 
 
       exportIndividualResultsToPkml(
@@ -199,10 +208,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       exportOptimizedPopulation(
@@ -224,10 +233,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       exportIndividualValuesToConfigTable(
@@ -249,10 +258,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       exportModelParametersToConfigTables(
@@ -276,10 +285,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       exportHyperParametersToConfigTables(
@@ -300,10 +309,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       saveFinalValuesToTables(
@@ -323,10 +332,10 @@ BMLMOptimization <- R6::R6Class(
         return(invisible())
       }
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the statusList
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = statusList$best$params,
-        scalingMethod = statusList$best$scalingMethod
+        params = statusList$best$params
       )
 
       dt <- getCurrentConfigTable(
@@ -819,10 +828,10 @@ BMLMOptimization <- R6::R6Class(
       if (private$status %in% c("stopped", "finalized")) {
         private$archivePreviousResults()
         optimStatus <- readRDS(file = file.path(self$outputDir, "bestOptimStatus.RDS"))
-        private$dtList <- setParameterToTables(
+        # params are already unscaled in the optimStatus
+        private$dtList <- setUnscaledParameterToTables(
           dtList = private$dtList,
-          params = optimStatus$params,
-          scalingMethod = optimStatus$scalingMethod
+          params = optimStatus$params
         )
         private$dtList$iteration <- optimStatus$iteration
         private$dtList$NAcounter <- optimStatus$NAcounter
@@ -1044,10 +1053,10 @@ BMLMOptimization <- R6::R6Class(
       bestStatus <- readRDS(file.path(self$outputDir, "bestOptimStatus.RDS"))
       private$printStatus(bestStatus, "best")
 
-      private$dtList <- setParameterToTables(
+      # params are already unscaled in the bestStatus
+      private$dtList <- setUnscaledParameterToTables(
         dtList = private$dtList,
-        params = bestStatus$params,
-        scalingMethod = bestStatus$scalingMethod
+        params = bestStatus$params
       )
       dtRes <- readRDS(file.path(self$outputDir, "bestPrediction.RDS"))
       if (!is.data.frame(dtRes)) {
@@ -1094,6 +1103,49 @@ BMLMOptimization <- R6::R6Class(
             statusObject$iteration * 100
         )
       )
+    },
+    savePackageVersion = function() {
+      versionFile <- file.path(self$outputDir, "package_version.txt")
+      currentVersion <- as.character(packageVersion("ospsuite.bmlm"))
+      writeLines(currentVersion, versionFile)
+      logAndDisplayOptimization(
+        paste("Saved package version:", currentVersion),
+        outputDir = self$outputDir
+      )
+    },
+    checkAndConvertVersion = function(projectConfiguration) {
+      versionFile <- file.path(self$outputDir, "package_version.txt")
+      currentVersion <- as.character(packageVersion("ospsuite.bmlm"))
+      
+      if (file.exists(versionFile)) {
+        savedVersion <- readLines(versionFile, warn = FALSE)[1]
+        
+        if (compareVersion(savedVersion, currentVersion) < 0) {
+          logAndDisplayOptimization(
+            paste("Detected older version:", savedVersion, "-> Updating to:", currentVersion),
+            outputDir = self$outputDir
+          )
+          
+          # Call convertVersionBMLM to update files
+          # Create a temporary projectConfiguration-like object for this run
+          tempConfig <- list(outputFolder = dirname(dirname(self$outputDir)))
+          
+          # Only convert this specific run folder
+          checkAndUpdateScalingMethod(self$outputDir)
+          convertScaledToUnscaledParams(self$outputDir)
+          
+          # Update version file
+          writeLines(currentVersion, versionFile)
+          
+          logAndDisplayOptimization(
+            paste("Version update completed:", savedVersion, "->", currentVersion),
+            outputDir = self$outputDir
+          )
+        }
+      } else {
+        # No version file exists, save current version
+        private$savePackageVersion()
+      }
     }
   )
 )

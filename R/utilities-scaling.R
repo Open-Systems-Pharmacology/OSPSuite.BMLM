@@ -105,6 +105,60 @@ getParams <-
     return(initialValues)
   }
 
+#' Get Unscaled Parameters
+#'
+#' This function retrieves unscaled parameter values from the provided data tables.
+#' Unlike getParams(), this returns the actual unscaled values, not the scaled transformation.
+#'
+#' @param dtPrior A data.table containing prior values
+#' @param dtStartValues A data.table containing start values
+#' @param valueColumn Name of column with value of interest either 'value' or 'startValue'.
+#' @param optimizationGroup A character string indicating the optimization group;
+#'                          must be one of 'both', 'external', or 'internal'.
+#'
+#' @return A named numeric vector of unscaled parameter values.
+#' @keywords internal
+#' @noRd
+getUnscaledParams <-
+  function(dtPrior,
+           dtStartValues,
+           valueColumn = c("value", "startValue"),
+           optimizationGroup = c("both", "external", "internal")) {
+    # initialize variables to avoid linter messages
+    value <- NULL
+
+    optimizationGroup <- match.arg(optimizationGroup)
+    valueColumn <- match.arg(valueColumn)
+
+    # Select relevant columns from dtPrior and dtStartValues
+    dtInput <-
+      dtPrior[, c("id", ..valueColumn, "valueMode")]
+    if (nrow(dtStartValues) > 0) {
+      dtInput <- rbind(
+        dtInput,
+        dtStartValues[, c("id", ..valueColumn)],
+        fill = TRUE
+      )
+    }
+    setnames(dtInput, old = valueColumn, new = "value")
+
+    # split parameters for optimizations
+    dtInput <- switch(optimizationGroup,
+      "external" = dtInput[is.na(valueMode) | valueMode == PARAMETERTYPE$global],
+      "internal" = dtInput[valueMode %in% c(PARAMETERTYPE$hyperParameter, PARAMETERTYPE$outputError)],
+      dtInput
+    )
+
+    checkmate::assertNumeric(dtInput$value, any.missing = FALSE)
+
+    unscaledValues <- stats::setNames(
+      dtInput$value,
+      dtInput$id
+    )
+
+    return(unscaledValues)
+  }
+
 #' Set Parameter to Tables
 #'
 #' This function updates the parameter values in the provided data.tables based on the optimization results.
@@ -132,6 +186,27 @@ setParameterToTables <- function(dtList, params, scalingMethod) {
         ),
       by = .I
       ]
+    }
+  }
+
+  return(dtList)
+}
+
+#' Set Unscaled Parameter to Tables
+#'
+#' This function updates the parameter values in the provided data.tables with unscaled values.
+#' Unlike setParameterToTables(), this function assumes params are already unscaled values.
+#'
+#' @param dtList A list containing various data.tables used in the optimization process.
+#' @param params A numeric vector of unscaled parameters.
+#'
+#' @return A list containing the updated data.tables.
+#' @keywords internal
+#' @noRd
+setUnscaledParameterToTables <- function(dtList, params) {
+  for (table in c("prior", "startValues")) {
+    if (nrow(dtList[[table]]) > 0) {
+      dtList[[table]][id %in% names(params), value := params[id]]
     }
   }
 
