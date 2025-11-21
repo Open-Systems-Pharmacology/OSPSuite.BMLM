@@ -56,13 +56,13 @@ The typical BMLM workflow consists of the following steps:
 
 The following diagram visualizes the complete BMLM workflow, showing the relationships between different files and the data flow through the optimization process:
 
-```{r workflow-diagram, echo=FALSE, eval=TRUE, fig.width=10, fig.height=12}
+```{r workflow-diagram, echo=FALSE, eval=TRUE, fig.width=20, fig.height=12}
 library(DiagrammeR)
 grViz("
 digraph BMLM_Workflow {
-  graph [rankdir=TB, fontname=Helvetica, compound=true]
-  node [shape=box, style=filled, fontname=Helvetica, margin=0.2]
-  edge [fontname=Helvetica]
+  graph [rankdir=TB, fontname=Helvetica, fontsize=16, compound=true]
+  node [shape=box, style=filled, fontname=Helvetica, fontsize=16, margin=0.2]
+  edge [fontname=Helvetica, fontsize=14]
   
   # Styling
   node [fillcolor='#E8F4F8']
@@ -75,7 +75,7 @@ digraph BMLM_Workflow {
     
     snapshot [label='Snapshot\n(.json)', fillcolor='#FFE6E6']
     observed [label='Observed Data\n(from Reporting Framework)', fillcolor='#FFE6E6']
-    rf_config [label='Reporting Framework\nConfiguration', fillcolor='#FFE6E6']
+    rf_config [label='Reporting Framework\nScenarios', fillcolor='#FFE6E6']
   }
   
   # Configuration phase
@@ -128,25 +128,22 @@ digraph BMLM_Workflow {
     style=filled
     fillcolor='#FFF9C4'
     
-    check_conv [label='checkConvergence()', shape=ellipse, fillcolor='#FFF59D']
-    check_pred [label='checkPredictedVsObserved()', shape=ellipse, fillcolor='#FFF59D']
-    check_res [label='checkResidualsAsQQ()', shape=ellipse, fillcolor='#FFF59D']
-    check_dist [label='checkDistributions()', shape=ellipse, fillcolor='#FFF59D']
+    check_conv [label='check\nConvergence()', shape=ellipse, fillcolor='#FFF59D']
+    check_pred [label='check\nPredictedVsObserved()', shape=ellipse, fillcolor='#FFF59D']
+    check_res [label='check\nResiduals()', shape=ellipse, fillcolor='#FFF59D']
+    check_dist [label='check\nDistributions()', shape=ellipse, fillcolor='#FFF59D']
   }
-  
-  # Final results
-  result_rds [label='result.RDS\n(final optimization results)', fillcolor='#BA68C8', penwidth=2]
-  
+
   # Export phase
   subgraph cluster_export {
     label='Export Results'
     style=filled
     fillcolor='#E0F2F1'
     
-    export_pop [label='exportResultAsPopulation()', shape=ellipse, fillcolor='#B2DFDB']
-    export_params [label='exportModelParametersToConfigTables()', shape=ellipse, fillcolor='#B2DFDB']
-    export_ind [label='exportIndividualValuesToConfigTable()', shape=ellipse, fillcolor='#B2DFDB']
-    export_pkml [label='exportIndividualResultsToPkml()', shape=ellipse, fillcolor='#B2DFDB']
+    export_pop [label='export\nResultAsPopulation()', shape=ellipse, fillcolor='#B2DFDB']
+    export_params [label='export\nModelParametersToConfigTables()', shape=ellipse, fillcolor='#B2DFDB']
+    export_ind [label='export\nIndividualValuesToConfigTable()', shape=ellipse, fillcolor='#B2DFDB']
+    export_pkml [label='export\nIndividualResultsToPkml()', shape=ellipse, fillcolor='#B2DFDB']
   }
   
   # Output files back to reporting framework
@@ -164,7 +161,6 @@ digraph BMLM_Workflow {
   
   # Main workflow edges
   snapshot -> add_config
-  rf_config -> add_config
   add_config -> bmlm_xlsx
   
   bmlm_xlsx -> config_priors
@@ -174,7 +170,7 @@ digraph BMLM_Workflow {
   bmlm_xlsx -> bmlm_new
   observed -> bmlm_new
   rf_config -> bmlm_new
-  
+
   bmlm_new -> output_dir
   output_dir -> data_csv
   output_dir -> prior_csv
@@ -201,19 +197,11 @@ digraph BMLM_Workflow {
   pred_rds -> check_res [style=dashed]
   best_rds -> check_dist [style=dashed]
   
-  # Final result
-  best_rds -> result_rds [label='After\nconvergence', penwidth=2]
-  
   # Export phase
-  result_rds -> export_pop
-  result_rds -> export_params
-  result_rds -> export_ind
-  result_rds -> export_pkml
-  
-  rf_config -> export_pop
-  rf_config -> export_params
-  rf_config -> export_ind
-  rf_config -> export_pkml
+  best_rds -> export_pop
+  best_rds -> export_params
+  best_rds -> export_ind
+  best_rds -> export_pkml
   
   export_pop -> pop_files
   export_params -> model_params
@@ -236,7 +224,7 @@ digraph BMLM_Workflow {
   
   {rank=same; leg_input; leg_config; leg_func; leg_temp; leg_output}
 }
-", width=800, height=1000)
+", width=1600, height=1000)
 ```
 
 **Key File Dependencies:**
