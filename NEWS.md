@@ -1,6 +1,6 @@
 # ospsuite.bmlm NEWS
 
-## [0.2.0] - 2025-11-21
+## [0.1.10.9000] - 2025-11-21
 
 ### Breaking Changes
 - **Parameter Storage Format Changed**: Parameters in optimStatus.RDS, bestOptimStatus.RDS, and failedOptimStatus.RDS are now stored as **unscaled values** instead of scaled values.

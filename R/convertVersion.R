@@ -62,7 +62,7 @@ checkAndUpdateScalingMethod <- function(folder) {
 
 #' Convert Scaled to Unscaled Parameters
 #'
-#' Version 0.2.0 changed the storage format of parameters in status files from scaled to unscaled.
+#' Version 0.1.10 changed the storage format of parameters in status files from scaled to unscaled.
 #' This function checks if status files contain scaled parameters and converts them to unscaled format.
 #' It also adds a version marker to indicate the conversion has been done.
 #'
@@ -75,8 +75,8 @@ convertScaledToUnscaledParams <- function(folder) {
   versionFile <- file.path(folder, "package_version.txt")
   if (file.exists(versionFile)) {
     savedVersion <- readLines(versionFile, warn = FALSE)[1]
-    # If version is 0.2.0 or higher, conversion already done
-    if (compareVersion(savedVersion, "0.2.0") >= 0) {
+    # If version is 0.1.10 or higher, conversion already done
+    if (compareVersion(savedVersion, "0.1.10") >= 0) {
       return(invisible())
     }
   }

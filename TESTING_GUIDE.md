@@ -1,12 +1,12 @@
-# Testing Guide for Version 0.2.0 Changes
+# Testing Guide for Version 0.1.10 Changes
 
 ## Overview
-Version 0.2.0 changes how parameters are stored in optimStatus files. This guide helps verify that the changes work correctly.
+Version 0.1.10 changes how parameters are stored in optimStatus files. This guide helps verify that the changes work correctly.
 
 ## Pre-Testing Setup
 
 ### 1. Update Test Data Files
-The test data files need to be converted from v0.1.9 format to v0.2.0 format:
+The test data files need to be converted from v0.1.9 format to v0.1.10 format:
 
 ```r
 # From the package root directory
@@ -16,7 +16,7 @@ source("update_test_data.R")
 This will:
 - Generate test data with proper CSV files
 - Convert the RDS files to unscaled format
-- Update the version file to 0.2.0
+- Update the version file to 0.1.10
 
 Alternatively, you can regenerate test data from scratch by:
 1. Running a short optimization
@@ -55,9 +55,9 @@ myRun <- BMLMOptimization$new(
 version_file <- file.path(myRun$outputDir, "package_version.txt")
 stopifnot(file.exists(version_file))
 
-# Verify version is 0.2.0
+# Verify version is 0.1.10
 version <- readLines(version_file)[1]
-stopifnot(version == "0.2.0")
+stopifnot(version == "0.1.10")
 ```
 
 #### Test: Loading Existing Run (Auto-Conversion)
@@ -103,7 +103,7 @@ convertVersionBMLM(projectConfig)
 # Verify version was updated
 version <- readLines(file.path(test_project_dir, "Output", "BMLM", "test_run", 
                                 "package_version.txt"))[1]
-stopifnot(version == "0.2.0")
+stopifnot(version == "0.1.10")
 ```
 
 ## Integration Tests
@@ -154,7 +154,7 @@ myRun$getCurrentConfigTable(projectConfiguration)
 # This requires having an actual old project from version 0.1.9
 # Steps:
 # 1. Create optimization run with version 0.1.9 (if available)
-# 2. Upgrade to version 0.2.0
+# 2. Upgrade to version 0.1.10
 # 3. Load the old run
 # 4. Verify it still works
 
@@ -177,7 +177,7 @@ old_run$checkCorrelations()
 ## Manual Verification Checklist
 
 ### Version Tracking
-- [ ] New runs create `package_version.txt` with "0.2.0"
+- [ ] New runs create `package_version.txt` with "0.1.10"
 - [ ] Version file is logged in `optimization_log.txt`
 - [ ] Loading existing runs checks version file
 - [ ] Older versions trigger automatic conversion
@@ -204,7 +204,7 @@ old_run$checkCorrelations()
 ## Common Issues and Solutions
 
 ### Issue: Test failures after update
-**Solution**: Make sure test data has been updated to v0.2.0 format using `update_test_data.R`
+**Solution**: Make sure test data has been updated to v0.1.10 format using `update_test_data.R`
 
 ### Issue: Parameters look wrong after loading
 **Solution**: Check if conversion was applied correctly. Old files should have been detected and converted.
@@ -237,9 +237,9 @@ if (status$scalingMethod == "hardBounds") {
 ### Check version in log file
 ```r
 # Look for these messages in optimization_log.txt:
-# - "Saved package version: 0.2.0"
-# - "Detected older version: 0.1.9 -> Updating to: 0.2.0"
-# - "Version update completed: 0.1.9 -> 0.2.0"
+# - "Saved package version: 0.1.10"
+# - "Detected older version: 0.1.9 -> Updating to: 0.1.10"
+# - "Version update completed: 0.1.9 -> 0.1.10"
 
 logfile <- file.path(myRun$outputDir, "optimization_log.txt")
 cat(readLines(logfile), sep = "\n")
@@ -258,14 +258,14 @@ grep("Converted scaled to unscaled",
 
 ## Expected Test Results
 
-### Before 0.2.0
+### Before 0.1.10
 - optimStatus.RDS: params in [0,1] for hardBounds or [-20,20] for logsig
 - No package_version.txt file
 - setParameterToTables() used to unscale when loading
 
-### After 0.2.0
+### After 0.1.10
 - optimStatus.RDS: params in actual value ranges
-- package_version.txt contains "0.2.0"
+- package_version.txt contains "0.1.10"
 - setUnscaledParameterToTables() used when loading (no unscaling needed)
 - Old projects automatically converted on first load
 

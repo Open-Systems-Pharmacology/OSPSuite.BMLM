@@ -41,6 +41,6 @@ file.remove(file.path(testResultDir, "prior.csv"))
 file.remove(file.path(testResultDir, "startValues.csv"))
 
 # Update version file
-writeLines("0.2.0", file.path(testResultDir, "package_version.txt"))
+writeLines("0.1.10.9000", file.path(testResultDir, "package_version.txt"))
 
 message("Test data conversion complete!")

@@ -50,10 +50,10 @@ All now use `setUnscaledParameterToTables()` instead of `setParameterToTables()`
 ### 4. Package Version
 
 #### DESCRIPTION
-- Updated version from 0.1.9 to 0.2.0 (breaking change)
+- Updated version from 0.1.9 to 0.1.10 (breaking change)
 
 #### NEWS.md (+28 lines)
-- Added comprehensive changelog for version 0.2.0
+- Added comprehensive changelog for version 0.1.10
 - Documented breaking changes
 - Provided migration guide for existing projects
 
@@ -86,7 +86,7 @@ dtList <- setParameterToTables(dtList, optimStatus$params, optimStatus$scalingMe
 # ^ This unscales the params
 ```
 
-### After (0.2.0):
+### After (0.1.10):
 ```r
 # Parameters saved as unscaled values
 optimStatus <- list(
@@ -105,9 +105,9 @@ dtList <- setUnscaledParameterToTables(dtList, optimStatus$params)
 ### Automatic Conversion
 When loading an existing project created with version 0.1.9 or earlier:
 1. `BMLMOptimization$new()` checks for `package_version.txt` in the run directory
-2. If not found or version < 0.2.0, calls conversion functions automatically
+2. If not found or version < 0.1.10, calls conversion functions automatically
 3. Logs the conversion in the optimization log
-4. Updates the version file to 0.2.0
+4. Updates the version file to 0.1.10
 
 ### Manual Conversion
 Users can also manually call:
@@ -132,7 +132,7 @@ source("update_test_data.R")
 ```
 
 **Option 2**: Generate new test data
-Run a short optimization with version 0.2.0 and copy the resulting files.
+Run a short optimization with version 0.1.10 and copy the resulting files.
 
 ### Test Coverage
 Tests verify:
@@ -153,7 +153,7 @@ All tests that load optimStatus files will now expect unscaled parameters.
 For projects created with version 0.1.9 or earlier:
 
 - [ ] Backup your project directory
-- [ ] Update to version 0.2.0
+- [ ] Update to version 0.1.10
 - [ ] Option A: Let automatic conversion happen when you load runs
   - Simply call `BMLMOptimization$new()` with existing runs
   - Check the log file for conversion messages
