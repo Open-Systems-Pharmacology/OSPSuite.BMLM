@@ -151,10 +151,12 @@ setParameterToTables <- function(dtList, params, scalingMethod) {
 #' @noRd
 scaleToLogSig <- function(value, minValue, maxValue, scaling) {
   param <-
-    qlogis(scaleWithinBounds(value = value,
-                                  minValue = minValue,
-                                  maxValue = maxValue,
-                                  scaling = scaling))
+    qlogis(scaleWithinBounds(
+      value = value,
+      minValue = minValue,
+      maxValue = maxValue,
+      scaling = scaling
+    ))
 
   param <- pmax(-20, pmin(20, param))
   return(param)
@@ -172,10 +174,12 @@ scaleToLogSig <- function(value, minValue, maxValue, scaling) {
 #' @keywords internal
 #' @noRd
 unscaleFromLogSig <- function(param, minValue, maxValue, scaling) {
-  unscaleFromBounds(param = plogis(param),
-                    minValue = minValue,
-                    maxValue = maxValue,
-                    scaling = scaling)
+  unscaleFromBounds(
+    param = plogis(param),
+    minValue = minValue,
+    maxValue = maxValue,
+    scaling = scaling
+  )
 }
 
 #' Scale Within Specified Limits

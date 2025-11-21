@@ -19,7 +19,7 @@ plotPredictedVsTime <- function(
     titeltxt = NULL,
     ...) {
   # Input validation
-  checkmate::assertDataTable(dtRes,null.ok = FALSE,min.rows = 1)
+  checkmate::assertDataTable(dtRes, null.ok = FALSE, min.rows = 1)
   checkmate::assertCharacter(titeltxt, len = 1, null.ok = TRUE)
   checkmate::assertCount(nCols, positive = TRUE)
   yScale <- tolower(match.arg(yScale))
@@ -54,7 +54,7 @@ plotPredictedVsTime <- function(
         title = titeltxt,
         subtitle = dtResGroup$scenario[1],
         y = dtResGroup$outputPathId[1],
-        caption = 'time raster of predicted is matched to time raster of observed'
+        caption = "time raster of predicted is matched to time raster of observed"
       ) +
       theme(legend.position = "none")
 
@@ -92,9 +92,9 @@ plotResidualLoop <- function(dtRes, plotFunction, nCols = 2, titeltxt = NULL,
   # Input validation
   checkmate::assertDataTable(dtRes, min.rows = 1)
   checkmate::assertFunction(plotFunction)
-  checkmate::assertCount(nCols,positive = TRUE)
-  checkmate::assertCharacter(titeltxt,null.ok = TRUE,len = 1)
-  checkmate::assertLogical(excludeCensored,null.ok = FALSE)
+  checkmate::assertCount(nCols, positive = TRUE)
+  checkmate::assertCharacter(titeltxt, null.ok = TRUE, len = 1)
+  checkmate::assertLogical(excludeCensored, null.ok = FALSE)
 
   # Get unique outputPathIds
   outputPathIds <- unique(dtRes$outputPathId)
@@ -104,8 +104,9 @@ plotResidualLoop <- function(dtRes, plotFunction, nCols = 2, titeltxt = NULL,
   for (id in outputPathIds) {
     # Filter data for the current outputPathId
     filteredData <- dtRes[dtRes$outputPathId == id, ]
-    if (excludeCensored)
-      filteredData = filteredData[isCensored == FALSE]
+    if (excludeCensored) {
+      filteredData <- filteredData[isCensored == FALSE]
+    }
 
     # Call the specific plot expression passed as an argument
     plotObject <- plotFunction(filteredData, ...) +
@@ -117,12 +118,12 @@ plotResidualLoop <- function(dtRes, plotFunction, nCols = 2, titeltxt = NULL,
     # Add facet wrapping by scenario and group
     plotObject <- plotObject +
       facet_wrap(vars(scenario, group), ncol = nCols) +
-      scale_shape_manual(values = c('FALSE' = 'circle','TRUE' = 'circle open')) +
-      theme(legend.direction = 'horizontal')
+      scale_shape_manual(values = c("FALSE" = "circle", "TRUE" = "circle open")) +
+      theme(legend.direction = "horizontal")
 
-    if (excludeCensored){
+    if (excludeCensored) {
       plotObject <- plotObject +
-        guides(shape = 'none',fill = 'none',color = 'none')
+        guides(shape = "none", fill = "none", color = "none")
     }
     plotList[[id]] <- plotObject
   }
@@ -149,7 +150,7 @@ plotPredictedVsObserved <- function(
     ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
-  checkmate::assertLogical(addRegression,null.ok = FALSE)
+  checkmate::assertLogical(addRegression, null.ok = FALSE)
   xyScale <- tolower(match.arg(xyScale))
 
   # Create the  plot
@@ -160,7 +161,7 @@ plotPredictedVsObserved <- function(
     comparisonLineVector = getFoldDistanceList(folds = c()),
     xyscale = xyScale,
     groupAesthetics = c(),
-    geomPointAttributes = list(shape = 21,fill = 'blue'),
+    geomPointAttributes = list(shape = 21, fill = "blue"),
     ...
   )
 
@@ -184,9 +185,12 @@ plotResidualsVsTime <- function(filteredData, ...) {
 
   # Create the base plot for residuals vs observed
   plotObject <- ospsuite_plotResidualsVsTime(filteredData,
-                                             mapping = aes(y = resNorm,
-                                                           shape = isCensored),
-                                             groupAesthetics = c()) +
+    mapping = aes(
+      y = resNorm,
+      shape = isCensored
+    ),
+    groupAesthetics = c()
+  ) +
     labs(y = getErrormodelLabel(filteredData$errorModel[1]))
 
   return(plotObject)
@@ -209,11 +213,11 @@ plotResidualsDistribution <- function(filteredData, ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
 
-  setorderv(filteredData,'resNorm')
-  filteredData[, ecdf := seq_len(.N) / .N, by = c('scenario', 'group')]
+  setorderv(filteredData, "resNorm")
+  filteredData[, ecdf := seq_len(.N) / .N, by = c("scenario", "group")]
 
   plotObject <- ggplotWithWatermark(filteredData) +
-    geom_point(aes(x = resNorm, y = ecdf,shape = isCensored)) +
+    geom_point(aes(x = resNorm, y = ecdf, shape = isCensored)) +
     geom_function(fun = pnorm) +
     labs(
       x = getErrormodelLabel(filteredData$errorModel[1]),
@@ -239,18 +243,18 @@ plotResidualsAsHistogram <- function(filteredData, ...) {
 
   # Create the base plot for residuals vs observed
   plotObject <- ospsuite.plots::plotHistogram(filteredData,
-                                              mapping = aes(x = resNorm, groupby = isCensored),
-                                              plotAsFrequency = TRUE,
-                                              distribution = "none",
-                                              geomHistAttributes = list(position = 'stack'),
-                                              ...
+    mapping = aes(x = resNorm, groupby = isCensored),
+    plotAsFrequency = TRUE,
+    distribution = "none",
+    geomHistAttributes = list(position = "stack"),
+    ...
   ) +
     stat_function(
       fun = dnorm, args = list(mean = 0, sd = 1),
       color = "black", linewidth = 1
     ) +
     geom_vline(xintercept = 0, linewidth = 0.5) +
-    #theme(legend.position = "none") +
+    # theme(legend.position = "none") +
     labs(
       x = getErrormodelLabel(filteredData$errorModel[1]),
     )
@@ -267,25 +271,29 @@ plotResidualsAsHistogram <- function(filteredData, ...) {
 #' @return A ggplot object for the QQ plot.
 #' @export
 #' @family plotting
-plotResidualsAsQQ <- function(filteredData,...) {
+plotResidualsAsQQ <- function(filteredData, ...) {
   # Input validation
   checkmate::assertDataTable(filteredData, min.rows = 1)
 
-    # Create the base plot for residuals vs observed
-    plotObject <- ospsuite.plots::plotQQ(data = filteredData,
-                                         mapping = aes(sample = resNorm,groupby = isCensored)) +
-      geom_abline(slope = 1,intercept = 0,linetype = 'dashed')
-      labs(
-        y = getErrormodelLabel(filteredData$errorModel[1])
-      )
+  # Create the base plot for residuals vs observed
+  plotObject <- ospsuite.plots::plotQQ(
+    data = filteredData,
+    mapping = aes(sample = resNorm, groupby = isCensored)
+  ) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+  labs(
+    y = getErrormodelLabel(filteredData$errorModel[1])
+  )
   return(invisible(plotObject))
 }
 # auxiliaries -------------------
-getErrormodelLabel <- function(errorModel){
-  return(paste('normalized residual\n',
-               switch(errorModel,
-                      absolute = '(data - predicted) / sigma',
-                      proportional = '(data - predicted) / (predicted * sigma)',
-                      log_absolute = '(log(data) - log(predicted)) / sigma'
-               )))
+getErrormodelLabel <- function(errorModel) {
+  return(paste(
+    "normalized residual\n",
+    switch(errorModel,
+      absolute = "(data - predicted) / sigma",
+      proportional = "(data - predicted) / (predicted * sigma)",
+      log_absolute = "(log(data) - log(predicted)) / sigma"
+    )
+  ))
 }

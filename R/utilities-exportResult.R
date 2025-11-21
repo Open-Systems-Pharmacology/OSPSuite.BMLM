@@ -1,4 +1,4 @@
-#' Save Final Values to Tables
+' Save Final Values to Tables
 #'
 #' This function saves final values from a provided data table to specified sheets in an Excel workbook.
 #'
@@ -47,36 +47,40 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
   results <- lapply(individualIds, function(sheetName) {
     message(paste("export values for", sheetName))
 
-
-    dtInd <- dtList$startValues[sheetName == individualId,c("name","categoricCovariate","finalValue")]
-    dtAdd <- addContainerAndParameterPath(dtExport = dtInd,
-                                          dtMappedPaths = dtList$mappedPaths) %>%
-      setnames(old = c('unit'),
-               new = c('units'))
+    dtInd <- dtList$startValues[sheetName == individualId, c("name", "categoricCovariate", "value")]
+    dtAdd <- addContainerAndParameterPath(
+      dtExport = dtInd,
+      dtMappedPaths = dtList$mappedPaths
+    ) %>%
+      setnames(
+        old = c("unit"),
+        new = c("units")
+      )
 
     scenarios <- unique(dtList$data[individualId == sheetName]$scenario)
 
     dtAdd <-
-      dtAdd[,!c('scenarios'),with = FALSE] %>%
-      melt(value.name = 'multiplicator',variable.name = 'scenario',measure.vars = scenarios)
-    dtAdd <- unique(dtAdd[,!c('scenario'),with = FALSE])
-    if (any(duplicated(dtAdd$linkedParameters))){
+      dtAdd[, !c("scenarios"), with = FALSE] %>%
+      melt(value.name = "multiplicator", variable.name = "scenario", measure.vars = scenarios)
+    dtAdd <- unique(dtAdd[, !c("scenario"), with = FALSE])
+    if (any(duplicated(dtAdd$linkedParameters))) {
       stop(messages$errorExportAmbiguousValues())
     }
-    dtAdd[useAsFactor == 1,value := value*multiplicator]
+    dtAdd[useAsFactor == 1, value := value * multiplicator]
 
-    for (iRow in which(dtAdd$useAsFactor == 1)){
-      p <- getParameter(container = scenarioList[[scenarios[[1]]]]$simulation,path = dtAdd$linkedParameters[iRow])
-      dtAdd$units[iRow] = p$unit
+    for (iRow in which(dtAdd$useAsFactor == 1)) {
+      p <- getParameter(container = scenarioList[[scenarios[[1]]]]$simulation, path = dtAdd$linkedParameters[iRow])
+      dtAdd$units[iRow] <- p$unit
     }
 
     if (sheetName %in% wb$sheet_names) {
       dt <- xlsxReadData(wb, sheetName = sheetName)
     } else {
-      return(data.table('container Path' =  character(),
-                        'parameter Name' = character(),
-                        value	= numeric(),
-                        units	= character()
+      dt <- (data.table(
+        "container Path" = character(),
+        "parameter Name" = character(),
+        value = numeric(),
+        units = character()
       ))
     }
 
@@ -92,7 +96,6 @@ exportIndividualValuesToConfigTable <- function(projectConfiguration, scenarioLi
       dtNewData = dt,
       templateXlsx = templateXlsx
     )
-
   })
 
   openxlsx::saveWorkbook(wb = wb, file = projectConfiguration$individualsFile, overwrite = TRUE)
@@ -236,69 +239,75 @@ exportOptimizedPopulation <-
 #'
 #' @return NULL
 #' @export
-exportModelParametersToConfigTables <- function(projectConfiguration,dtList,sheetName,overwrite = FALSE){
-
-  tmp <- dtList$prior[useAsFactor == TRUE,c("name")] %>%
+exportModelParametersToConfigTables <- function(projectConfiguration, dtList, sheetName, overwrite = FALSE) {
+  tmp <- dtList$prior[useAsFactor == TRUE, c("name")] %>%
     unique()
-  if (nrow(tmp) > 0){
+  if (nrow(tmp) > 0) {
     warning(messages$warningFactorParametersNotExported(tmp$name))
   }
 
-  dtExport = dtList$prior[valueMode != PARAMETERTYPE$outputError &
-                            useAsFactor == FALSE]
-  if (nrow(dtExport) == 0){
-    message('no parameters to export')
+  dtExport <- dtList$prior[valueMode != PARAMETERTYPE$outputError &
+    useAsFactor == FALSE]
+  if (nrow(dtExport) == 0) {
+    message("no parameters to export")
     return(invisible())
   }
   wbMP <- openxlsx::loadWorkbook(projectConfiguration$modelParamsFile)
   wbPop <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
 
 
-  for (covariate in unique(dtExport$categoricCovariate)){
+  for (covariate in unique(dtExport$categoricCovariate)) {
     exportSheets <- extractParameterValues(
       dtExport = dtExport[categoricCovariate == covariate],
-      dtMappedPaths = dtList$mappedPaths[,c('name','linkedParameters')]
+      dtMappedPaths = dtList$mappedPaths[, c("name", "linkedParameters")]
     )
 
-    wbMP <-  addExportSheet(wb = wbMP,
-                            dt = exportSheets$global,
-                            covariate = covariate,
-                            overwrite = overwrite,
-                            suffix = 'global',
-                            sheetName = sheetName)
-    wbMP <-  addExportSheet(wb = wbMP,
-                            dt = exportSheets$median,
-                            covariate = covariate,
-                            overwrite = overwrite,
-                            suffix = 'median',
-                            sheetName = sheetName)
-    wbPop <-  addExportSheet(wb = wbPop,
-                             dt = exportSheets$population,
-                             covariate = covariate,
-                             overwrite = overwrite,
-                             suffix = '',
-                             sheetName = sheetName,
-                             toModelParameters = FALSE)
+    wbMP <- addExportSheet(
+      wb = wbMP,
+      dt = exportSheets$global,
+      covariate = covariate,
+      overwrite = overwrite,
+      suffix = "global",
+      sheetName = sheetName
+    )
+    wbMP <- addExportSheet(
+      wb = wbMP,
+      dt = exportSheets$median,
+      covariate = covariate,
+      overwrite = overwrite,
+      suffix = "median",
+      sheetName = sheetName
+    )
+    wbPop <- addExportSheet(
+      wb = wbPop,
+      dt = exportSheets$population,
+      covariate = covariate,
+      overwrite = overwrite,
+      suffix = "",
+      sheetName = sheetName,
+      toModelParameters = FALSE
+    )
   }
   openxlsx::saveWorkbook(wb = wbMP, file = projectConfiguration$modelParamsFile, overwrite = TRUE)
   openxlsx::saveWorkbook(wb = wbPop, file = projectConfiguration$populationsFile, overwrite = TRUE)
-
 }
 # auxiliaries ------------
-addExportSheet <- function(wb,dt,sheetName,covariate,overwrite,suffix, toModelParameters= TRUE){
-  if (nrow(dt) == 0) return(wb)
+addExportSheet <- function(wb, dt, sheetName, covariate, overwrite, suffix, toModelParameters = TRUE) {
+  if (nrow(dt) == 0) {
+    return(wb)
+  }
 
-  sheetNameParts = c(sheetName,covariate,suffix)
-  sheetName <- paste(sheetNameParts[trimws(sheetNameParts) !=''],collapse = '_')
+  sheetNameParts <- c(sheetName, covariate, suffix)
+  sheetName <- paste(sheetNameParts[trimws(sheetNameParts) != ""], collapse = "_")
 
   if (sheetName %in% wb$sheet_names & !overwrite) {
     warning(messages$errorSheetAlreadyExists(sheetName))
     return(wb)
   }
 
-  message(paste("export parameters to",sheetName))
+  message(paste("export parameters to", sheetName))
 
-  if (toModelParameters){
+  if (toModelParameters) {
     xlsxAddDataUsingTemplate(
       wb = wb,
       templateSheet = "Template",
@@ -329,36 +338,43 @@ addExportSheet <- function(wb,dt,sheetName,covariate,overwrite,suffix, toModelPa
 #' @return A list of data.table containing extracted sheet inputs for export
 #' @keywords internal
 #' @noRd
-extractParameterValues <- function(dtExport, dtMappedPaths ) {
+extractParameterValues <- function(dtExport, dtMappedPaths) {
+  exportSheets <- list(global = data.table(), median = data.table(), population = data.table(), individuals = data.table())
+  if (nrow(dtExport) == 0) {
+    return(exportSheets)
+  }
 
-  exportSheets = list(global = data.table(),median = data.table(),population = data.table(),individuals = data.table())
-  if (nrow(dtExport) == 0) return(exportSheets)
-
-  dtExport <- addContainerAndParameterPath(dtExport = dtExport,dtMappedPaths = dtMappedPaths)
+  dtExport <- addContainerAndParameterPath(dtExport = dtExport, dtMappedPaths = dtMappedPaths)
 
   # Rename 'unit' column to 'units' for consistency
   setnames(dtExport, old = c("unit"), new = c("units"))
 
   # filter global values
-  exportSheets[['global']] <-
-    dtExport[valueMode == PARAMETERTYPE$global,c("container Path", "parameter Name", "value", "units")]
+  exportSheets[["global"]] <-
+    dtExport[valueMode == PARAMETERTYPE$global, c("container Path", "parameter Name", "value", "units")]
 
   # evaluate hyperParameters
-  dtExport <- dtExport[valueMode != PARAMETERTYPE$global,
-                       c("container Path","parameter Name","name","units","hyperDistribution","hyperParameter","value")]
-  dtExport[,index := seq(1,.N),by = c("container Path","parameter Name","name","units","hyperDistribution")]
+  dtExport <- dtExport[
+    valueMode != PARAMETERTYPE$global,
+    c("container Path", "parameter Name", "name", "units", "hyperDistribution", "hyperParameter", "value")
+  ]
+  if (nrow(dtExport) > 0){
+    dtExport[, index := seq(1, .N), by = c("container Path", "parameter Name", "name", "units", "hyperDistribution")]
 
-  dtExport <- dcast(dtExport,
-                      `container Path` + `parameter Name` + name + units + hyperDistribution   ~ index,
-                      value.var = c("hyperParameter","value")) %>%
-    setnames(old = c('name','hyperDistribution',paste("hyperParameter",seq(1,3),sep = '_'),paste("value",seq(1,3),sep = '_')),
-             new = c('parameter Group','distribution',paste0('p',seq(1,3),'_type'),paste0('p',seq(1,3),'_value')),
-             skip_absent = TRUE)
+    dtExport <- dcast(dtExport,
+                      `container Path` + `parameter Name` + name + units + hyperDistribution ~ index,
+                      value.var = c("hyperParameter", "value")
+    ) %>%
+      setnames(
+        old = c("name", "hyperDistribution", paste("hyperParameter", seq(1, 3), sep = "_"), paste("value", seq(1, 3), sep = "_")),
+        new = c("parameter Group", "distribution", paste0("p", seq(1, 3), "_type"), paste0("p", seq(1, 3), "_value")),
+        skip_absent = TRUE
+      )
+    exportSheets[["population"]] <- copy(dtExport)
 
-  exportSheets[['population']] <- copy(dtExport)
-
-  dtExport[,value := apply(.SD, 1, calculateValueOfDistributionRow,value = 0.5,type = 'Q',log = FALSE)]
-  exportSheets[['median']] <- dtExport[c("container Path", "parameter Name", "value", "units")]
+    dtExport[, value := apply(.SD, 1, calculateValueOfDistributionRow, value = 0.5, type = "Q", log = FALSE)]
+    exportSheets[["median"]] <- dtExport[c("container Path", "parameter Name", "value", "units")]
+  }
 
   return(exportSheets)
 }
@@ -387,8 +403,8 @@ addFinalValue <- function(wb, sheetName, identifier, newTable) {
 
   return(dt)
 }
-' Add Container and Parameter Path
-#'
+" Add Container and Parameter Path
+#"
 #' This function merges a data.table containing parameter values with mapped paths to extract respective container and parameter names.
 #'
 #' @param dtExport A data.table containing identifier and parameter type of parameters to be merged with mapped paths.
@@ -397,12 +413,133 @@ addFinalValue <- function(wb, sheetName, identifier, newTable) {
 #' @return A data.table that includes the mapped container paths and parameter names.
 #' @keywords internal
 #' @noRd
-addContainerAndParameterPath <- function(dtExport,dtMappedPaths){
-
+addContainerAndParameterPath <- function(dtExport, dtMappedPaths) {
   dtExport <- merge(dtMappedPaths, dtExport, by = "name")
 
   dtExport[, `container Path` := sapply(strsplit(linkedParameters, "\\|"), function(x) paste(x[-length(x)], collapse = "|"))]
   dtExport[, `parameter Name` := sapply(strsplit(linkedParameters, "\\|"), function(x) tail(x, n = 1))]
 
   return(dtExport)
+}
+# exportPopulationWithVariability --------------
+#' Export Population with Variability
+#'
+#' This function loads an existing population CSV file and generates new random parameter values
+#' according to the distributions defined in a variability sheet. Parameters with the same
+#' parameter group are strictly correlated.
+#'
+#' @param projectConfiguration A ProjectConfiguration object containing project configuration details,
+#'   including the path to the populations folder and populations file.
+#' @param populationName A string representing the name of the population (without .csv extension).
+#' @param variabilitySheetName A string representing the name of the variability sheet in the
+#'   Populations.xlsx file.
+#' @param newName An optional string for the new population name. If NULL, defaults to
+#'   paste(populationName, variabilitySheetName, sep = '_').
+#' @param overwrite A logical indicating whether to overwrite an existing population file with the same name.
+#'   Default is FALSE.
+#'
+#' @return NULL (invisible). The function saves a new population CSV file.
+#' @export
+#' @family export
+exportPopulationWithVariability <- function(projectConfiguration,
+                                            populationName,
+                                            variabilitySheetName,
+                                            newName = NULL,
+                                            overwrite = FALSE) {
+  # Validate inputs
+  checkmate::assertClass(projectConfiguration, "ProjectConfiguration")
+  checkmate::assertString(populationName)
+  checkmate::assertString(variabilitySheetName)
+  checkmate::assertString(newName, null.ok = TRUE)
+  checkmate::assertFlag(overwrite)
+
+  # Set default newName if not provided
+  if (is.null(newName)) {
+    newName <- paste(populationName, variabilitySheetName, sep = "_")
+  }
+
+  # new population
+  newPopulationFile <- file.path(projectConfiguration$populationsFolder, paste0(newName, ".csv"))
+
+  # Check if file already exists
+  if (file.exists(newPopulationFile) && !overwrite) {
+    message(messages$messagePopulationFileExists(newPopulationFile))
+    return(invisible())
+  }
+
+  # Load existing population file
+  populationFile <- file.path(projectConfiguration$populationsFolder, paste0(populationName, ".csv"))
+  checkmate::assertFileExists(populationFile)
+  message(messages$messageLoadingPopulation(populationFile))
+
+  dtPopulation <- data.table::fread(populationFile)
+
+  # Load variability sheet from Populations.xlsx
+  wbPop <- openxlsx::loadWorkbook(projectConfiguration$populationsFile)
+
+  if (!(variabilitySheetName %in% wbPop$sheet_names)) {
+    stop(messages$errorVariabilitySheetNotFound(variabilitySheetName, projectConfiguration$populationsFile))
+  }
+
+
+  message(messages$messageLoadingVariabilitySheet(variabilitySheetName))
+  dtVariability <- xlsxReadData(wb = wbPop, sheetName = variabilitySheetName, skipDescriptionRow = TRUE)
+
+  # Validate variability sheet has required columns
+  requiredCols <- c("container Path", "parameter Name", "parameter Group", "distribution")
+  missingCols <- setdiff(requiredCols, names(dtVariability))
+  if (length(missingCols) > 0) {
+    stop(messages$errorVariabilitySheetMissingColumns(missingCols))
+  }
+
+  # Create full parameter paths for matching
+  dtVariability[, parameterPath := paste(`container Path`, `parameter Name`, sep = "|")]
+
+  # Get number of individuals
+  nIndividuals <- nrow(dtPopulation)
+  message(messages$messageGeneratingVariability(nIndividuals))
+
+  # Group parameters by parameter Group for correlation
+  uniqueGroups <- unique(dtVariability$`parameter Group`)
+
+  # Generate random values for each group
+  for (group in uniqueGroups) {
+    dtGroup <- dtVariability[`parameter Group` == group]
+    nParams <- nrow(dtGroup)
+
+    message(messages$messageProcessingParameterGroup(group, nParams))
+
+    # For strict correlation, generate one set of random quantiles (probabilities)
+    # and apply to all parameters in the group
+    randomQuantiles <- runif(nIndividuals)
+
+    # Apply the same quantiles to each parameter in the group
+    for (i in seq_len(nParams)) {
+      row <- dtGroup[i, ]
+      paramPath <- row$parameterPath
+
+      # Check if this parameter exists in the population
+      if (!(paramPath %in% names(dtPopulation))) {
+        warning(messages$warningParameterNotFoundInPopulation(paramPath))
+        next
+      }
+
+      # Generate new values using the quantile function for the distribution
+      newValues <- sapply(randomQuantiles, function(q) {
+        calculateValueOfDistributionRow(row = unlist(row[1]), type = "Q", value = q, log = FALSE)
+      })
+
+      if (any(is.na(newValues))) stop(paste("Parameter generation for", paramPath, "failed. Distributed parameter contains NA."))
+
+      # Update population with new values
+      dtPopulation[[paramPath]] <- newValues
+    }
+  }
+
+  # Save new population
+  message(messages$messageSavingPopulation(newPopulationFile))
+  data.table::fwrite(dtPopulation, newPopulationFile)
+
+  message(messages$messagePopulationCreated(newName))
+  return(invisible())
 }

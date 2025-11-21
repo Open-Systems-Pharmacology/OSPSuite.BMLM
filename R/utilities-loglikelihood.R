@@ -354,16 +354,16 @@ calculateResidual <- function(yValue, predicted, model, sigma, isCensored, lloq)
   # If the data is censored, calculate the probability of being above the lower limit of quantification (lloq)
   if (isCensored) {
     res <- switch(model,
-                  absolute = (lloq - predicted) / sigma,
-                  proportional = (lloq - predicted) / (sigma * predicted),
-                  log_absolute = (log(lloq) - log(predicted)) / sigma
+      absolute = (lloq - predicted) / sigma,
+      proportional = (lloq - predicted) / (sigma * predicted),
+      log_absolute = (log(lloq) - log(predicted)) / sigma
     )
   } else {
     # If the data is notored, calculate the log likelihood based on the chosen model
     res <- switch(model,
-                  absolute = (yValue - predicted) / sigma,
-                  proportional = (yValue - predicted) / (sigma * predicted),
-                  log_absolute = (log(yValue) - log(predicted)) / sigma
+      absolute = (yValue - predicted) / sigma,
+      proportional = (yValue - predicted) / (sigma * predicted),
+      log_absolute = (log(yValue) - log(predicted)) / sigma
     )
   }
 
