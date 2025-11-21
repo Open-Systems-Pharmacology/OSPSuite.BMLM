@@ -422,6 +422,7 @@ runInternalOptimization <- function(dtList, optimEnv, outputDir) {
 #' Update Optimization Status
 #'
 #' Updates the optimization status with the current parameters and iteration.
+#' Note: Parameters are stored as UNSCALED values (not scaled).
 #'
 #' @param dtPrior A data.table containing prior values.
 #' @param dtStartValues A data.table containing start values.
@@ -433,11 +434,10 @@ runInternalOptimization <- function(dtList, optimEnv, outputDir) {
 updateOptimStatus <- function(dtPrior, dtStartValues, optimEnv) {
   return(list(
     iteration = optimEnv$iteration,
-    params = getParams(
+    params = getUnscaledParams(
       dtPrior = dtPrior,
       dtStartValues = dtStartValues,
-      optimizationGroup = c("both"),
-      scalingMethod = optimEnv$scalingMethod
+      optimizationGroup = c("both")
     ),
     scalingMethod = optimEnv$scalingMethod,
     NAcounter = optimEnv$NAcounter,

@@ -17,6 +17,7 @@ convertVersionBMLM <- function(projectConfiguration) {
 
   for (folder in runFolders) {
     checkAndUpdateScalingMethod(folder)
+    convertScaledToUnscaledParams(folder)
   }
 
   return(invisible())
@@ -53,6 +54,111 @@ checkAndUpdateScalingMethod <- function(folder) {
 
       fwrite(convergence, file = file.path(folder, "convergence.csv"))
       message(paste("Add outsideRangeCounter to convergence.csv for run", folder))
+    }
+  }
+
+  return(invisible())
+}
+
+#' Convert Scaled to Unscaled Parameters
+#'
+#' Version 0.1.10 changed the storage format of parameters in status files from scaled to unscaled.
+#' This function checks if status files contain scaled parameters and converts them to unscaled format.
+#' It also adds a version marker to indicate the conversion has been done.
+#'
+#' @param folder A character string specifying the path to the folder containing the status files.
+#' @return None
+#' @keywords internal
+#' @noRd
+convertScaledToUnscaledParams <- function(folder) {
+  # Check if conversion has already been done
+  versionFile <- file.path(folder, "package_version.txt")
+  if (file.exists(versionFile)) {
+    savedVersion <- readLines(versionFile, warn = FALSE)[1]
+    # If version is 0.1.10 or higher, conversion already done
+    if (compareVersion(savedVersion, "0.1.10") >= 0) {
+      return(invisible())
+    }
+  }
+
+  statusFiles <- list.files(path = folder, pattern = "optimStatus.RDS$")
+
+  # Need to load the data tables to perform unscaling
+  priorFile <- file.path(folder, "prior.csv")
+  startValuesFile <- file.path(folder, "startValues.csv")
+
+  if (!file.exists(priorFile)) {
+    message(paste("Cannot convert parameters - prior.csv not found in", folder))
+    return(invisible())
+  }
+
+  dtPrior <- fread(priorFile)
+  dtStartValues <- if (file.exists(startValuesFile)) fread(startValuesFile) else data.table()
+
+  for (sFile in statusFiles) {
+    status <- readRDS(file = file.path(folder, sFile))
+
+    # Check if params exist and scalingMethod is defined
+    if ("params" %in% names(status) && "scalingMethod" %in% names(status)) {
+      # Check if this looks like it needs conversion by trying to detect scaled vs unscaled
+      # Scaled params for hardBounds should be between 0 and 1
+      # We'll check if ALL params are in (0,1) range which suggests they're scaled
+      if (status$scalingMethod == SCALINGMETHOD$hardBounds) {
+        allInRange <- all(status$params > 0 & status$params < 1)
+        
+        if (allInRange) {
+          # These appear to be scaled params, convert to unscaled
+          unscaleParamToValue <- getUnscaleFunction(status$scalingMethod)
+          
+          # Create a temporary dtList structure
+          dtList <- list(prior = dtPrior, startValues = dtStartValues)
+          
+          # Use setParameterToTables to convert scaled to unscaled
+          dtList <- setParameterToTables(
+            dtList = dtList,
+            params = status$params,
+            scalingMethod = status$scalingMethod
+          )
+          
+          # Extract the unscaled values
+          status$params <- getUnscaledParams(
+            dtPrior = dtList$prior,
+            dtStartValues = dtList$startValues,
+            optimizationGroup = "both"
+          )
+          
+          # Save the updated status
+          saveRDS(object = status, file = file.path(folder, sFile))
+          
+          message(paste("Converted scaled to unscaled parameters in file:", sFile, "for run", folder))
+        }
+      } else if (status$scalingMethod == SCALINGMETHOD$logsig) {
+        # For logsig, scaled params are typically in a wider range around [-20, 20]
+        # But it's harder to detect, so we'll check if params are outside typical value ranges
+        # We'll use a heuristic: if most params are in [-20, 20] range, they're likely scaled
+        inScaledRange <- sum(status$params >= -20 & status$params <= 20) / length(status$params)
+        
+        if (inScaledRange > 0.8) {  # If 80%+ are in this range, likely scaled
+          # Convert to unscaled
+          dtList <- list(prior = dtPrior, startValues = dtStartValues)
+          
+          dtList <- setParameterToTables(
+            dtList = dtList,
+            params = status$params,
+            scalingMethod = status$scalingMethod
+          )
+          
+          status$params <- getUnscaledParams(
+            dtPrior = dtList$prior,
+            dtStartValues = dtList$startValues,
+            optimizationGroup = "both"
+          )
+          
+          saveRDS(object = status, file = file.path(folder, sFile))
+          
+          message(paste("Converted scaled to unscaled parameters in file:", sFile, "for run", folder))
+        }
+      }
     }
   }
 
